@@ -26,7 +26,7 @@ function deleteContentRecord(string $table, int $id, ?string $postType = null): 
 }
 function processStorageDeletions(): int {
     $db=getDB();$deleted=0;
-    foreach($db->query('SELECT reference FROM storage_deletions ORDER BY created_at LIMIT 100')->fetchAll() as $job) {
+    foreach($db->query('SELECT reference FROM storage_deletions WHERE not_before <= NOW() ORDER BY created_at LIMIT 100')->fetchAll() as $job) {
         try {
             if(storedFileIsReferenced($job['reference'])) {
                 // An edit failed or another content item still uses this file; cancel.

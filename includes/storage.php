@@ -1,6 +1,36 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
 
+/** Request-local tracking; standalone media-library uploads deliberately do not opt in. */
+function &contentUploadScope(): array {
+    static $scope = ['active'=>false, 'completed'=>[]];
+    return $scope;
+}
+/** Separate autocommit connection: a content rollback must not erase cleanup intent. */
+function uploadJournalDB(): PDO {
+    static $db;
+    return $db ??= newDatabaseConnection();
+}
+function beginContentUploadScope(): void {
+    $scope =& contentUploadScope();
+    if ($scope['active']) return;
+    $scope['active'] = true;
+    register_shutdown_function(function(): void {
+        $scope =& contentUploadScope();
+        if (!$scope['completed']) return;
+        try {
+            // An unfinished transaction cannot be a successful save at request end.
+            if (getDB()->inTransaction()) getDB()->rollBack();
+            $ready = uploadJournalDB()->prepare('UPDATE storage_deletions SET not_before=NOW() WHERE reference=?');
+            foreach ($scope['completed'] as $url) $ready->execute([$url]);
+            require_once __DIR__.'/content-delete.php';
+            processStorageDeletions();
+        } catch (Throwable $e) {
+            error_log('New upload cleanup queued for retry with bin/storage-gc.php.');
+        }
+    });
+}
+
 /** Only generated keys/legacy upload references from our own origin can be deleted. */
 function storageKey(string $value): string {
     $root = dirname(__DIR__) . '/';
@@ -85,6 +115,12 @@ function storeValidatedFile(string $path, string $kind, string $folder): string 
         }
         $key = $folder . '/' . bin2hex(random_bytes(20)) . '.' . $info['extension'];
         $url = storageUrl($key);
+        $scope =& contentUploadScope();
+        if ($scope['active']) {
+            // Write ahead of physical storage. A crash/timeout retains a durable job.
+            // Give in-flight requests a full day before a background worker may act.
+            uploadJournalDB()->prepare("INSERT INTO storage_deletions (reference,not_before) VALUES (?,NOW()+INTERVAL '24 hours') ON CONFLICT DO NOTHING")->execute([$url]);
+        }
         if (UPLOAD_STORAGE === 's3') {
             storageClient()->putObject([
                 'Bucket'=>env_value('S3_BUCKET'),'Key'=>$key,'SourceFile'=>$path,
@@ -112,6 +148,7 @@ function storeValidatedFile(string $path, string $kind, string $folder): string 
             else @unlink(UPLOAD_DIR . $key);
             throw $e;
         }
+        if ($scope['active']) $scope['completed'][] = $url;
         return $url;
     } catch (Throwable $e) {
         error_log('Upload failed: ' . get_class($e));

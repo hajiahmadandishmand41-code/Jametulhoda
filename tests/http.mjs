@@ -43,6 +43,28 @@ r=await api.post('/ajax/like.php',{data:{post_id:Number(id)},headers:{'X-CSRF-To
 r=await api.get('/admin/posts/delete.php?id='+id);check('GET delete confirms, no mutation',r.status()===200 && (await r.text()).includes('تأیید عملیات'));r=await api.get('/post.php?slug='+title);check('post still exists after GET delete',r.status()===200);r=await api.post('/admin/posts/delete.php',{form:{id},maxRedirects:0});check('delete missing CSRF rejected',r.status()===403);r=await api.get('/admin/posts/delete.php?id='+id);csrf=token(await r.text());r=await api.post('/admin/posts/delete.php',{form:{id,csrf_token:csrf},maxRedirects:0});check('POST delete valid',r.status()===303,String(r.status()));r=await api.get('/post.php?slug='+title);check('deleted post 404',r.status()===404);for(const url of stored){const file=await api.get(url);check('deleted media returns 404',file.status()===404);}}
 r=await api.get('/admin/posts/create.php');csrf=token(await r.text());
 r=await api.post('/admin/posts/create.php',{multipart:{csrf_token:csrf,title:'rejected-'+stamp,status:'published',featured_image:{name:'photo.jpg',mimeType:'image/jpeg',buffer:Buffer.from('<?php echo "unsafe"; ?>')}},maxRedirects:0});check('spoofed image rejected',r.status()===200 && (await r.text()).includes('خطا در آپلود'));
+// Failed multi-file content uploads must not leak a previously accepted image.
+// A standalone media-library upload is intentional and must survive this cleanup.
+r=await api.get('/admin/media/'); csrf=token(await r.text());
+r=await api.post('/admin/media/',{multipart:{csrf_token:csrf,'images[]':image}});
+let library=await r.text();
+const galleryId=library.match(/href="\?delete=(\d+)"/)?.[1];
+const mediaUrls=text=>[...text.matchAll(/data-copy-url="([^"]+)"/g)].map(m=>m[1]).sort();
+const beforeFailedUpload=mediaUrls(library);
+check('standalone gallery upload retained',r.status()===200 && library.includes('تصویر با موفقیت آپلود شد') && !!galleryId && beforeFailedUpload.length>0);
+r=await api.get('/admin/books/create.php'); csrf=token(await r.text());
+r=await api.post('/admin/books/create.php',{multipart:{csrf_token:csrf,title:'qa-rejected-book-'+stamp,description:'آزمون پاک‌سازی',cover_image:image,pdf_file:{name:'fake.pdf',mimeType:'application/pdf',buffer:Buffer.from('not a PDF')}}});
+const rejectedBook=await r.text();
+check('second upload validation rejects book',r.status()===200 && rejectedBook.includes('خطا در آپلود فایل PDF'),String(r.status()));
+if (!rejectedBook.includes('خطا در آپلود فایل PDF')) fs.writeFileSync('test-results/rejected-book.html',rejectedBook);
+r=await api.get('/admin/media/'); library=await r.text();
+check('failed upload cleaned without deleting library files',JSON.stringify(mediaUrls(library))===JSON.stringify(beforeFailedUpload));
+if (galleryId) {
+  csrf=token(library);
+  // The listing has an upload CSRF field; the delete operation requires POST too.
+  r=await api.post('/admin/media/',{form:{csrf_token:csrf,delete:galleryId},maxRedirects:0});
+  check('standalone gallery fixture removed',r.status()===303 || r.status()===302);
+}
 r=await api.get('/admin/users.php');csrf=token(await r.text());
 const editorName='qa_editor_'+stamp;
 r=await api.post('/admin/users.php',{form:{csrf_token:csrf,username:editorName,full_name:'ویرایشگر آزمون',role:'editor',password:creds.password,is_active:'on'}});check('create editor account',r.status()===200 && (await r.text()).includes('اطلاعات کاربر ذخیره شد'));

@@ -28,6 +28,7 @@ if (!$lesson) {
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    beginContentUploadScope();
     if (!verifyCsrfToken($_POST[CSRF_TOKEN_NAME] ?? '')) {
         $error = 'خطای امنیتی. لطفاً صفحه را رفرش کنید.';
     } else {
