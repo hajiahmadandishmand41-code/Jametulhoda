@@ -8,13 +8,13 @@ require_once __DIR__ . '/includes/header.php';
 $db = getDB();
 
 // حذف پیام
-if (!empty($_GET['delete'])) {
-    if (!verifyCsrfToken($_GET[CSRF_TOKEN_NAME] ?? '')) {
+if (!empty($_POST['delete'])) {
+    if (!verifyCsrfToken($_POST[CSRF_TOKEN_NAME] ?? '')) {
         $_SESSION['flash_msg']  = 'خطای امنیتی. دوباره تلاش کنید.';
         $_SESSION['flash_type'] = 'danger';
         redirect(siteUrl('admin/messages.php'));
     }
-    $db->prepare("DELETE FROM contact_messages WHERE id=?")->execute([(int)$_GET['delete']]);
+    $db->prepare("DELETE FROM contact_messages WHERE id=?")->execute([(int)$_POST['delete']]);
     $_SESSION['flash_msg']  = 'پیام حذف شد.';
     $_SESSION['flash_type'] = 'success';
     redirect(siteUrl('admin/messages.php'));
@@ -26,10 +26,7 @@ if (!empty($_GET['id'])) {
     $stmt = $db->prepare("SELECT * FROM contact_messages WHERE id=?");
     $stmt->execute([(int)$_GET['id']]);
     $viewMsg = $stmt->fetch() ?: null;
-    if ($viewMsg && !$viewMsg['is_read']) {
-        $db->prepare("UPDATE contact_messages SET is_read=1 WHERE id=?")->execute([$viewMsg['id']]);
-        $viewMsg['is_read'] = 1;
-    }
+
 }
 
 // لیست پیام‌ها
@@ -101,7 +98,7 @@ if (!empty($_POST['mark_all_read']) && verifyCsrfToken($_POST[CSRF_TOKEN_NAME] ?
                             </div>
                             <div class="d-flex gap-1">
                                 <a href="?id=<?= $msg['id'] ?>" class="btn btn-xs btn-sm btn-outline-primary py-0 px-2" title="مشاهده"><i class="bi bi-eye"></i></a>
-                                <a href="?delete=<?= $msg['id'] ?>&<?= CSRF_TOKEN_NAME ?>=<?= urlencode(generateCsrfToken()) ?>" class="btn btn-xs btn-sm btn-outline-danger py-0 px-2" title="حذف" data-confirm="حذف این پیام؟"><i class="bi bi-trash"></i></a>
+                                <a href="?delete=<?= $msg['id'] ?>" class="btn btn-xs btn-sm btn-outline-danger py-0 px-2" title="حذف" data-confirm="حذف این پیام؟"><i class="bi bi-trash"></i></a>
                             </div>
                         </div>
                     </li>
@@ -135,7 +132,7 @@ if (!empty($_POST['mark_all_read']) && verifyCsrfToken($_POST[CSRF_TOKEN_NAME] ?
                         <i class="bi bi-reply ms-1"></i>پاسخ
                     </a>
                     <?php endif; ?>
-                    <a href="?delete=<?= $viewMsg['id'] ?>&<?= CSRF_TOKEN_NAME ?>=<?= urlencode(generateCsrfToken()) ?>" class="btn btn-sm btn-outline-danger" data-confirm="حذف این پیام؟">
+                    <a href="?delete=<?= $viewMsg['id'] ?>" class="btn btn-sm btn-outline-danger" data-confirm="حذف این پیام؟">
                         <i class="bi bi-trash ms-1"></i>حذف
                     </a>
                 </div>

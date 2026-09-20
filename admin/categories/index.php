@@ -9,11 +9,11 @@ $db   = getDB();
 $error = $success = '';
 
 // حذف دسته‌بندی
-if (isset($_GET['delete'])) {
-    if (!verifyCsrfToken($_GET[CSRF_TOKEN_NAME] ?? '')) {
+if (isset($_POST['delete'])) {
+    if (!verifyCsrfToken($_POST[CSRF_TOKEN_NAME] ?? '')) {
         $error = 'خطای امنیتی. دوباره تلاش کنید.';
     } else {
-        $delId = (int)$_GET['delete'];
+        $delId = (int)$_POST['delete'];
         if ($delId) {
             // بررسی وجود پست در این دسته
             $cntStmt = $db->prepare("SELECT COUNT(*) FROM posts WHERE category_id=?");
@@ -31,7 +31,7 @@ if (isset($_GET['delete'])) {
 }
 
 // ذخیره (ایجاد/ویرایش)
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['delete'])) {
     if (!verifyCsrfToken($_POST[CSRF_TOKEN_NAME] ?? '')) {
         $error = 'خطای امنیتی.';
     } else {
@@ -165,7 +165,7 @@ $cats = $db->query(
                                         <a href="<?= siteUrl('admin/categories/?edit=' . $cat['id']) ?>" class="btn btn-sm btn-outline-primary py-0 px-2" title="ویرایش"><i class="bi bi-pencil"></i></a>
                                         <a href="<?= siteUrl('category.php?slug=' . urlencode($cat['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2" title="مشاهده"><i class="bi bi-eye"></i></a>
                                         <?php if ($cat['post_count'] == 0): ?>
-                                        <a href="?delete=<?= $cat['id'] ?>&<?= CSRF_TOKEN_NAME ?>=<?= urlencode(generateCsrfToken()) ?>" class="btn btn-sm btn-outline-danger py-0 px-2" title="حذف" data-confirm="حذف دسته‌بندی «<?= sanitize($cat['name']) ?>»؟"><i class="bi bi-trash"></i></a>
+                                        <a href="?delete=<?= $cat['id'] ?>" class="btn btn-sm btn-outline-danger py-0 px-2" title="حذف" data-confirm="حذف دسته‌بندی «<?= sanitize($cat['name']) ?>»؟"><i class="bi bi-trash"></i></a>
                                         <?php else: ?>
                                         <span class="btn btn-sm btn-outline-secondary py-0 px-2 disabled" title="ابتدا مطالب را منتقل کنید"><i class="bi bi-trash"></i></span>
                                         <?php endif; ?>

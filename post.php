@@ -92,7 +92,7 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </div>
 
-<main class="py-5">
+<div class="py-5">
     <div class="container">
         <div class="row g-4">
             <!-- محتوای اصلی -->
@@ -239,7 +239,7 @@ require_once __DIR__ . '/includes/header.php';
 
                     <!-- محتوا -->
                     <div class="single-post-content">
-                        <?= $post['content'] ?: '<p class="text-muted">محتوایی وارد نشده است.</p>' ?>
+                        <?= safeRichText($post['content']) ?: '<p class="text-muted">محتوایی وارد نشده است.</p>' ?>
                     </div>
 
                     <!-- ─── آمار لایک (نمایش جداگانه تعداد قلب) ─────────── -->
@@ -388,7 +388,7 @@ require_once __DIR__ . '/includes/header.php';
             </div>
         </div>
     </div>
-</main>
+</div>
 
 <script>
 /* ─── کپی لینک ─────────────────────────────────────── */
@@ -434,8 +434,8 @@ function showCopyMsg() {
         if (!plyrInstance && typeof Plyr !== 'undefined') {
             plyrInstance = new Plyr(videoEl, {
                 controls: ['play-large','play','progress','current-time','duration','mute','volume','fullscreen'],
-                loadSprite: false,
-                iconUrl: '',
+                loadSprite: true,
+                iconUrl: document.querySelector('meta[name=plyr-sprite]')?.content,
                 blankVideo: '',
                 autoplay: false,
                 resetOnEnd: false,

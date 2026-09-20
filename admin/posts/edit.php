@@ -22,6 +22,7 @@ $imgStmt->execute([$id]);
 $postImages = $imgStmt->fetchAll();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    beginContentUploadScope();
     if (!verifyCsrfToken($_POST[CSRF_TOKEN_NAME] ?? '')) {
         $error = 'خطای امنیتی.';
     } else {
@@ -55,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $up = uploadImage($_FILES['featured_image'], 'posts');
                 if ($up) {
                     // حذف تصویر قدیمی
-                    if ($featImg && file_exists(__DIR__ . '/../../' . $featImg)) @unlink(__DIR__ . '/../../' . $featImg);
+                    if ($featImg) scheduleFileDeletion($featImg);
                     $featImg = $up;
                 } else {
                     $error = 'خطا در آپلود تصویر شاخص.';
@@ -64,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // حذف تصویر شاخص
             if (!$error && !empty($_POST['remove_featured'])) {
-                if ($featImg && file_exists(__DIR__ . '/../../' . $featImg)) @unlink(__DIR__ . '/../../' . $featImg);
+                if ($featImg) scheduleFileDeletion($featImg);
                 $featImg = '';
             }
 
@@ -78,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$error && !empty($_FILES['featured_video']['name'])) {
                 $upV = uploadFeaturedVideo($_FILES['featured_video']);
                 if ($upV) {
-                    if ($featVid && file_exists(__DIR__ . '/../../' . $featVid)) @unlink(__DIR__ . '/../../' . $featVid);
+                    if ($featVid) scheduleFileDeletion($featVid);
                     $featVid = $upV;
                 } else {
                     $error = 'خطا در آپلود ویدیو شاخص. فرمت‌های مجاز: MP4، WebM، MOV، MKV (حداکثر 200MB)';
@@ -87,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // حذف ویدیو شاخص
             if (!$error && !empty($_POST['remove_featured_video'])) {
-                if ($featVid && file_exists(__DIR__ . '/../../' . $featVid)) @unlink(__DIR__ . '/../../' . $featVid);
+                if ($featVid) scheduleFileDeletion($featVid);
                 $featVid = '';
             }
 
@@ -131,8 +132,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $imgRow->execute([(int)$imgId, $id]);
                         $imgData = $imgRow->fetch();
                         if ($imgData && $imgData['image_path']) {
-                            $fp = __DIR__ . '/../../' . $imgData['image_path'];
-                            if (file_exists($fp)) @unlink($fp);
+                            $fp = $imgData['image_path'];
+                            scheduleFileDeletion($fp);
                         }
                         $db->prepare("DELETE FROM post_images WHERE id=? AND post_id=?")->execute([(int)$imgId, $id]);
                     }
@@ -365,7 +366,7 @@ $existingVideo = getMediaFor('post', $id, 'video');
                     </div>
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-success"><i class="bi bi-save ms-1"></i>ذخیره تغییرات</button>
-                        <a href="<?= siteUrl('admin/posts/delete.php?id=' . $id . '&' . CSRF_TOKEN_NAME . '=' . urlencode(generateCsrfToken())) ?>"
+                        <a href="<?= siteUrl('admin/posts/delete.php?id=' . $id) ?>"
                            class="btn btn-outline-danger"
                            data-confirm="آیا از حذف این مطلب اطمینان دارید؟">
                             <i class="bi bi-trash ms-1"></i>حذف مطلب

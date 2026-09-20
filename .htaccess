@@ -1,0 +1,4 @@
+Options -Indexes
+RewriteEngine On
+RewriteRule ^router\.php$ - [L]
+RewriteRule ^ router.php [END,QSA]

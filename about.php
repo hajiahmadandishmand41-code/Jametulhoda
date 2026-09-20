@@ -15,7 +15,7 @@ require_once __DIR__ . '/includes/header.php';
         </nav>
     </div>
 </div>
-<main class="py-5">
+<div class="py-5">
     <div class="container">
         <div class="page-header mb-5">
             <h1 class="page-title"><i class="bi bi-info-circle ms-2 text-gold"></i>درباره مدرسه علمیه جامعه‌الهدی</h1>
@@ -85,5 +85,5 @@ require_once __DIR__ . '/includes/header.php';
             </div>
         </div>
     </div>
-</main>
+</div>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

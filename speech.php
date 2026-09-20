@@ -50,7 +50,7 @@ require_once __DIR__ . '/includes/header.php';
     <li class="breadcrumb-item active"><?= sanitize(mb_strimwidth($post['title'], 0, 50, '...')) ?></li>
 </ol></nav></div></div>
 
-<main class="py-5"><div class="container">
+<div class="py-5"><div class="container">
     <div class="row g-4">
         <div class="col-lg-8">
             <article class="single-post">
@@ -134,7 +134,7 @@ require_once __DIR__ . '/includes/header.php';
                 <?php endif; ?>
 
                 <div class="single-post-content">
-                    <?= $post['content'] ?: '<p class="text-muted">متنی وارد نشده است.</p>' ?>
+                    <?= safeRichText($post['content']) ?: '<p class="text-muted">متنی وارد نشده است.</p>' ?>
                 </div>
 
                 <!-- ─── دانلود فایل‌های رسانه‌ای ───────────────────────────────── -->
@@ -155,14 +155,8 @@ require_once __DIR__ . '/includes/header.php';
                         $label    = sanitize($m['title'] ?: ($m['kind'] === 'video' ? 'ویدیو' : 'صوت'));
                         $iconClass = $m['kind'] === 'video' ? 'bi bi-camera-video-fill text-primary' : 'bi bi-mic-fill text-success';
                         // اندازه فایل اگر در دسترس باشد
-                        $absPath = rtrim(UPLOAD_DIR, '/') . '/../' . ltrim($m['file_path'], '/');
-                        $size    = '';
-                        if (file_exists($absPath)) {
-                            $bytes = filesize($absPath);
-                            $size  = $bytes >= 1048576
-                                ? round($bytes / 1048576, 1) . ' MB'
-                                : round($bytes / 1024) . ' KB';
-                        }
+                        $bytes = (int)($m['size'] ?? 0);
+                        $size = $bytes ? number_format($bytes / 1024 / 1024, 1) . ' MB' : '';
                     ?>
                         <li>
                             <i class="<?= $iconClass ?> file-icon"></i>
@@ -211,7 +205,7 @@ require_once __DIR__ . '/includes/header.php';
             </div>
         </aside>
     </div>
-</div></main>
+</div></div>
 
 <script src="<?= siteUrl('assets/js/media-player.js') ?>"></script>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

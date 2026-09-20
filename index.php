@@ -35,7 +35,7 @@ try {
     $lStmt = $db->prepare(
         "SELECT * FROM lessons
          WHERE status='published'
-           AND (page_section IS NULL OR page_section = '' OR FIND_IN_SET('home', REPLACE(REPLACE(page_section,' ',''),',,',',')))
+           AND (page_section IS NULL OR page_section = '' OR 'home' = ANY(string_to_array(REPLACE(page_section,' ',''),',')))
          ORDER BY id DESC LIMIT 5"
     );
     $lStmt->execute();
@@ -94,6 +94,7 @@ function renderCardMedia(array $post, string $size = 'card'): string {
 }
 
 require_once __DIR__ . '/includes/header.php';
+require __DIR__ . '/includes/home-intro.php';
 ?>
 
 <!-- ─── اسلایدر اخبار برجسته ─────────────────────────────────────────────── -->
@@ -119,7 +120,7 @@ require_once __DIR__ . '/includes/header.php';
                 <?php if ($hasVid && $i === 0): ?>
                 <div class="hero-autoplay-wrap" style="position:relative;overflow:hidden;">
                     <video class="d-block w-100 hero-img" id="heroAutoVideo" src="<?= htmlspecialchars($vidUrl,ENT_QUOTES) ?>"
-                           autoplay muted playsinline preload="auto" loop
+                           controls muted playsinline preload="none"
                            <?= $poster ? 'poster="'.htmlspecialchars($poster,ENT_QUOTES).'"' : '' ?> style="object-fit:cover;"></video>
                     <span class="hero-video-badge"><i class="bi bi-camera-video-fill"></i> ویدیو</span>
                 </div>
@@ -162,14 +163,6 @@ require_once __DIR__ . '/includes/header.php';
         <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
             <span class="carousel-control-next-icon"></span><span class="visually-hidden">بعدی</span>
         </button>
-    </div>
-</section>
-<?php else: ?>
-<section class="hero-plain py-5 text-center" style="background:linear-gradient(135deg,#1a3a2a,#0d2018)">
-    <div class="container">
-        <h1 class="text-white fw-bold"><?= sanitize(getSetting('site_name', SITE_NAME)) ?></h1>
-        <p class="text-light opacity-75 mt-2"><?= sanitize(getSetting('site_slogan', SITE_SLOGAN)) ?></p>
-        <a href="<?= siteUrl('about.php') ?>" class="btn btn-gold mt-3">درباره ما <i class="bi bi-arrow-left ms-1"></i></a>
     </div>
 </section>
 <?php endif; ?>

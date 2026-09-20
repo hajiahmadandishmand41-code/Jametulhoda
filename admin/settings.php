@@ -8,13 +8,14 @@ $sets = array_column($rows, 'value', 'key');
 
 $success = $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    beginContentUploadScope();
     if (!verifyCsrfToken($_POST[CSRF_TOKEN_NAME] ?? '')) {
         $error = 'خطای امنیتی.';
     } else {
         $fields = ['site_name','site_slogan','about_short','address','phone','email','social_telegram','social_youtube','social_instagram'];
         foreach ($fields as $field) {
             $val  = trim($_POST[$field] ?? '');
-            $stmt = $db->prepare("INSERT INTO settings (`key`,`value`) VALUES (?,?) ON DUPLICATE KEY UPDATE `value`=?");
+            $stmt = $db->prepare("INSERT INTO settings (key,value) VALUES (?,?) ON CONFLICT (key) DO UPDATE SET value=?");
             $stmt->execute([$field, $val, $val]);
         }
 
@@ -22,8 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!empty($_FILES['logo']['name'])) {
             $logoPath = uploadImage($_FILES['logo'], 'site');
             if ($logoPath) {
-                copy(__DIR__ . '/../' . $logoPath, __DIR__ . '/../assets/images/logo.jpg');
-                @unlink(__DIR__ . '/../' . $logoPath);
+                $db->prepare('INSERT INTO settings (key,value) VALUES (?,?) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value')->execute(['site_logo', $logoPath]);
             }
         }
 

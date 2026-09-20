@@ -1,0 +1,96 @@
+name: PHP and PostgreSQL checks
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: jhd_test
+          POSTGRES_USER: jhd_test
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      APP_ENV: development
+      DATABASE_URL: postgresql://jhd_test@127.0.0.1:5432/jhd_test?sslmode=disable
+      SESSION_DRIVER: database
+      UPLOAD_STORAGE: local
+      SITE_URL: https://example.test
+      TEST_ADMIN_USERNAME: ci_admin
+      ADMIN_USERNAME: ci_admin
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          ini-values: opcache.jit=0, opcache.jit_buffer_size=0, output_buffering=4096
+          extensions: pdo_pgsql, mbstring, fileinfo, gd, dom, curl, zip
+          tools: composer:v2
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Validate and install PHP dependencies
+        run: |
+          composer validate --no-check-publish
+          composer install --no-interaction --prefer-dist --no-dev 2>&1 | tee /tmp/composer-install.log
+      - run: find . -name '*.php' -not -path './vendor/*' -not -path './node_modules/*' -print0 | xargs -0 -n1 php -l
+      - run: php tests/security.php && php bin/migrate.php && php bin/migrate.php
+      - name: Upload rollback and durable cleanup
+        run: ALLOW_DESTRUCTIVE_TESTS=1 php tests/storage-recovery.php
+      - name: Temporary test administrator
+        run: |
+          password=$(openssl rand -hex 24)
+          echo "::add-mask::$password"
+          echo "TEST_ADMIN_PASSWORD=$password" >> "$GITHUB_ENV"
+          ADMIN_PASSWORD="$password" php bin/create-admin.php
+      - run: npm ci && npx playwright install --with-deps chromium
+      - name: Integration and browser tests
+        run: |
+          php -S 0.0.0.0:8080 router.php > test-server.log 2>&1 &
+          curl --retry 10 --retry-connrefused --retry-delay 1 --fail --silent http://127.0.0.1:8080/ > /dev/null
+          npm run test:http 2>&1 | tee /tmp/http-tests.log
+          npm run test:browser 2>&1 | tee /tmp/browser-tests.log
+          node tests/links.mjs 2>&1 | tee /tmp/link-tests.log
+          if grep -Ei "PHP (Warning|Fatal|Parse)|Application failure|Upload failed" test-server.log; then exit 1; fi
+      - name: Failure diagnostics
+        if: failure()
+        run: |
+          python3 - <<'PYTHON'
+          import pathlib
+          for name in ['/tmp/http-tests.log','/tmp/browser-tests.log','/tmp/link-tests.log','test-server.log']:
+              path=pathlib.Path(name)
+              if path.exists():
+                  lines=[line for line in path.read_text().splitlines() if any(word in line for word in ['FAIL','Fatal','Warning','Error','failure','exceeded','status','path','checked'])]
+                  message=' | '.join(lines)[-3000:].replace('%','%25').replace('\n','%0A')
+                  if message: print('::error title=Test diagnostics::'+message)
+          PYTHON
+      - name: Container build
+        run: docker build -f Dockerfile.vercel -t jametulhoda:test .
+      - name: Container runtime on custom PORT
+        run: |
+          docker run -d --name jhd-container --network host -e PORT=8081 -e APP_ENV=development -e DATABASE_URL -e SESSION_DRIVER -e UPLOAD_STORAGE -e UPLOAD_LOCAL_PATH=/tmp/jhd-uploads -e SITE_URL jametulhoda:test
+          trap 'docker logs jhd-container > container-server.log 2>&1; docker rm -f jhd-container' EXIT
+          curl --retry 10 --retry-connrefused --retry-delay 1 --fail --silent http://127.0.0.1:8081/ > /dev/null
+          TEST_BASE_URL=http://127.0.0.1:8081/ npm run test:http
+          TEST_BASE_URL=http://127.0.0.1:8081/ npm run test:browser
+          docker logs jhd-container > container-server.log 2>&1
+          if grep -Ei "PHP (Warning|Fatal|Parse)|Application failure|Upload failed" container-server.log; then exit 1; fi
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: verification
+          path: |
+            test-results/
+            test-server.log
+            container-server.log
+            composer.lock

@@ -1,7 +1,7 @@
   </div><!-- /.admin-content -->
 </div><!-- /.admin-main -->
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="<?= siteUrl('assets/vendor/bootstrap.bundle.min.js') ?>"></script>
 <script>
 // Auto dismiss alerts
 document.querySelectorAll('.alert-auto-dismiss').forEach(function(el) {

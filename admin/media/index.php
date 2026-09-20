@@ -5,7 +5,7 @@
 $adminTitle = 'مدیریت رسانه';
 require_once __DIR__ . '/../includes/header.php';
 
-$uploadPath = __DIR__ . '/../../uploads/';
+
 $error = $success = '';
 
 // آپلود تصاویر
@@ -34,48 +34,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['images']['name'][0]
     }
 }
 
-// حذف تصویر
-if (!empty($_GET['delete'])) {
-    if (!verifyCsrfToken($_GET[CSRF_TOKEN_NAME] ?? '')) {
-        $_SESSION['flash_msg']  = 'خطای امنیتی. دوباره تلاش کنید.';
-        $_SESSION['flash_type'] = 'danger';
-        redirect(siteUrl('admin/media/'));
-    }
-    $filename = basename($_GET['delete']);
-    $fp = $uploadPath . 'media/' . $filename;
-    if (file_exists($fp) && !is_dir($fp)) {
-        @unlink($fp);
-        $_SESSION['flash_msg']  = 'تصویر حذف شد.';
-        $_SESSION['flash_type'] = 'success';
+if (!empty($_POST['delete'])) {
+    requirePostCsrf();
+    $id = (int)$_POST['delete'];
+    $stmt = getDB()->prepare('SELECT url FROM stored_files WHERE id=?');
+    $stmt->execute([$id]);
+    if ($url=$stmt->fetchColumn()) {
+        if (storedFileIsReferenced($url)) {
+            $_SESSION['flash_msg']='فایل به محتوا متصل است؛ ابتدا آن را از محتوا جدا کنید.';
+            $_SESSION['flash_type']='warning';
+        } else deleteStoredFile($url);
     }
     redirect(siteUrl('admin/media/'));
 }
-
-// خواندن تصاویر آپلودشده
-$images = [];
-$mediaDir = $uploadPath . 'media/';
-if (!is_dir($mediaDir)) @mkdir($mediaDir, 0755, true);
-if (is_dir($mediaDir)) {
-    $files = array_diff(scandir($mediaDir), ['.','..']);
-    foreach ($files as $f) {
-        $ext = strtolower(pathinfo($f, PATHINFO_EXTENSION));
-        if (in_array($ext, ['jpg','jpeg','png','gif','webp'])) {
-            $fp = $mediaDir . $f;
-            $images[] = [
-                'name' => $f,
-                'path' => 'uploads/media/' . $f,
-                'size' => filesize($fp),
-                'time' => filemtime($fp),
-            ];
-        }
-    }
-    // مرتب‌سازی: جدیدترین اول
-    usort($images, fn($a, $b) => $b['time'] - $a['time']);
-}
+$page=max(1,min(10000,(int)($_GET['page']??1))); $limit=48;
+$total=(int)getDB()->query('SELECT COUNT(*) FROM stored_files')->fetchColumn();
+$listing=getDB()->prepare('SELECT * FROM stored_files ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?');
+$listing->execute([$limit,($page-1)*$limit]); $rows=$listing->fetchAll();
+$images = array_map(fn($row) => ['name'=>$row['id'], 'display_name'=>basename(parse_url($row['url'],PHP_URL_PATH)??''), 'mime'=>$row['mime'], 'path'=>$row['url'], 'size'=>$row['size'], 'time'=>strtotime($row['created_at'])], $rows);
 ?>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h5 class="mb-0"><i class="bi bi-images ms-2"></i>مدیریت رسانه</h5>
-    <span class="text-muted small"><?= count($images) ?> تصویر</span>
+    <span class="text-muted small"><?= $total ?> فایل</span>
 </div>
 
 <?php if ($error): ?><div class="alert alert-danger"><?= sanitize($error) ?></div><?php endif; ?>
@@ -102,20 +82,24 @@ if (is_dir($mediaDir)) {
 <!-- گالری -->
 <?php if (!empty($images)): ?>
 <div class="admin-card">
-    <div class="admin-card-header">گالری تصاویر</div>
+    <div class="admin-card-header">کتابخانه رسانه</div>
     <div class="admin-card-body">
         <div class="row g-3">
             <?php foreach ($images as $img): ?>
             <div class="col-6 col-md-3 col-lg-2">
                 <div class="position-relative border rounded overflow-hidden" style="aspect-ratio:1">
-                    <img src="<?= imgUrl($img['path']) ?>" style="width:100%;height:100%;object-fit:cover" alt="<?= sanitize($img['name']) ?>" loading="lazy">
+                    <?php if (str_starts_with($img['mime'],'image/')): ?>
+                    <img src="<?= imgUrl($img['path']) ?>" style="width:100%;height:100%;object-fit:cover" alt="<?= sanitize($img['display_name']) ?>" loading="lazy">
+                    <?php else: $icon=str_starts_with($img['mime'],'audio/')?'music-note-beamed':(str_starts_with($img['mime'],'video/')?'camera-video':'file-earmark-text'); ?>
+                    <div class="d-flex h-100 align-items-center justify-content-center flex-column" style="background:var(--jhd-paper)"><i class="bi bi-<?= $icon ?> fs-1" aria-hidden="true"></i><small><?= sanitize($img['mime']) ?></small></div>
+                    <?php endif; ?>
                     <div class="position-absolute bottom-0 start-0 end-0 d-flex justify-content-between p-1" style="background:rgba(0,0,0,.6)">
-                        <a href="<?= imgUrl($img['path']) ?>" target="_blank" class="btn btn-xs text-white p-0" style="font-size:.7rem" title="مشاهده"><i class="bi bi-eye"></i></a>
-                        <button onclick="copyToClipboard('<?= imgUrl($img['path']) ?>')" class="btn btn-xs text-white p-0" style="font-size:.7rem" title="کپی لینک"><i class="bi bi-link-45deg"></i></button>
-                        <a href="?delete=<?= urlencode($img['name']) ?>&<?= CSRF_TOKEN_NAME ?>=<?= urlencode(generateCsrfToken()) ?>" class="btn btn-xs text-danger p-0" style="font-size:.7rem" data-confirm="حذف این تصویر؟" title="حذف"><i class="bi bi-trash"></i></a>
+                        <a href="<?= imgUrl($img['path']) ?>" target="_blank" rel="noopener noreferrer" class="btn btn-xs text-white p-0" style="font-size:.7rem" title="مشاهده"><i class="bi bi-eye"></i></a>
+                        <button data-copy-url="<?= sanitize(imgUrl($img['path'])) ?>" class="btn btn-xs text-white p-0" style="font-size:.7rem" title="کپی لینک"><i class="bi bi-link-45deg"></i></button>
+                        <a href="?delete=<?= urlencode($img['name']) ?>" class="btn btn-xs text-danger p-0" style="font-size:.7rem" data-confirm="حذف این فایل؟" title="حذف"><i class="bi bi-trash"></i></a>
                     </div>
                 </div>
-                <div class="text-muted mt-1" style="font-size:.7rem;overflow:hidden;white-space:nowrap;text-overflow:ellipsis" title="<?= sanitize($img['name']) ?>"><?= sanitize($img['name']) ?></div>
+                <div class="text-muted mt-1" style="font-size:.7rem;overflow:hidden;white-space:nowrap;text-overflow:ellipsis" title="<?= sanitize($img['display_name']) ?>"><?= sanitize($img['display_name']) ?></div>
                 <div class="text-muted" style="font-size:.68rem"><?= round($img['size']/1024) ?> KB</div>
             </div>
             <?php endforeach; ?>
@@ -125,12 +109,15 @@ if (is_dir($mediaDir)) {
 <?php else: ?>
 <div class="text-center py-5 text-muted">
     <i class="bi bi-images display-4 d-block mb-3 opacity-25"></i>
-    <p>تصویری آپلود نشده است.</p>
+    <p>فایلی آپلود نشده است.</p>
 </div>
 <?php endif; ?>
 
+<div class="my-4"><?= paginate($total,$limit,$page,siteUrl('admin/media/').'?page=%d') ?></div>
 <script>
+document.querySelectorAll('[data-copy-url]').forEach(function(button){button.addEventListener('click',function(){copyToClipboard(button.dataset.copyUrl);});});
 function copyToClipboard(text) {
+    if (!navigator.clipboard) { prompt('لینک فایل:',text); return; }
     navigator.clipboard.writeText(text).then(function() {
         alert('لینک کپی شد:\n' + text);
     }).catch(function() {

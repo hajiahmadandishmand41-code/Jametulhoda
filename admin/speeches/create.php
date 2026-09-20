@@ -10,15 +10,10 @@ require_once __DIR__ . '/../../includes/media.php';
 $error = '';
 
 // اطمینان از وجود ستون speaker
-try {
-    $db = getDB();
-    $chk = $db->query("SHOW COLUMNS FROM posts LIKE 'speaker'");
-    if ($chk->rowCount() === 0) {
-        $db->exec("ALTER TABLE posts ADD COLUMN `speaker` VARCHAR(200) DEFAULT NULL AFTER `summary`");
-    }
-} catch (PDOException $e) {}
+$db = getDB();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    beginContentUploadScope();
     if (!verifyCsrfToken($_POST[CSRF_TOKEN_NAME] ?? '')) {
         $error = 'خطای امنیتی. لطفاً صفحه را رفرش کنید.';
     } else {
@@ -59,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt  = $db->prepare(
                         "INSERT INTO posts (title, slug, speaker, summary, content, featured_image, featured_video,
                          post_type, page_section, category_id, author_id, status, published_at, created_at, updated_at)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, 'speech', 'home,speeches', ?, ?, ?, NOW(), NOW(), NOW())"
+                         VALUES (?, ?, ?, ?, ?, ?, ?, 'speech', 'home,speeches', ?, ?, ?, NOW(), NOW(), NOW()) RETURNING id"
                     );
                     $stmt->execute([
                         $title, $slug, $speaker ?: null, $summary ?: null, $content ?: null,
@@ -67,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $category_id ?: null,
                         $admin['id'], $status
                     ]);
-                    $newId = (int)$db->lastInsertId();
+                    $newId = (int)$stmt->fetchColumn();
 
                     // آپلود فایل صوتی — الزامی
                     if (!empty($_FILES['audio_file']['name']) && $_FILES['audio_file']['error'] === UPLOAD_ERR_OK) {
@@ -85,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['flash_type'] = 'success';
                     redirect(siteUrl('admin/speeches/edit.php?id=' . $newId));
                 } catch (PDOException $e) {
-                    $error = 'خطا در ذخیره: ' . $e->getMessage();
+                    $error = 'خطا در ذخیره: ';
                 }
             }
         }

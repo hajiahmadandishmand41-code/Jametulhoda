@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+.vercel/
+/vendor/
+node_modules/
+*.log
+*.bak
+*.sql.gz
+.phpunit.cache/
+/test-results/
+/uploads/*
+!/uploads/.htaccess
+!/uploads/.gitkeep
+/test-server.log

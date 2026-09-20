@@ -46,7 +46,7 @@ $likeUrl = siteUrl('ajax/like.php');
     </div>
 </div>
 
-<main class="py-5">
+<div class="py-5">
     <div class="container">
         <div class="page-header mb-4">
             <h1 class="page-title"><i class="bi bi-newspaper ms-2 text-gold"></i>اخبار مدرسه</h1>
@@ -148,6 +148,6 @@ $likeUrl = siteUrl('ajax/like.php');
         <?php endif; ?>
         <?php endif; ?>
     </div>
-</main>
+</div>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

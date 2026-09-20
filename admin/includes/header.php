@@ -7,6 +7,10 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
 requireLogin();
+header('Cache-Control: no-store');
+header('X-Robots-Tag: noindex, nofollow');
+if (preg_match('~/admin/(settings|messages|media|users)([/.]|$)~', $_SERVER['SCRIPT_NAME'] ?? '')) requireRole(['superadmin','admin']);
+require_once __DIR__ . '/../../includes/admin-actions.php';
 $admin = currentAdmin();
 $currentAdminPage = basename($_SERVER['PHP_SELF']);
 $currentAdminDir  = basename(dirname($_SERVER['PHP_SELF']));
@@ -17,9 +21,9 @@ $currentAdminDir  = basename(dirname($_SERVER['PHP_SELF']));
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= isset($adminTitle) ? sanitize($adminTitle) . ' — ' : '' ?>پنل مدیریت | <?= SITE_NAME ?></title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="<?= siteUrl('assets/vendor/bootstrap.rtl.min.css') ?>">
+<link rel="stylesheet" href="<?= siteUrl('assets/vendor/icons/bootstrap-icons.min.css') ?>">
+
 <style>
 :root {
   --admin-sidebar: #0d1f13;
@@ -139,20 +143,23 @@ body { font-family: 'Vazirmatn', sans-serif; background: var(--admin-bg); color:
 /* Responsive */
 #sidebarToggle { display: none; }
 @media (max-width: 768px) {
-  .admin-sidebar { transform: translateX(248px); }
-  .admin-sidebar.open { transform: translateX(0); }
+  .admin-sidebar { display: none; }
+  .admin-sidebar.open { display: flex; }
   .admin-main { margin-right: 0; }
   #sidebarToggle { display: flex; }
   .admin-content { padding: 14px; }
 }
 </style>
+<script src="<?= siteUrl('assets/js/theme.js') ?>"></script>
+<link rel="stylesheet" href="<?= siteUrl('assets/css/design-system.css') ?>">
+<script src="<?= siteUrl('assets/js/interface.js') ?>" defer></script>
 </head>
-<body>
+<body><button style="position:fixed;bottom:20px;left:20px;z-index:1000;background:var(--jhd-surface)" class="jhd-icon-btn" data-theme-toggle aria-label="تغییر پوسته" aria-pressed="false"><i class="bi bi-moon"></i></button>
 
 <!-- Sidebar -->
-<div class="admin-sidebar" id="adminSidebar">
+<div class="admin-sidebar" id="adminSidebar" role="navigation" aria-label="منوی مدیریت">
   <div class="sidebar-brand d-flex align-items-center">
-    <img src="<?= siteUrl('assets/images/logo.jpg') ?>" alt="لوگو" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕌</text></svg>'">
+    <img src="<?= imgUrl(getSetting('site_logo', 'assets/images/logo.jpg')) ?>" alt="لوگو" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕌</text></svg>'">
     <div>
       <span class="name">جامعه‌الهدی</span>
       <span class="sub">پنل مدیریت</span>
@@ -160,6 +167,7 @@ body { font-family: 'Vazirmatn', sans-serif; background: var(--admin-bg); color:
   </div>
 
   <nav class="sidebar-nav">
+<?php if ($admin['role'] === 'superadmin'): ?><a href="<?= siteUrl('admin/users.php') ?>" class="sidebar-link"><i class="bi bi-people"></i>مدیریت کاربران</a><?php endif; ?>
     <div class="sidebar-section">داشبورد</div>
     <a href="<?= siteUrl('admin/') ?>" class="sidebar-link <?= $currentAdminPage==='index.php' && $currentAdminDir==='admin'?'active':'' ?>">
       <i class="bi bi-speedometer2"></i>داشبورد
@@ -245,7 +253,7 @@ body { font-family: 'Vazirmatn', sans-serif; background: var(--admin-bg); color:
 <div class="admin-main">
   <div class="admin-topbar">
     <div class="d-flex align-items-center gap-3">
-      <button id="sidebarToggle" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('adminSidebar').classList.toggle('open')">
+      <button id="sidebarToggle" class="btn btn-sm btn-outline-secondary" aria-controls="adminSidebar" aria-expanded="false" aria-label="منوی مدیریت">
         <i class="bi bi-list"></i>
       </button>
       <span class="topbar-title"><?= isset($adminTitle) ? sanitize($adminTitle) : 'پنل مدیریت' ?></span>

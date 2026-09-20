@@ -17,7 +17,7 @@ $offset = ($page - 1) * $limit;
 $where  = ['1=1'];
 $params = [];
 if ($search) {
-    $where[]  = "(title LIKE ? OR description LIKE ?)";
+    $where[]  = "(title ILIKE ? OR description ILIKE ?)";
     $s        = '%' . $search . '%';
     $params   = array_merge($params, [$s, $s]);
 }
@@ -152,7 +152,7 @@ $urlBase = siteUrl('admin/books/') . '?q=' . urlencode($search) . '&page=';
                    class="btn btn-sm btn-outline-primary py-0 px-2" title="ویرایش">
                   <i class="bi bi-pencil"></i>
                 </a>
-                <a href="<?= siteUrl('admin/books/delete.php?id=' . $b['id'] . '&' . CSRF_TOKEN_NAME . '=' . urlencode(generateCsrfToken())) ?>"
+                <a href="<?= siteUrl('admin/books/delete.php?id=' . $b['id']) ?>"
                    class="btn btn-sm btn-outline-danger py-0 px-2"
                    title="حذف"
                    data-confirm="آیا از حذف کتاب «<?= sanitize($b['title']) ?>» اطمینان دارید؟">

@@ -27,20 +27,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $slug  = uniqueSlug('posts', $title);
                 $stmt  = $db->prepare(
                     "INSERT INTO posts (title, slug, content, post_type, page_section, category_id, author_id, status, published_at, created_at, updated_at)
-                     VALUES (?, ?, ?, 'article', 'home,articles', ?, ?, ?, NOW(), NOW(), NOW())"
+                     VALUES (?, ?, ?, 'article', 'home,articles', ?, ?, ?, NOW(), NOW(), NOW()) RETURNING id"
                 );
                 $stmt->execute([
                     $title, $slug, $content ?: null,
                     $category_id ?: null,
                     $admin['id'], $status
                 ]);
-                $newId = (int)$db->lastInsertId();
+                $newId = (int)$stmt->fetchColumn();
 
                 $_SESSION['flash_msg']  = 'مقاله با موفقیت ذخیره شد.';
                 $_SESSION['flash_type'] = 'success';
                 redirect(siteUrl('admin/articles/edit.php?id=' . $newId));
             } catch (PDOException $e) {
-                $error = 'خطا در ذخیره مقاله: ' . $e->getMessage();
+                $error = 'خطا در ذخیره مقاله: ';
             }
         }
     }

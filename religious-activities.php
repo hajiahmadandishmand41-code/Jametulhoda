@@ -11,7 +11,7 @@ $pages = (int)ceil($total / $limit);
     <li class="breadcrumb-item"><a href="<?= siteUrl() ?>">صفحه اصلی</a></li>
     <li class="breadcrumb-item active">فعالیت‌های مذهبی</li>
 </ol></nav></div></div>
-<main class="py-5"><div class="container">
+<div class="py-5"><div class="container">
     <div class="page-header mb-4"><h1 class="page-title"><i class="bi bi-star-fill ms-2 text-gold"></i>فعالیت‌های مذهبی</h1><div class="section-divider"></div></div>
     <?php if (empty($posts)): ?>
     <div class="text-center py-5"><i class="bi bi-star display-1 text-muted opacity-25 d-block mb-3"></i><h4 class="text-muted">فعالیتی یافت نشد</h4></div>
@@ -36,5 +36,5 @@ $pages = (int)ceil($total / $limit);
     </div>
     <?php if ($pages > 1): ?><div class="mt-5"><?= paginate($total, $limit, $page, siteUrl('religious-activities.php') . '?page=%d') ?></div><?php endif; ?>
     <?php endif; ?>
-</div></main>
+</div></div>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

@@ -16,7 +16,7 @@ $where  = ["p.post_type = 'news'"];
 $params = [];
 
 if ($status) { $where[] = "p.status = ?"; $params[] = $status; }
-if ($search) { $where[] = "p.title LIKE ?"; $params[] = "%$search%"; }
+if ($search) { $where[] = "p.title ILIKE ?"; $params[] = "%$search%"; }
 
 $whereStr = implode(' AND ', $where);
 
@@ -105,7 +105,7 @@ $urlBase = '?status=' . urlencode($status) . '&q=' . urlencode($search) . '&page
                             <div class="d-flex gap-1">
                                 <a href="<?= siteUrl('admin/news/edit.php?id=' . $p['id']) ?>" class="btn btn-sm btn-outline-primary py-0 px-2" title="ویرایش"><i class="bi bi-pencil"></i></a>
                                 <a href="<?= siteUrl('post.php?slug=' . urlencode($p['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2" title="مشاهده"><i class="bi bi-eye"></i></a>
-                                <a href="<?= siteUrl('admin/news/delete.php?id=' . $p['id'] . '&' . CSRF_TOKEN_NAME . '=' . urlencode(generateCsrfToken())) ?>"
+                                <a href="<?= siteUrl('admin/news/delete.php?id=' . $p['id']) ?>"
                                    class="btn btn-sm btn-outline-danger py-0 px-2"
                                    title="حذف"
                                    data-confirm="آیا از حذف «<?= sanitize($p['title']) ?>» اطمینان دارید؟">

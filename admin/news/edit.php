@@ -16,6 +16,7 @@ if (!$post || $post['post_type'] !== 'news') {
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    beginContentUploadScope();
     if (!verifyCsrfToken($_POST[CSRF_TOKEN_NAME] ?? '')) {
         $error = 'خطای امنیتی.';
     } else {
@@ -35,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!empty($_FILES['featured_image']['name']) && $_FILES['featured_image']['error'] === UPLOAD_ERR_OK) {
                 $up = uploadImage($_FILES['featured_image'], 'posts');
                 if ($up) {
-                    if ($featImg && file_exists(__DIR__ . '/../../' . $featImg)) @unlink(__DIR__ . '/../../' . $featImg);
+                    if ($featImg) scheduleFileDeletion($featImg);
                     $featImg = $up;
                 } else {
                     $error = 'خطا در آپلود تصویر.';
@@ -43,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if (!$error && !empty($_POST['remove_featured'])) {
-                if ($featImg && file_exists(__DIR__ . '/../../' . $featImg)) @unlink(__DIR__ . '/../../' . $featImg);
+                if ($featImg) scheduleFileDeletion($featImg);
                 $featImg = '';
             }
 
@@ -63,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['flash_type'] = 'success';
                     redirect(siteUrl('admin/news/edit.php?id=' . $id));
                 } catch (PDOException $e) {
-                    $error = 'خطا در ذخیره: ' . $e->getMessage();
+                    $error = 'خطا در ذخیره: ';
                 }
             }
         }

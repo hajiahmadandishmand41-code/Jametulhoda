@@ -28,6 +28,7 @@ if (!$lesson) {
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    beginContentUploadScope();
     if (!verifyCsrfToken($_POST[CSRF_TOKEN_NAME] ?? '')) {
         $error = 'خطای امنیتی. لطفاً صفحه را رفرش کنید.';
     } else {
@@ -54,8 +55,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $up = uploadImage($_FILES['featured_image'], 'lessons');
                 if ($up) {
                     if ($featImg) {
-                        $old = rtrim(UPLOAD_DIR, '/') . '/../' . ltrim($featImg, '/');
-                        if (file_exists($old)) @unlink($old);
+                        $old = $featImg;
+                        scheduleFileDeletion($old);
                     }
                     $featImg = $up;
                 } else {
@@ -66,8 +67,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // حذف تصویر شاخص
             if (!$error && !empty($_POST['remove_image'])) {
                 if ($featImg) {
-                    $old = rtrim(UPLOAD_DIR, '/') . '/../' . ltrim($featImg, '/');
-                    if (file_exists($old)) @unlink($old);
+                    $old = $featImg;
+                    scheduleFileDeletion($old);
                 }
                 $featImg = '';
             }
@@ -79,8 +80,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $audioUp = uploadAudio($_FILES['audio_file']);
                     if ($audioUp) {
                         if ($audioPath) {
-                            $old = rtrim(UPLOAD_DIR, '/') . '/../' . ltrim($audioPath, '/');
-                            if (file_exists($old)) @unlink($old);
+                            $old = $audioPath;
+                            scheduleFileDeletion($old);
                         }
                         $audioPath = $audioUp;
                     } else {
@@ -88,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         if (!in_array($ext, ['mp3','ogg','wav','m4a','mp4'], true)) {
                             $error = 'فرمت فایل صوتی پشتیبانی نمی‌شود. فرمت‌های مجاز: MP3، OGG، WAV، M4A';
                         } else {
-                            $error = 'خطا در آپلود فایل صوتی. پوشه uploads/audio باید قابل نوشتن باشد.';
+                            $error = 'خطا در آپلود فایل صوتی. تنظیمات فضای ذخیره‌سازی و نوع فایل را بررسی کنید.';
                         }
                     }
                 } elseif ($audioErr !== UPLOAD_ERR_NO_FILE) {
@@ -106,8 +107,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // حذف فایل صوتی
             if (!$error && !empty($_POST['remove_audio'])) {
                 if ($audioPath) {
-                    $old = rtrim(UPLOAD_DIR, '/') . '/../' . ltrim($audioPath, '/');
-                    if (file_exists($old)) @unlink($old);
+                    $old = $audioPath;
+                    scheduleFileDeletion($old);
                 }
                 $audioPath = '';
             }
@@ -118,14 +119,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ensureFeaturedVideoColumn();
                 $upV = uploadFeaturedVideo($_FILES['video_file']);
                 if ($upV) {
-                    if ($videoPath && file_exists(__DIR__ . '/../../' . $videoPath)) @unlink(__DIR__ . '/../../' . $videoPath);
+                    if ($videoPath) scheduleFileDeletion($videoPath);
                     $videoPath = $upV;
                 } else {
                     $error = 'خطا در آپلود ویدیو. فرمت‌های مجاز: MP4، WebM، MOV (حداکثر 200MB)';
                 }
             }
             if (!$error && !empty($_POST['remove_video'])) {
-                if ($videoPath && file_exists(__DIR__ . '/../../' . $videoPath)) @unlink(__DIR__ . '/../../' . $videoPath);
+                if ($videoPath) scheduleFileDeletion($videoPath);
                 $videoPath = '';
             }
 
@@ -134,14 +135,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$error && !empty($_FILES['pdf_file']['name']) && $_FILES['pdf_file']['error'] === UPLOAD_ERR_OK) {
                 $upPdf = uploadBookFile($_FILES['pdf_file'], 'pdf');
                 if ($upPdf) {
-                    if ($pdfPath && file_exists(__DIR__ . '/../../' . $pdfPath)) @unlink(__DIR__ . '/../../' . $pdfPath);
+                    if ($pdfPath) scheduleFileDeletion($pdfPath);
                     $pdfPath = $upPdf;
                 } else {
                     $error = 'خطا در آپلود PDF.';
                 }
             }
             if (!$error && !empty($_POST['remove_pdf'])) {
-                if ($pdfPath && file_exists(__DIR__ . '/../../' . $pdfPath)) @unlink(__DIR__ . '/../../' . $pdfPath);
+                if ($pdfPath) scheduleFileDeletion($pdfPath);
                 $pdfPath = '';
             }
 
@@ -179,8 +180,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     redirect(siteUrl('admin/lessons/edit.php?id=' . $id));
 
                 } catch (PDOException $e) {
-                    error_log('Lesson edit error: ' . $e->getMessage());
-                    $error = 'خطا در ذخیره تغییرات: ' . $e->getMessage();
+                    error_log('Lesson edit error: ' . get_class($e));
+                    $error = 'خطا در ذخیره تغییرات: ';
                 }
             }
         }
@@ -393,7 +394,7 @@ $currentSections = !empty($lesson['page_section'])
                         <button type="submit" class="btn btn-success">
                             <i class="bi bi-save ms-1"></i>ذخیره تغییرات
                         </button>
-                        <a href="<?= siteUrl('admin/lessons/delete.php?id=' . $id . '&' . CSRF_TOKEN_NAME . '=' . urlencode(generateCsrfToken())) ?>"
+                        <a href="<?= siteUrl('admin/lessons/delete.php?id=' . $id) ?>"
                            class="btn btn-outline-danger"
                            onclick="return confirm('آیا از حذف این درس اطمینان دارید؟')">
                             <i class="bi bi-trash ms-1"></i>حذف درس

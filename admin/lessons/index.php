@@ -15,7 +15,7 @@ $offset = ($page - 1) * $per;
 $where  = ['1=1'];
 $params = [];
 if ($search) {
-    $where[]  = "(l.title LIKE ? OR l.content LIKE ? OR l.summary LIKE ? OR l.teacher LIKE ?)";
+    $where[]  = "(l.title ILIKE ? OR l.content ILIKE ? OR l.summary ILIKE ? OR l.teacher ILIKE ?)";
     $s        = '%' . $search . '%';
     $params   = array_merge($params, [$s, $s, $s, $s]);
 }
@@ -43,7 +43,7 @@ try {
     $stmt->execute(array_merge($params, [$per, $offset]));
     $lessons = $stmt->fetchAll();
 } catch (PDOException $e) {
-    error_log('admin/lessons query error: ' . $e->getMessage());
+    error_log('admin/lessons query error: ' . get_class($e));
     $lessons = [];
 }
 $pages   = (int)ceil($total / $per);
@@ -174,7 +174,7 @@ $withAudio  = (int)$db->query("SELECT COUNT(*) FROM lessons WHERE audio_file IS 
               <div class="d-flex gap-1">
                 <a href="<?= siteUrl('admin/lessons/edit.php?id=' . $l['id']) ?>" class="btn btn-sm btn-outline-primary py-0 px-2" title="ویرایش"><i class="bi bi-pencil"></i></a>
                 <a href="<?= siteUrl('lesson.php?slug=' . urlencode($l['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2" title="مشاهده"><i class="bi bi-eye"></i></a>
-                <a href="<?= siteUrl('admin/lessons/delete.php?id=' . $l['id'] . '&' . CSRF_TOKEN_NAME . '=' . urlencode(generateCsrfToken())) ?>"
+                <a href="<?= siteUrl('admin/lessons/delete.php?id=' . $l['id']) ?>"
                    class="btn btn-sm btn-outline-danger py-0 px-2"
                    title="حذف"
                    data-confirm="آیا از حذف درس «<?= sanitize($l['title']) ?>» اطمینان دارید؟">

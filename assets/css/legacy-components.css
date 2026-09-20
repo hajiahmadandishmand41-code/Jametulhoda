@@ -1,0 +1,208 @@
+
+    /* ─── Like Button ──────────────────────────────────── */
+    .btn-like {
+        display:inline-flex;align-items:center;gap:5px;
+        background:none;border:1.5px solid #e0e0e0;border-radius:30px;
+        padding:4px 12px;cursor:pointer;font-size:.85rem;
+        color:#888;transition:all .25s;line-height:1;
+        user-select:none;
+    }
+    .btn-like:hover { border-color:#e74c3c;color:#e74c3c;background:#fff5f5; }
+    .btn-like.liked  { border-color:#e74c3c;color:#e74c3c;background:#fff0f0; }
+    .btn-like .like-icon { font-size:1rem;transition:transform .2s; }
+    .btn-like:active .like-icon,
+    .btn-like.like-animate .like-icon { transform:scale(1.4); }
+    .btn-like .like-count { font-weight:600;min-width:1ch; }
+
+    /* ─── Video Player Wrapper ─────────────────────────── */
+    .video-player-wrap { background:#000;border-radius:12px;overflow:hidden;margin:16px 0; }
+    .video-player-wrap .plyr { border-radius:12px; }
+    .video-lazy-container { position:relative;cursor:pointer; }
+    .video-lazy-poster {
+        position:relative;border-radius:12px;overflow:hidden;
+        background:#111;display:flex;align-items:center;justify-content:center;
+        min-height:200px;
+    }
+    .video-lazy-poster img { width:100%;height:auto;object-fit:cover;display:block; }
+    .video-play-overlay {
+        position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+        background:rgba(0,0,0,.35);transition:background .2s;
+    }
+    .video-lazy-poster:hover .video-play-overlay { background:rgba(0,0,0,.5); }
+    .video-play-btn {
+        width:68px;height:68px;border-radius:50%;
+        background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;
+        box-shadow:0 4px 20px rgba(0,0,0,.4);transition:transform .2s;
+    }
+    .video-lazy-poster:hover .video-play-btn { transform:scale(1.12); }
+    .video-play-btn i { font-size:1.8rem;color:#c0392b;margin-right:-3px; }
+
+    /* نشانه‌گر ویدیو روی کارت */
+    .video-badge-card {
+        position:absolute;bottom:8px;right:8px;
+        background:rgba(0,0,0,.72);color:#fff;
+        border-radius:6px;padding:3px 8px;font-size:.72rem;
+        display:flex;align-items:center;gap:4px;backdrop-filter:blur(4px);
+    }
+
+    /* ─── دکمه پخش ویدیو شاخص روی کارت ─────────── */
+    .featured-video-play {
+        position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+        width:54px;height:54px;border-radius:50%;
+        background:rgba(229,57,53,.92);color:#fff;
+        border:none;cursor:pointer;
+        display:flex;align-items:center;justify-content:center;
+        box-shadow:0 4px 16px rgba(0,0,0,.4);
+        transition:all .25s;z-index:3;
+    }
+    .featured-video-play i { font-size:1.6rem;margin-left:-2px; }
+    .featured-video-play:hover { background:#c0392b;transform:translate(-50%,-50%) scale(1.12); }
+
+    /* ─── Modal پخش ویدیو شاخص از کارت ─────────── */
+    .featured-video-modal {
+        position:fixed;inset:0;z-index:99999;
+        background:rgba(0,0,0,.85);
+        display:flex;align-items:center;justify-content:center;
+        padding:20px;backdrop-filter:blur(6px);
+    }
+    .featured-video-modal-inner {
+        position:relative;max-width:1000px;width:100%;
+        background:#000;border-radius:12px;overflow:hidden;
+        box-shadow:0 20px 60px rgba(0,0,0,.6);
+    }
+    .featured-video-modal video { width:100%;max-height:80vh;display:block; }
+    .featured-video-modal-close {
+        position:absolute;top:-44px;left:0;
+        background:rgba(255,255,255,.1);color:#fff;
+        border:1px solid rgba(255,255,255,.2);
+        width:36px;height:36px;border-radius:50%;
+        font-size:1.2rem;cursor:pointer;
+        display:flex;align-items:center;justify-content:center;
+    }
+    .featured-video-modal-close:hover { background:rgba(255,255,255,.2); }
+
+    /* ─── منوی همبرگری سمت چپ (Offcanvas Mobile) ── */
+    .hamburger-box {
+        display:none;
+        width:44px;height:44px;
+        background:var(--primary,#1a7a4a);
+        border-radius:10px;
+        align-items:center;justify-content:center;
+        cursor:pointer;border:none;
+        box-shadow:0 3px 12px rgba(26,122,74,.35);
+        transition:all .25s;
+        flex-shrink:0;
+    }
+    .hamburger-box:hover {
+        background:var(--primary-dark,#0f5c38);
+        box-shadow:0 5px 18px rgba(26,122,74,.5);
+        transform:translateY(-1px);
+    }
+    .hamburger-box .hb-line {
+        display:block;width:20px;height:2px;
+        background:#fff;border-radius:2px;
+        transition:all .3s ease;position:relative;
+    }
+    .hamburger-box .hb-lines {
+        display:flex;flex-direction:column;gap:5px;
+    }
+    .hamburger-box.open .hb-lines .hb-line:nth-child(1) {
+        transform:translateY(7px) rotate(45deg);
+    }
+    .hamburger-box.open .hb-lines .hb-line:nth-child(2) {
+        opacity:0;transform:scaleX(0);
+    }
+    .hamburger-box.open .hb-lines .hb-line:nth-child(3) {
+        transform:translateY(-7px) rotate(-45deg);
+    }
+
+    /* Mobile Offcanvas Overlay */
+    .mobile-nav-overlay {
+        display:none;position:fixed;inset:0;
+        background:rgba(0,0,0,.55);z-index:9998;
+        backdrop-filter:blur(2px);
+        opacity:0;transition:opacity .3s;
+    }
+    .mobile-nav-overlay.active { opacity:1; }
+
+    /* Mobile Nav Drawer */
+    .mobile-nav-drawer {
+        position:fixed;top:0;left:0;bottom:0;
+        width:min(85vw,320px);
+        background:#fff;z-index:9999;
+        transform:translateX(-100%);
+        transition:transform .35s cubic-bezier(.4,0,.2,1);
+        overflow-y:auto;
+        box-shadow:4px 0 30px rgba(0,0,0,.18);
+        display:flex;flex-direction:column;
+    }
+    .mobile-nav-drawer.open {
+        transform:translateX(0);
+    }
+    .mobile-nav-header {
+        background:var(--primary-dark,#0f5c38);
+        padding:20px 16px 16px;
+        display:flex;align-items:center;gap:12px;
+    }
+    .mobile-nav-header img {
+        width:44px;height:44px;border-radius:50%;
+        border:2px solid rgba(255,255,255,.4);object-fit:contain;background:#fff;
+    }
+    .mobile-nav-header .site-name-sm {
+        color:#fff;font-size:.95rem;font-weight:700;
+        font-family:'Amiri',serif;line-height:1.3;flex:1;
+    }
+    .mobile-nav-header .site-slogan-sm {
+        color:rgba(255,255,255,.7);font-size:.75rem;
+    }
+    .mobile-nav-close {
+        background:rgba(255,255,255,.15);border:none;
+        color:#fff;width:34px;height:34px;border-radius:50%;
+        display:flex;align-items:center;justify-content:center;
+        cursor:pointer;font-size:1.1rem;flex-shrink:0;
+        transition:background .2s;
+    }
+    .mobile-nav-close:hover { background:rgba(255,255,255,.3); }
+    .mobile-nav-body { padding:12px 0;flex:1; }
+    .mobile-nav-body a {
+        display:flex;align-items:center;gap:10px;
+        padding:12px 20px;color:var(--text-dark,#1a1a2e);
+        font-size:.95rem;font-weight:500;
+        border-bottom:1px solid #f5f5f5;
+        text-decoration:none;transition:all .2s;
+    }
+    .mobile-nav-body a:hover,
+    .mobile-nav-body a.active {
+        background:var(--primary-soft,#e8f5ee);
+        color:var(--primary,#1a7a4a);padding-right:28px;
+    }
+    .mobile-nav-body a i {
+        width:20px;text-align:center;color:var(--primary,#1a7a4a);font-size:1rem;
+    }
+    .mobile-nav-section-title {
+        padding:10px 20px 4px;
+        font-size:.75rem;font-weight:700;
+        color:var(--text-muted,#9898b0);text-transform:uppercase;
+        letter-spacing:.06em;
+    }
+    .mobile-nav-search {
+        padding:12px 16px;
+        border-top:1px solid #f0f0f0;
+    }
+    .mobile-nav-search .form-control {
+        border-radius:8px;border:1.5px solid #e0e0e0;
+        font-family:inherit;font-size:.9rem;
+        padding:8px 14px;
+    }
+    .mobile-nav-search .form-control:focus {
+        border-color:var(--primary,#1a7a4a);
+        box-shadow:0 0 0 3px rgba(26,122,74,.1);
+    }
+    @media(min-width:992px){
+        .hamburger-box { display:none !important; }
+        .mobile-nav-drawer,.mobile-nav-overlay { display:none !important; }
+    }
+    @media(max-width:991.98px){
+        .hamburger-box { display:flex; }
+    }
+    

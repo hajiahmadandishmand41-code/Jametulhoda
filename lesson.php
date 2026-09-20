@@ -69,7 +69,7 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </div>
 
-<main class="py-5">
+<div class="py-5">
     <div class="container">
         <div class="row g-4">
             <!-- محتوای اصلی -->
@@ -162,7 +162,7 @@ require_once __DIR__ . '/includes/header.php';
                     <!-- محتوای کامل -->
                     <?php if ($lesson['content']): ?>
                     <div class="single-post-content mt-4">
-                        <?= $lesson['content'] ?>
+                        <?= safeRichText($lesson['content']) ?>
                     </div>
                     <?php endif; ?>
 
@@ -245,7 +245,7 @@ require_once __DIR__ . '/includes/header.php';
             </div>
         </div>
     </div>
-</main>
+</div>
 
 <script>
 function copyLessonLink(url) {
@@ -265,8 +265,8 @@ function copyLessonLink(url) {
     if (!audioEl) return;
     var plyrAudio = new Plyr(audioEl, {
         controls: ['play','progress','current-time','duration','mute','volume'],
-        loadSprite: false,
-        iconUrl: '',
+        loadSprite: true,
+        iconUrl: document.querySelector('meta[name=plyr-sprite]')?.content,
         i18n: {
             play: 'پخش', pause: 'مکث', mute: 'بی‌صدا',
             unmute: 'صدا', volume: 'صدا'

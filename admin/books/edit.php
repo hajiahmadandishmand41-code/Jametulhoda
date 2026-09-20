@@ -23,6 +23,7 @@ if (!$book) {
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    beginContentUploadScope();
     if (!verifyCsrfToken($_POST[CSRF_TOKEN_NAME] ?? '')) {
         $error = 'خطای امنیتی.';
     } else {
@@ -38,16 +39,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // آپلود تصویر جلد جدید
             if (!empty($_FILES['cover_image']['name']) && $_FILES['cover_image']['error'] === UPLOAD_ERR_OK) {
-                $up = uploadImage($_FILES['cover_image'], 'books/covers');
+                $up = uploadImage($_FILES['cover_image'], 'book-covers');
                 if ($up) {
-                    if ($coverImg && file_exists(__DIR__ . '/../../' . $coverImg)) @unlink(__DIR__ . '/../../' . $coverImg);
+                    if ($coverImg) scheduleFileDeletion($coverImg);
                     $coverImg = $up;
                 } else {
                     $error = 'خطا در آپلود تصویر جلد.';
                 }
             }
             if (!$error && !empty($_POST['remove_cover'])) {
-                if ($coverImg && file_exists(__DIR__ . '/../../' . $coverImg)) @unlink(__DIR__ . '/../../' . $coverImg);
+                if ($coverImg) scheduleFileDeletion($coverImg);
                 $coverImg = '';
             }
 
@@ -55,14 +56,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$error && !empty($_FILES['pdf_file']['name']) && $_FILES['pdf_file']['error'] === UPLOAD_ERR_OK) {
                 $up = uploadBookFile($_FILES['pdf_file'], 'pdf');
                 if ($up) {
-                    if ($pdfFile && file_exists(__DIR__ . '/../../' . $pdfFile)) @unlink(__DIR__ . '/../../' . $pdfFile);
+                    if ($pdfFile) scheduleFileDeletion($pdfFile);
                     $pdfFile = $up;
                 } else {
                     $error = 'خطا در آپلود فایل PDF.';
                 }
             }
             if (!$error && !empty($_POST['remove_pdf'])) {
-                if ($pdfFile && file_exists(__DIR__ . '/../../' . $pdfFile)) @unlink(__DIR__ . '/../../' . $pdfFile);
+                if ($pdfFile) scheduleFileDeletion($pdfFile);
                 $pdfFile = '';
             }
 
@@ -70,14 +71,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$error && !empty($_FILES['word_file']['name']) && $_FILES['word_file']['error'] === UPLOAD_ERR_OK) {
                 $up = uploadBookFile($_FILES['word_file'], 'word');
                 if ($up) {
-                    if ($wordFile && file_exists(__DIR__ . '/../../' . $wordFile)) @unlink(__DIR__ . '/../../' . $wordFile);
+                    if ($wordFile) scheduleFileDeletion($wordFile);
                     $wordFile = $up;
                 } else {
                     $error = 'خطا در آپلود فایل Word.';
                 }
             }
             if (!$error && !empty($_POST['remove_word'])) {
-                if ($wordFile && file_exists(__DIR__ . '/../../' . $wordFile)) @unlink(__DIR__ . '/../../' . $wordFile);
+                if ($wordFile) scheduleFileDeletion($wordFile);
                 $wordFile = '';
             }
 
@@ -92,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['flash_type'] = 'success';
                     redirect(siteUrl('admin/books/'));
                 } catch (PDOException $e) {
-                    error_log('books edit error: ' . $e->getMessage());
+                    error_log('books edit error: ' . get_class($e));
                     $error = 'خطا در ذخیره‌سازی.';
                 }
             }

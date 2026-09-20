@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', function () {
             method: 'POST',
             body:   formData,
             credentials: 'same-origin',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-Token': document.querySelector('meta[name=csrf-token]')?.content || '' }
         })
         .then(function (res) {
             if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -295,6 +295,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (typeof Plyr !== 'undefined' && videoEl) {
             try {
                 activePlyr = new Plyr(videoEl, {
+                    iconUrl: document.querySelector('meta[name=plyr-sprite]')?.content,
                     controls: [
                         'play-large', 'play', 'rewind', 'fast-forward',
                         'progress', 'current-time', 'duration',

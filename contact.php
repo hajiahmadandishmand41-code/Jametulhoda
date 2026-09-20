@@ -12,53 +12,7 @@ startSecureSession();
 
 // ─── اطمینان از وجود جدول پیام‌ها (سازگار با is_read) ────────────────────────
 function ensureContactTable(): void {
-    static $done = false;
-    if ($done) return;
-    try {
-        $db = getDB();
-        $db->exec(
-            "CREATE TABLE IF NOT EXISTS `contact_messages` (
-                `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                `name`       VARCHAR(200) NOT NULL,
-                `email`      VARCHAR(200) DEFAULT NULL,
-                `phone`      VARCHAR(50)  DEFAULT NULL,
-                `subject`    VARCHAR(300) DEFAULT NULL,
-                `message`    TEXT         NOT NULL,
-                `ip_address` VARCHAR(45)  DEFAULT NULL,
-                `is_read`    TINYINT(1)   NOT NULL DEFAULT 0,
-                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (`id`),
-                KEY `idx_is_read` (`is_read`),
-                KEY `idx_created` (`created_at`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
-        );
-
-        // Migration ایمن: اگر جدول قدیمی با ستون status وجود دارد،
-        // ستون is_read را اضافه می‌کنیم (اگر وجود نداشت)
-        try {
-            $check = $db->query("SHOW COLUMNS FROM contact_messages LIKE 'is_read'");
-            if ($check->rowCount() === 0) {
-                $db->exec("ALTER TABLE contact_messages ADD COLUMN `is_read` TINYINT(1) NOT NULL DEFAULT 0 AFTER `ip_address`");
-                // مهاجرت از status به is_read اگر ستون status وجود داشت
-                $statusCheck = $db->query("SHOW COLUMNS FROM contact_messages LIKE 'status'");
-                if ($statusCheck->rowCount() > 0) {
-                    $db->exec("UPDATE contact_messages SET is_read = CASE WHEN status IN ('read','replied') THEN 1 ELSE 0 END");
-                }
-            }
-        } catch (\Throwable $e) { /* بی‌صدا رد شو */ }
-
-        // اضافه کردن ip_address اگر وجود نداشت
-        try {
-            $ipCheck = $db->query("SHOW COLUMNS FROM contact_messages LIKE 'ip_address'");
-            if ($ipCheck->rowCount() === 0) {
-                $db->exec("ALTER TABLE contact_messages ADD COLUMN `ip_address` VARCHAR(45) DEFAULT NULL AFTER `message`");
-            }
-        } catch (\Throwable $e) { /* بی‌صدا رد شو */ }
-
-        $done = true;
-    } catch (PDOException $e) {
-        error_log('ensureContactTable error: ' . $e->getMessage());
-    }
+    // Schema managed by bin/migrate.php.
 }
 
 ensureContactTable();
@@ -97,10 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // دریافت IP
-        $ip = trim(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']
-            ?? $_SERVER['HTTP_X_REAL_IP']
-            ?? $_SERVER['REMOTE_ADDR']
-            ?? '0.0.0.0')[0]);
+        $ip = clientIp();
 
         // محدودیت نرخ: حداکثر ۳ پیام در ۳۰ دقیقه از یک IP
         if (empty($errors) && $ip) {
@@ -109,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // بررسی وجود ستون ip_address قبل از کوئری
                 $rstmt  = $db->prepare(
                     "SELECT COUNT(*) FROM contact_messages
-                     WHERE ip_address = ? AND created_at > DATE_SUB(NOW(), INTERVAL 30 MINUTE)"
+                     WHERE ip_address = ? AND created_at > (NOW() - INTERVAL '30 minutes')"
                 );
                 $rstmt->execute([$ip]);
                 if ((int)$rstmt->fetchColumn() >= 3) {
@@ -117,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             } catch (PDOException $e) {
                 // اگر DB مشکل داشت، ادامه بده
-                error_log('Rate limit check error: ' . $e->getMessage());
+                error_log('Rate limit check error: ' . get_class($e));
             }
         }
 
@@ -141,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // ابطال CSRF token برای جلوگیری از ارسال مجدد
                 unset($_SESSION[CSRF_TOKEN_NAME]);
             } catch (PDOException $e) {
-                error_log('Contact form save error: ' . $e->getMessage());
+                error_log('Contact form save error: ' . get_class($e));
                 $errors[] = 'خطا در ذخیره پیام. لطفاً دوباره تلاش کنید.';
             }
         }
@@ -162,7 +113,7 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </div>
 
-<main class="py-5">
+<div class="py-5">
     <div class="container">
         <div class="row g-5">
             <!-- فرم تماس -->
@@ -327,7 +278,7 @@ require_once __DIR__ . '/includes/header.php';
             </div>
         </div>
     </div>
-</main>
+</div>
 
 <script>
 // اعتبارسنجی سمت کلاینت

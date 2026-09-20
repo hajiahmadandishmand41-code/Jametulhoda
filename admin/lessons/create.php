@@ -13,6 +13,7 @@ $error   = '';
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    beginContentUploadScope();
     if (!verifyCsrfToken($_POST[CSRF_TOKEN_NAME] ?? '')) {
         $error = 'خطای امنیتی. لطفاً صفحه را رفرش کنید.';
     } else {
@@ -58,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         if (!in_array($ext, ['mp3','ogg','wav','m4a','mp4'], true)) {
                             $error = 'فرمت فایل صوتی پشتیبانی نمی‌شود. فرمت‌های مجاز: MP3، OGG، WAV، M4A';
                         } else {
-                            $error = 'خطا در آپلود فایل صوتی. پوشه uploads/audio باید قابل نوشتن باشد.';
+                            $error = 'خطا در آپلود فایل صوتی. تنظیمات فضای ذخیره‌سازی و نوع فایل را بررسی کنید.';
                         }
                     }
                 } elseif ($audioErr !== UPLOAD_ERR_NO_FILE) {
@@ -76,28 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$error) {
                 try {
                     // اطمینان از وجود جدول lessons با همه ستون‌های لازم
-                    $db->exec(
-                        "CREATE TABLE IF NOT EXISTS `lessons` (
-                            `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                            `title`         VARCHAR(500) NOT NULL,
-                            `slug`          VARCHAR(500) NOT NULL,
-                            `subject`       VARCHAR(255) DEFAULT NULL,
-                            `teacher`       VARCHAR(255) DEFAULT NULL,
-                            `content`       TEXT         DEFAULT NULL,
-                            `summary`       TEXT         DEFAULT NULL,
-                            `featured_image` VARCHAR(500) DEFAULT NULL,
-                            `audio_file`    VARCHAR(500) DEFAULT NULL,
-                            `views`         INT UNSIGNED NOT NULL DEFAULT 0,
-                            `status`        ENUM('published','draft') NOT NULL DEFAULT 'draft',
-                            `page_section`  VARCHAR(255) DEFAULT 'home',
-                            `level`          ENUM('beginner','intermediate','advanced') DEFAULT NULL,
-                            `sort_order`     INT NOT NULL DEFAULT 0,
-                            `created_at`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                            `updated_at`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                            PRIMARY KEY (`id`),
-                            UNIQUE KEY `slug` (`slug`(191))
-                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
-                    );
+                    /* Schema installed by CLI migration. */
 
                     // Migration مجدد اطمینان
                     ensureLessonsColumns();
@@ -125,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $slug = uniqueSlug('lessons', $title);
                     $stmt = $db->prepare(
                         "INSERT INTO lessons (title, slug, subject, teacher, content, summary, featured_image, audio_file, video_file, pdf_file, status, page_section, level, created_at, updated_at)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())"
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) RETURNING id"
                     );
                     $stmt->execute([
                         $title, $slug, $subject ?: null, $teacher ?: null,
@@ -133,7 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $videoPath ?: null, $pdfPath ?: null,
                         $status, $page_section, $level
                     ]);
-                    $newId = (int)$db->lastInsertId();
+                    $newId = (int)$stmt->fetchColumn();
 
                     $_SESSION['flash_msg']  = 'درس با موفقیت ذخیره شد.';
                     $_SESSION['flash_type'] = 'success';
@@ -141,8 +121,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     } // end if(!$error) for video/pdf
                 } catch (PDOException $e) {
-                    error_log('Lesson create error: ' . $e->getMessage());
-                    $error = 'خطا در ذخیره درس: ' . $e->getMessage();
+                    error_log('Lesson create error: ' . get_class($e));
+                    $error = 'خطا در ذخیره درس: ';
                 }
             }
         }

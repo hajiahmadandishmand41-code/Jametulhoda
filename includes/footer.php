@@ -1,3 +1,7 @@
+<?php if (($currentPage ?? '') === 'index.php'): ?>
+<div class="container"><section class="jhd-invitation"><div><h2>آغاز یک مسیر روشن</h2><p>برای آشنایی با برنامه‌های آموزشی و شرایط پذیرش، با ما در ارتباط باشید.</p></div><a class="jhd-button" href="<?= siteUrl('contact.php') ?>">گفت‌وگو با مدرسه <i class="bi bi-arrow-left"></i></a></section></div>
+<?php endif; ?>
+</main>
 <?php
 /**
  * footer.php - فوتر عمومی سایت — نسخه ۲.۱ (+ Plyr.js)
@@ -17,7 +21,7 @@ $siteEmail     = getSetting('email', SITE_EMAIL);
                 <div class="col-lg-4 col-md-6">
                     <div class="footer-widget">
                         <div class="d-flex align-items-center mb-3 gap-3">
-                            <img src="<?= siteUrl('assets/images/logo.jpg') ?>" alt="لوگو" class="footer-logo" onerror="this.src='<?= siteUrl('assets/images/placeholder.svg') ?>'">
+                            <img src="<?= imgUrl(getSetting('site_logo', 'assets/images/logo.jpg')) ?>" alt="لوگو" class="footer-logo" onerror="this.src='<?= siteUrl('assets/images/placeholder.svg') ?>'">
                             <h5 class="footer-title mb-0"><?= sanitize($siteName) ?></h5>
                         </div>
                         <p class="footer-text"><?= sanitize(getSetting('site_slogan', SITE_SLOGAN)) ?></p>
@@ -27,9 +31,9 @@ $siteEmail     = getSetting('email', SITE_EMAIL);
                             مؤسس: آیت‌الله محمدحسین حلیمی
                         </p>
                         <div class="footer-social mt-3">
-                            <?php if ($t = getSetting('social_telegram')): ?><a href="<?= sanitize($t) ?>" target="_blank" class="social-link" title="تلگرام"><i class="bi bi-telegram"></i></a><?php endif; ?>
-                            <?php if ($y = getSetting('social_youtube')): ?><a href="<?= sanitize($y) ?>" target="_blank" class="social-link" title="یوتیوب"><i class="bi bi-youtube"></i></a><?php endif; ?>
-                            <?php if ($i = getSetting('social_instagram')): ?><a href="<?= sanitize($i) ?>" target="_blank" class="social-link" title="اینستاگرام"><i class="bi bi-instagram"></i></a><?php endif; ?>
+                            <?php if ($t = getSetting('social_telegram')): ?><a href="<?= sanitize(safeExternalUrl($t)) ?>" target="_blank" rel="noopener noreferrer" class="social-link" title="تلگرام"><i class="bi bi-telegram"></i></a><?php endif; ?>
+                            <?php if ($y = getSetting('social_youtube')): ?><a href="<?= sanitize(safeExternalUrl($y)) ?>" target="_blank" rel="noopener noreferrer" class="social-link" title="یوتیوب"><i class="bi bi-youtube"></i></a><?php endif; ?>
+                            <?php if ($i = getSetting('social_instagram')): ?><a href="<?= sanitize(safeExternalUrl($i)) ?>" target="_blank" rel="noopener noreferrer" class="social-link" title="اینستاگرام"><i class="bi bi-instagram"></i></a><?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -128,9 +132,9 @@ $siteEmail     = getSetting('email', SITE_EMAIL);
 <button id="scrollTop" title="بازگشت به بالا"><i class="bi bi-chevron-up"></i></button>
 
 <!-- Scripts -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="<?= siteUrl('assets/vendor/bootstrap.bundle.min.js') ?>"></script>
 <!-- Plyr Video Player JS -->
-<script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
+<script src="<?= siteUrl('assets/vendor/plyr.js') ?>"></script>
 <script src="<?= siteUrl('assets/js/main.js') ?>"></script>
 <script src="<?= siteUrl('assets/js/media-player.js') ?>" defer></script>
 </body>

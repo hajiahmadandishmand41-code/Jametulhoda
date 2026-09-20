@@ -19,13 +19,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$row || !password_verify($current, $row['password'])) {
             $error = 'رمز عبور فعلی اشتباه است.';
-        } elseif (strlen($new) < 8) {
-            $error = 'رمز عبور جدید باید حداقل ۸ کاراکتر باشد.';
+        } elseif (strlen($new) < 14) {
+            $error = 'رمز عبور جدید باید حداقل ۱۴ کاراکتر باشد.';
         } elseif ($new !== $confirm) {
             $error = 'تکرار رمز عبور مطابقت ندارد.';
         } else {
             $hash = password_hash($new, PASSWORD_BCRYPT, ['cost' => 12]);
-            $db->prepare("UPDATE users SET password = ? WHERE id = ?")->execute([$hash, $admin2['id']]);
+            $db->prepare("UPDATE users SET password = ?, auth_version=auth_version+1 WHERE id = ?")->execute([$hash, $admin2['id']]);
             $_SESSION['flash_msg']  = 'رمز عبور با موفقیت تغییر یافت.';
             $_SESSION['flash_type'] = 'success';
             redirect(siteUrl('admin/'));
@@ -47,8 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
             <div class="mb-3">
                 <label>رمز عبور جدید</label>
-                <input type="password" name="new_password" class="form-control" required minlength="8">
-                <div class="form-text">حداقل ۸ کاراکتر</div>
+                <input type="password" name="new_password" class="form-control" required minlength="14">
+                <div class="form-text">حداقل ۱۴ کاراکتر</div>
             </div>
             <div class="mb-4">
                 <label>تکرار رمز عبور جدید</label>
