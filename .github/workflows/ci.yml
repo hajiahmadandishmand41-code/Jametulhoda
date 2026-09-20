@@ -31,6 +31,8 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
+          coverage: none
+          ini-values: opcache.jit=0, opcache.jit_buffer_size=0
           extensions: pdo_pgsql, mbstring, fileinfo, gd, dom, curl, zip
           tools: composer:v2
       - uses: actions/setup-node@v5

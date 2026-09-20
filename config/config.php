@@ -57,7 +57,9 @@ date_default_timezone_set('Asia/Kabul');
 
 // All entrypoints share non-disclosing failures and response hardening.
 if (PHP_SAPI !== 'cli') {
-    if (!ob_get_level()) ob_start();
+    // A pre-existing PHP buffer may auto-flush after 4096 bytes. Keep our own
+    // unbounded response buffer until controllers finish redirect/header decisions.
+    ob_start(null, 0);
     header('X-Content-Type-Options: nosniff');
     header('Referrer-Policy: strict-origin-when-cross-origin');
     if (APP_ENV === 'production') header('X-Frame-Options: SAMEORIGIN');
