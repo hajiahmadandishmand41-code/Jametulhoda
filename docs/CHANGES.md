@@ -158,4 +158,22 @@
 - `.github/workflows/ci.yml`: اجرای واقعی image ساخته‌شده روی PORT=8081 و تکرار آزمون HTTP/browser؛ diagnostics و log کانتینر.
 - `README.md`، `docs/AUDIT_FA.md`، `docs/DEPLOYMENT_FA.md`: شواهد قابل ردیابی، محدودیت deployment و قطع اعتبار اتصال GitHub در آخرین push.
 
-بخش عمده تغییرات push شده است؛ اصلاح پایانی خزنده و گزارش نهایی به علت خطای GitHub authentication فعلاً فقط در commitهای محلی محفوظ‌اند.
+خطای authentication مرحله قبل رفع شد و commitهای محلی باقی‌مانده push شدند.
+
+
+### ادامه کار: بازیابی آپلود پس از شکست ذخیره
+
+| فایل | تغییر |
+|---|---|
+| `database.sql` | journal مستقل `pending_uploads`، index زمان پردازش و مهلت صف حذف. |
+| `includes/storage.php` | ثبت قصد پاک‌سازی پیش از نوشتن فایل با connection مستقل؛ نگهداری فایل متصل و آزادسازی فایل بی‌مرجع در پایان درخواست. |
+| `includes/content-delete.php` | انتقال اتمیک jobهای رسیده از journal به صف حذف با `SKIP LOCKED`؛ رعایت مهلت درخواست‌های ناتمام. |
+| `admin/books/create.php`، `admin/books/edit.php` | فعال‌کردن چرخه بازیابی آپلود کتاب. |
+| `admin/lessons/create.php`، `admin/lessons/edit.php` | فعال‌کردن چرخه بازیابی آپلود درس. |
+| `admin/posts/create.php`، `admin/posts/edit.php` | فعال‌کردن چرخه بازیابی فایل‌های پست. |
+| `admin/news/create.php`، `admin/news/edit.php` | فعال‌کردن چرخه بازیابی فایل‌های خبر. |
+| `admin/speeches/create.php`، `admin/speeches/edit.php` | فعال‌کردن چرخه بازیابی فایل‌های سخنرانی. |
+| `admin/settings.php` | بازیابی آپلود لوگوی بدون مرجع. |
+| `tests/http.mjs` | چهار بررسی جدید برای شکست فایل دوم، پاک‌سازی فایل اول و حفظ آپلود مستقل کتابخانه. |
+| `tests/storage-recovery.php` | ده بررسی DB/storage برای rollback، journal مستقل، مهلت پردازش و حفظ مرجع؛ opt-in صریح برای محیط آزمایشی. |
+| `.github/workflows/ci.yml` | اجرای تست بازیابی در PostgreSQL واقعی پیش از تست‌های HTTP و کانتینر. |
