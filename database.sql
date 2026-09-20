@@ -204,6 +204,12 @@ CREATE TABLE IF NOT EXISTS stored_files (
 CREATE INDEX IF NOT EXISTS contact_rate_limit ON contact_messages(ip_address,created_at);
 CREATE TABLE IF NOT EXISTS storage_deletions (reference TEXT PRIMARY KEY, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
 ALTER TABLE storage_deletions ADD COLUMN IF NOT EXISTS not_before TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE TABLE IF NOT EXISTS pending_uploads (
+ reference TEXT PRIMARY KEY,
+ not_before TIMESTAMPTZ NOT NULL DEFAULT (NOW()+INTERVAL '24 hours'),
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS pending_uploads_due ON pending_uploads(not_before);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_version INTEGER NOT NULL DEFAULT 1;
 CREATE INDEX IF NOT EXISTS posts_public_listing ON posts(status,post_type,published_at DESC);
 CREATE INDEX IF NOT EXISTS lessons_public_listing ON lessons(status,created_at DESC);

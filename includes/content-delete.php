@@ -26,6 +26,14 @@ function deleteContentRecord(string $table, int $id, ?string $postType = null): 
 }
 function processStorageDeletions(): int {
     $db=getDB();$deleted=0;
+    // A separate staging journal prevents older deletion workers from seeing
+    // in-flight uploads. Promote only expired/completed requests atomically.
+    $db->exec("WITH due AS (
+        SELECT reference FROM pending_uploads WHERE not_before<=NOW()
+        ORDER BY not_before LIMIT 100 FOR UPDATE SKIP LOCKED
+    ), claimed AS (
+        DELETE FROM pending_uploads p USING due WHERE p.reference=due.reference RETURNING p.reference
+    ) INSERT INTO storage_deletions (reference) SELECT reference FROM claimed ON CONFLICT DO NOTHING");
     foreach($db->query('SELECT reference FROM storage_deletions WHERE not_before <= NOW() ORDER BY created_at LIMIT 100')->fetchAll() as $job) {
         try {
             if(storedFileIsReferenced($job['reference'])) {

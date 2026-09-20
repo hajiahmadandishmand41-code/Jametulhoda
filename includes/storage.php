@@ -21,7 +21,7 @@ function beginContentUploadScope(): void {
         try {
             // An unfinished transaction cannot be a successful save at request end.
             if (getDB()->inTransaction()) getDB()->rollBack();
-            $ready = uploadJournalDB()->prepare('UPDATE storage_deletions SET not_before=NOW() WHERE reference=?');
+            $ready = uploadJournalDB()->prepare('UPDATE pending_uploads SET not_before=NOW() WHERE reference=?');
             foreach ($scope['completed'] as $url) $ready->execute([$url]);
             require_once __DIR__.'/content-delete.php';
             processStorageDeletions();
@@ -119,7 +119,7 @@ function storeValidatedFile(string $path, string $kind, string $folder): string 
         if ($scope['active']) {
             // Write ahead of physical storage. A crash/timeout retains a durable job.
             // Give in-flight requests a full day before a background worker may act.
-            uploadJournalDB()->prepare("INSERT INTO storage_deletions (reference,not_before) VALUES (?,NOW()+INTERVAL '24 hours') ON CONFLICT DO NOTHING")->execute([$url]);
+            uploadJournalDB()->prepare("INSERT INTO pending_uploads (reference,not_before) VALUES (?,NOW()+INTERVAL '24 hours') ON CONFLICT DO NOTHING")->execute([$url]);
         }
         if (UPLOAD_STORAGE === 's3') {
             storageClient()->putObject([

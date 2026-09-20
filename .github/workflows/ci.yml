@@ -45,6 +45,8 @@ jobs:
           composer install --no-interaction --prefer-dist --no-dev 2>&1 | tee /tmp/composer-install.log
       - run: find . -name '*.php' -not -path './vendor/*' -not -path './node_modules/*' -print0 | xargs -0 -n1 php -l
       - run: php tests/security.php && php bin/migrate.php && php bin/migrate.php
+      - name: Upload rollback and durable cleanup
+        run: ALLOW_DESTRUCTIVE_TESTS=1 php tests/storage-recovery.php
       - name: Temporary test administrator
         run: |
           password=$(openssl rand -hex 24)
