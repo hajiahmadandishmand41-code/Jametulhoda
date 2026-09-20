@@ -3,7 +3,11 @@
 require_once __DIR__ . '/config/config.php';
 if (env_value('VERCEL') && (int)($_SERVER['CONTENT_LENGTH'] ?? 0)>4*1024*1024) { http_response_code(413); exit('حجم درخواست بیش از حد مجاز است.'); }
 $path = rawurldecode(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/');
-if (BASE_PATH && str_starts_with($path, BASE_PATH . '/')) $path = substr($path, strlen(BASE_PATH));
+if (BASE_PATH) {
+    if ($path === BASE_PATH) $path='/';
+    elseif (str_starts_with($path, BASE_PATH . '/')) $path=substr($path,strlen(BASE_PATH));
+    else { http_response_code(404); exit; }
+}
 if (str_contains($path, '..') || str_contains($path, "\0") || str_contains($path, '\\')) { http_response_code(404); exit; }
 if (preg_match('~^/assets/[a-zA-Z0-9_./-]+\.(css|js|svg|png|jpe?g|webp|gif|woff2?)$~D', $path) ||
     (UPLOAD_STORAGE === 'local' && preg_match('~^/uploads/(?:[a-zA-Z0-9_-]+/)+[a-zA-Z0-9_.-]+\.(jpg|jpeg|png|gif|webp|mp3|ogg|wav|m4a|mp4|webm|mov|mkv|pdf|doc|docx)$~D', $path))) {

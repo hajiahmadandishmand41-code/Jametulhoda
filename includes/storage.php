@@ -8,6 +8,7 @@ function storageKey(string $value): string {
     if (str_starts_with($value, UPLOAD_DIR)) $value = 'uploads/' . substr($value, strlen(UPLOAD_DIR));
     if (str_starts_with($value, UPLOAD_BASE_URL . '/')) $value = substr($value, strlen(UPLOAD_BASE_URL) + 1);
     elseif (str_starts_with($value, BASE_PATH . '/uploads/')) $value = substr($value, strlen(BASE_PATH . '/uploads/'));
+    elseif (str_starts_with($value, '/uploads/')) $value = substr($value, 9);
     elseif (str_starts_with($value, 'uploads/')) $value = substr($value, 8);
     if (!in_array(explode('/', $value)[0], ['posts','lessons','books','book-covers','site','media',UPLOAD_IMAGES,UPLOAD_AUDIO,UPLOAD_VIDEO,UPLOAD_DOCUMENTS], true)) return '';
     if (!preg_match('~^(?:[a-zA-Z0-9_-]+/)+[a-zA-Z0-9_.-]+\.(?:jpg|jpeg|png|gif|webp|mp3|ogg|wav|m4a|mp4|webm|mov|mkv|pdf|doc|docx)$~D', $value) || str_contains($value, '..')) return '';

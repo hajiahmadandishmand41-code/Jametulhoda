@@ -42,7 +42,7 @@ jobs:
           composer validate --no-check-lock --no-check-publish
           composer install --no-interaction --prefer-dist --no-dev 2>&1 | tee /tmp/composer-install.log
       - name: Dependency lock snapshot
-        run: php -r 'echo "::notice title=Dependency lock snapshot::".base64_encode(gzencode(file_get_contents("composer.lock")))."\n";'
+        run: php -r 'foreach(str_split(base64_encode(gzencode(file_get_contents("composer.lock"))),2000) as $i=>$chunk) echo "::notice title=Dependency lock chunk $i::$chunk\n"; echo "::notice title=Lock checksum::".hash_file("sha256","composer.lock")."\n";'
 
       - run: find . -name '*.php' -not -path './vendor/*' -not -path './node_modules/*' -print0 | xargs -0 -n1 php -l
       - run: php tests/security.php && php bin/migrate.php && php bin/migrate.php
@@ -56,11 +56,23 @@ jobs:
       - name: Integration and browser tests
         run: |
           php -S 0.0.0.0:8080 router.php > test-server.log 2>&1 &
-          npm run test:http
-          npm run test:browser
+          npm run test:http 2>&1 | tee /tmp/http-tests.log
+          npm run test:browser 2>&1 | tee /tmp/browser-tests.log
+      - name: Failure diagnostics
+        if: failure()
+        run: |
+          python3 - <<'PYTHON'
+          import pathlib
+          for name in ['/tmp/http-tests.log','/tmp/browser-tests.log','test-server.log']:
+              path=pathlib.Path(name)
+              if path.exists():
+                  lines=[line for line in path.read_text().splitlines() if any(word in line for word in ['FAIL','Fatal','Warning','Error','failure','exceeded'])]
+                  message=' | '.join(lines)[-3000:].replace('%','%25').replace('\n','%0A')
+                  if message: print('::error title=Test diagnostics::'+message)
+          PYTHON
       - name: Container build
         run: docker build -f Dockerfile.vercel -t jametulhoda:test .
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: verification
