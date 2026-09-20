@@ -142,3 +142,20 @@
 | `.github/workflows/ci.yml` | metadata صحیح، wait/readiness، diagnostics، تست لینک و خطاهای log؛ حذف snapshot موقت پس از ثبت lock. |
 
 تغییرات فقط روی شاخه session push شده‌اند؛ main جابه‌جا یا بازنویسی نشده است.
+
+
+### اصلاحات تکمیلی اعتبارسنجی نهایی
+
+- `config/config.php`: بافر پاسخ مستقل برای جلوگیری از headers-already-sent و helper اعتبارسنجی IP.
+- `includes/auth.php`، `includes/functions.php`، `contact.php`: استفاده از IP معتبر؛ اولویت محدودیت IP پیش از ایجاد bucket نام کاربری.
+- `admin/users.php`: transaction مشترک برای اطلاعات کاربر، رمز و نسخه session.
+- `admin/includes/header.php`، `assets/js/interface.js`: منوی موبایل پنل بدون overflow، کنترل صفحه‌کلید و وضعیت ARIA.
+- `admin/login.php`: اتصال label/input و autocomplete صحیح ورود.
+- `admin/media/index.php`: نمایش جداگانه image/audio/video/document، pagination و کپی لینک بدون تزریق مستقیم URL داخل JavaScript.
+- `tests/browser.mjs`: ورود واقعی کارکنان، پوسته و منوی موبایل و رسانه پنل علاوه بر آزمون عمومی.
+- `tests/security.php`: ۲۵ assertion شامل رد forwarded IP غیرقابل اعتماد.
+- `tests/links.mjs`: timeout و مصرف stream پاسخ برای آزادسازی اتصال، خروجی JSON خطا با مسیر دقیق.
+- `.github/workflows/ci.yml`: اجرای واقعی image ساخته‌شده روی PORT=8081 و تکرار آزمون HTTP/browser؛ diagnostics و log کانتینر.
+- `README.md`، `docs/AUDIT_FA.md`، `docs/DEPLOYMENT_FA.md`: شواهد قابل ردیابی، محدودیت deployment و قطع اعتبار اتصال GitHub در آخرین push.
+
+بخش عمده تغییرات push شده است؛ اصلاح پایانی خزنده و گزارش نهایی به علت خطای GitHub authentication فعلاً فقط در commitهای محلی محفوظ‌اند.

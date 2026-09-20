@@ -4,6 +4,8 @@
 
 > **وضعیت:** نسخه اصلاح‌شده در شاخه `arena/01a0bf9d-jametulhoda` است. GitHub CI شامل Docker build موفق شده و Vercel از اتصال GitHub یک Preview ساخته است. این Preview محافظت‌شده است و صحت runtime production هنوز تأیید نشده است. قبل از انتشار، [گزارش بررسی و محدودیت‌های باقی‌مانده](docs/AUDIT_FA.md) و [راهنمای استقرار](docs/DEPLOYMENT_FA.md) را بخوانید. دکمه بالا جایگزین تنظیم دیتابیس و storage نیست.
 
+> **وضعیت همگام‌سازی نهایی:** آخرین push تأییدشده `479e9af` و [CI آن موفق](https://github.com/hajiahmadandishmand41-code/jametulhoda/actions/runs/35525330749) است. اصلاح آخر خزنده و گزارش نهایی به دلیل خطای GitHub authentication هنوز محلی‌اند؛ برای ادامه، اتصال GitHub را در Arena دوباره برقرار کنید.
+
 [مشاهده Preview واقعی Vercel — نیازمند ورود مجاز به Vercel](https://jametulhoda-git-arena-01a0bf9d-jametulhoda-eshop4.vercel.app)
 
 # مدرسه علمیه جامعه‌الهدی
@@ -70,7 +72,7 @@ npm run test:browser
 node tests/links.mjs
 ```
 
-نتایج و تصاویر آزمون‌ها در `test-results/` تولید می‌شوند و وارد Git نمی‌شوند. Workflow در `.github/workflows/ci.yml` برای lint، schema تکرارپذیر، HTTP، مرورگر و Docker build فراهم شده است. وجود workflow به‌تنهایی به معنی موفق‌بودن CI نیست؛ وضعیت واقعی در گزارش ثبت می‌شود.
+نتایج و تصاویر آزمون‌ها در `test-results/` تولید می‌شوند و وارد Git نمی‌شوند. Workflow در `.github/workflows/ci.yml` برای lint، schema تکرارپذیر، HTTP، مرورگر، Docker build و اجرای آزمون‌ها روی Apache با PORT سفارشی فراهم شده است. وجود workflow به‌تنهایی به معنی موفق‌بودن CI نیست؛ وضعیت واقعی در گزارش ثبت می‌شود.
 
 ## مستندات
 

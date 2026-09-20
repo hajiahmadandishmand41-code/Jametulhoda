@@ -80,7 +80,7 @@ Container Images اکنون beta مستندشده است. ساختار `services
 5. با اتصال Vercel فعال، `vercel deploy` برای preview و پس از تأیید `vercel --prod` اجرا کنید.
 6. URL واقعی، logs، صفحات اصلی، فایل‌ها، login/logout، CSRF، session بین instanceها، upload/delete S3 و headers را روی deployment تست کنید. URL واقعی را فقط پس از موفقیت در README قرار دهید.
 
-**نتیجه این محیط:** CLI login معتبر ندارد و deploy مستقیم CLI رد شد. با push روی شاخه، اتصال موجود GitHub به Vercel به‌صورت خودکار Preview ساخت و وضعیت success برای commit `4fe20e3` ثبت شد. [آدرس واقعی Preview](https://jametulhoda-git-arena-01a0bf9d-jametulhoda-eshop4.vercel.app) پشت Deployment Protection است؛ تلاش برای مشاهده به صفحه ورود Vercel رفت. بنابراین runtime سایت، Neon و S3 واقعی و production logs هنوز قابل تأیید نیستند. Docker build در GitHub CI موفق شد.** برای ادامه، محیط Vercel و دسترسی مشاهده/لاگ را از حساب خود تنظیم کنید؛ secret را در گفتگو ارسال نکنید.
+**نتیجه این محیط:** CLI login معتبر ندارد و deploy مستقیم CLI رد شد. با push روی شاخه، اتصال موجود GitHub به Vercel به‌صورت خودکار Preview ساخت و وضعیت success برای commit `4fe20e3` ثبت شد. [آدرس واقعی Preview](https://jametulhoda-git-arena-01a0bf9d-jametulhoda-eshop4.vercel.app) پشت Deployment Protection است؛ تلاش برای مشاهده به صفحه ورود Vercel رفت. بنابراین runtime سایت، Neon و S3 واقعی و production logs هنوز قابل تأیید نیستند. Docker build و اجرای آزمون‌ها روی Apache با PORT=8081 در GitHub CI موفق شد. برای ادامه، محیط Vercel و دسترسی مشاهده/لاگ را از حساب خود تنظیم کنید؛ secret را در گفتگو ارسال نکنید.
 
 ## ۶. انتشار و بازگشت
 
@@ -89,3 +89,11 @@ Container Images اکنون beta مستندشده است. ساختار `services
 - backup فایل‌ها و DB را قبل از مهاجرت نگه دارید. Rollback کد PostgreSQL به نسخه MySQL بدون بازگردانی معماری DB امکان‌پذیر نیست.
 - Runtime logs نباید body فرم، رمز، token یا URL دارای credential را ثبت کنند. خطاهای عمومی فقط شناسه پیگیری دارند.
 - برای ثبت‌نام عمومی، ایمیل تأیید، بازیابی رمز، نقش دانشجو و مدیریت دیدگاه‌ها هنوز پیاده‌سازی لازم است؛ مسیر یا لینک نمایشی ساختگی برای آن‌ها اضافه نشده است.
+
+
+## وضعیت اتصال در پایان این مرحله
+
+CI کامل: https://github.com/hajiahmadandishmand41-code/jametulhoda/actions/runs/35525330749 روی `479e9af`.
+پس از آن اعتبار GitHub در sandbox رد شد؛ آخرین اصلاح ابزار خزنده و گزارش نهایی push نشده‌اند. پس از reconnect در Arena، فقط شاخه session را push کنید و checkهای PR را دوباره بررسی کنید. نیازی به اشتراک secret در گفتگو نیست.
+
+IP مشتری فقط در صورت وجود متغیر سیستمی `VERCEL` از هدر کنترل‌شده پلتفرم خوانده می‌شود؛ در سایر محیط‌ها `REMOTE_ADDR` معیار است. برای reverse proxy دیگری، سیاست trust صریح لازم است؛ هدر دلخواه کاربر را معتبر نکنید. [مستند هدرهای Vercel](https://vercel.com/docs/headers/request-headers).
