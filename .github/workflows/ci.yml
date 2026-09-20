@@ -58,17 +58,17 @@ jobs:
           curl --retry 10 --retry-connrefused --retry-delay 1 --fail --silent http://127.0.0.1:8080/ > /dev/null
           npm run test:http 2>&1 | tee /tmp/http-tests.log
           npm run test:browser 2>&1 | tee /tmp/browser-tests.log
-          node tests/links.mjs
+          node tests/links.mjs 2>&1 | tee /tmp/link-tests.log
           if grep -Ei "PHP (Warning|Fatal|Parse)|Application failure|Upload failed" test-server.log; then exit 1; fi
       - name: Failure diagnostics
         if: failure()
         run: |
           python3 - <<'PYTHON'
           import pathlib
-          for name in ['/tmp/http-tests.log','/tmp/browser-tests.log','test-server.log']:
+          for name in ['/tmp/http-tests.log','/tmp/browser-tests.log','/tmp/link-tests.log','test-server.log']:
               path=pathlib.Path(name)
               if path.exists():
-                  lines=[line for line in path.read_text().splitlines() if any(word in line for word in ['FAIL','Fatal','Warning','Error','failure','exceeded'])]
+                  lines=[line for line in path.read_text().splitlines() if any(word in line for word in ['FAIL','Fatal','Warning','Error','failure','exceeded','status','path','checked'])]
                   message=' | '.join(lines)[-3000:].replace('%','%25').replace('\n','%0A')
                   if message: print('::error title=Test diagnostics::'+message)
           PYTHON
