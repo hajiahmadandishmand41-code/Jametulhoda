@@ -1,0 +1,8 @@
+# Admin directory - PHP execution allowed but protect sensitive files
+Options -Indexes
+
+# Prevent direct access to includes
+<FilesMatch "^(database|config)\.php$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
