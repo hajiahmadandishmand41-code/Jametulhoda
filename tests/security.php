@@ -27,6 +27,13 @@ check(!str_contains($html,'evil()') && !str_contains($html,'javascript:') && !st
 check(str_contains($html,'<strong>world</strong>'),'safe formatting retained');
 check(persianDate('2024-03-20')==='1 فروردین 1403','Jalali new year');
 check(persianDate('2026-09-20')==='29 شهریور 1405','Jalali current date');
+$vercelBefore=getenv('VERCEL'); putenv('VERCEL');
+$_SERVER['REMOTE_ADDR']='192.0.2.1'; $_SERVER['HTTP_X_FORWARDED_FOR']='203.0.113.1';
+check(clientIp()==='192.0.2.1','untrusted forwarded IP ignored');
+putenv('VERCEL=1'); $_SERVER['HTTP_X_VERCEL_FORWARDED_FOR']='203.0.113.2';
+check(clientIp()==='203.0.113.2','trusted platform client IP');
+putenv($vercelBefore===false?'VERCEL':'VERCEL='.$vercelBefore);
+unset($_SERVER['HTTP_X_FORWARDED_FOR'],$_SERVER['HTTP_X_VERCEL_FORWARDED_FOR']);
 $token=generateCsrfToken();
 check(verifyCsrfToken($token),'valid CSRF');
 check(!verifyCsrfToken('bad'),'invalid CSRF');

@@ -95,17 +95,17 @@ body { font-family: 'Vazirmatn', sans-serif; background: linear-gradient(135deg,
         <form method="post" autocomplete="off">
             <?= csrfField() ?>
             <div class="mb-3">
-                <label class="form-label">نام کاربری</label>
+                <label class="form-label" for="username">نام کاربری</label>
                 <div class="icon-input">
                     <i class="bi bi-person-fill"></i>
-                    <input type="text" name="username" class="form-control" placeholder="نام کاربری را وارد کنید" value="<?= sanitize($_POST['username'] ?? '') ?>" required autofocus>
+                    <input type="text" name="username" id="username" autocomplete="username" class="form-control" placeholder="نام کاربری را وارد کنید" value="<?= sanitize($_POST['username'] ?? '') ?>" required autofocus>
                 </div>
             </div>
             <div class="mb-4">
-                <label class="form-label">رمز عبور</label>
+                <label class="form-label" for="password">رمز عبور</label>
                 <div class="icon-input">
                     <i class="bi bi-lock-fill"></i>
-                    <input type="password" name="password" class="form-control" placeholder="رمز عبور را وارد کنید" required>
+                    <input type="password" name="password" id="password" autocomplete="current-password" class="form-control" placeholder="رمز عبور را وارد کنید" required>
                 </div>
             </div>
             <button type="submit" class="btn-login"><i class="bi bi-box-arrow-in-right ms-2"></i>ورود به پنل</button>

@@ -51,10 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // دریافت IP
-        $ip = trim(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']
-            ?? $_SERVER['HTTP_X_REAL_IP']
-            ?? $_SERVER['REMOTE_ADDR']
-            ?? '0.0.0.0')[0]);
+        $ip = clientIp();
 
         // محدودیت نرخ: حداکثر ۳ پیام در ۳۰ دقیقه از یک IP
         if (empty($errors) && $ip) {

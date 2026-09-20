@@ -56,10 +56,10 @@ function loginAdmin(string $username, string $password): bool {
     // Atomic shared limiter survives cookie resets and concurrent requests.
     $key = hash('sha256', mb_strtolower(trim($username)));
     $limit = $db->prepare("INSERT INTO login_limits (key,attempts,expires_at) VALUES (?,1,NOW()+INTERVAL '15 minutes') ON CONFLICT (key) DO UPDATE SET attempts=CASE WHEN login_limits.expires_at<NOW() THEN 1 ELSE login_limits.attempts+1 END, expires_at=CASE WHEN login_limits.expires_at<NOW() THEN NOW()+INTERVAL '15 minutes' ELSE login_limits.expires_at END RETURNING attempts");
+    $limit->execute([hash('sha256', 'ip:' . clientIp())]);
+    if ((int)$limit->fetchColumn() > 50) return false;
     $limit->execute([$key]);
     if ((int)$limit->fetchColumn() > 5) return false;
-    $limit->execute([hash('sha256', 'ip:' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'))]);
-    if ((int)$limit->fetchColumn() > 50) return false;
     $stmt = $db->prepare("SELECT * FROM users WHERE username = ? AND is_active = 1 LIMIT 1");
     $stmt->execute([trim($username)]);
     $user = $stmt->fetch();

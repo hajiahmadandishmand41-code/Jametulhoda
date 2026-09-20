@@ -22,3 +22,17 @@ if (menuButton && navigation) {
   document.addEventListener('click', e => { if (!e.target.closest('.jhd-header')) close(); });
   matchMedia('(min-width: 992px)').addEventListener('change', close);
 }
+
+const adminMenu=document.getElementById('adminSidebar');
+const adminToggle=document.getElementById('sidebarToggle');
+if (adminMenu && adminToggle) {
+  const close=()=>{adminMenu.classList.remove('open'); adminToggle.setAttribute('aria-expanded','false');};
+  adminToggle.addEventListener('click',()=>{
+    const open=adminToggle.getAttribute('aria-expanded')!=='true';
+    adminMenu.classList.toggle('open',open); adminToggle.setAttribute('aria-expanded',String(open));
+    if(open) adminMenu.querySelector('a')?.focus();
+  });
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&adminMenu.classList.contains('open')){close();adminToggle.focus();}});
+  document.addEventListener('click',e=>{if(!adminMenu.contains(e.target)&&!adminToggle.contains(e.target))close();});
+  matchMedia('(min-width: 769px)').addEventListener('change',close);
+}

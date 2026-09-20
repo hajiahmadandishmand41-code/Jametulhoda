@@ -15,13 +15,15 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     elseif ($id===(int)$admin['id'] && (!$active || $role!=='superadmin')) $error='غیرفعال‌سازی یا کاهش دسترسی حساب فعلی مجاز نیست.';
     else {
         try {
+            $db->beginTransaction();
             if ($id) {
                 $stmt=$db->prepare('UPDATE users SET username=?,full_name=?,email=?,role=?,is_active=? WHERE id=?');
                 $stmt->execute([$username,$name,$email,$role,$active,$id]);
                 if ($password!=='') $db->prepare('UPDATE users SET password=?,auth_version=auth_version+1 WHERE id=?')->execute([password_hash($password,PASSWORD_DEFAULT),$id]);
             } else $db->prepare('INSERT INTO users (username,full_name,email,role,is_active,password) VALUES (?,?,?,?,?,?)')->execute([$username,$name,$email,$role,$active,password_hash($password,PASSWORD_DEFAULT)]);
+            $db->commit();
             $success='اطلاعات کاربر ذخیره شد.';
-        } catch (PDOException $e) { $error='ذخیره انجام نشد؛ نام کاربری باید یکتا باشد.'; }
+        } catch (PDOException $e) { if ($db->inTransaction()) $db->rollBack(); $error='ذخیره انجام نشد؛ نام کاربری باید یکتا باشد.'; }
     }
 }
 $edit=null;

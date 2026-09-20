@@ -78,3 +78,12 @@ set_exception_handler(function (Throwable $e): void {
     header('Cache-Control: no-store');
     echo '<!doctype html><html lang="fa" dir="rtl"><meta charset="utf-8"><title>سرویس موقتاً در دسترس نیست</title><h1>لطفاً کمی بعد دوباره تلاش کنید.</h1><p>شناسه پیگیری: ' . $id . '</p></html>';
 });
+
+/** Trust platform-owned forwarding headers only on Vercel, never arbitrary client headers. */
+function clientIp(): string {
+    $ip=$_SERVER['REMOTE_ADDR']??'0.0.0.0';
+    if (env_value('VERCEL')) {
+        $ip=trim(explode(',',$_SERVER['HTTP_X_VERCEL_FORWARDED_FOR']??$_SERVER['HTTP_X_FORWARDED_FOR']??$ip)[0]);
+    }
+    return filter_var($ip,FILTER_VALIDATE_IP)?$ip:'0.0.0.0';
+}

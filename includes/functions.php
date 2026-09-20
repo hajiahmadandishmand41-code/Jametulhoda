@@ -469,11 +469,7 @@ function ensureLikesTable(): void {
  * تولید هش یکتا برای کاربر فعلی (IP + User-Agent)
  */
 function getUserHash(): string {
-    $ip = $_SERVER['HTTP_X_FORWARDED_FOR']
-        ?? $_SERVER['HTTP_X_REAL_IP']
-        ?? $_SERVER['REMOTE_ADDR']
-        ?? '0.0.0.0';
-    $ip = trim(explode(',', $ip)[0]);
+    $ip = clientIp();
     $ua = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 200);
     return hash('sha256', $ip . '|' . $ua . '|like_salt_jamiat');
 }
