@@ -19,7 +19,7 @@ function startSecureSession(): void {
         session_set_cookie_params([
             'lifetime' => SESSION_LIFETIME,
             'path'     => BASE_PATH . '/',
-            'secure'   => APP_ENV === 'production' || (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
+            'secure'   => APP_ENV === 'production' || env_value('VERCEL') !== '' || (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
             'httponly' => true,
             'samesite' => 'Strict',
         ]);
@@ -84,7 +84,7 @@ function loginAdmin(string $username, string $password): bool {
 function logoutAdmin(): void {
     startSecureSession();
     $_SESSION = [];
-    setcookie(SESSION_NAME, '', ['expires'=>time()-3600, 'path'=>BASE_PATH.'/', 'secure'=>APP_ENV==='production', 'httponly'=>true, 'samesite'=>'Strict']);
+    setcookie(SESSION_NAME, '', ['expires'=>time()-3600, 'path'=>BASE_PATH.'/', 'secure'=>APP_ENV==='production' || env_value('VERCEL')!=='', 'httponly'=>true, 'samesite'=>'Strict']);
     session_destroy();
     header('Location: ' . siteUrl('admin/login.php'));
     exit;

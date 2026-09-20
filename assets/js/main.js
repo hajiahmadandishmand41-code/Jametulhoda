@@ -295,6 +295,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (typeof Plyr !== 'undefined' && videoEl) {
             try {
                 activePlyr = new Plyr(videoEl, {
+                    iconUrl: document.querySelector('meta[name=plyr-sprite]')?.content,
                     controls: [
                         'play-large', 'play', 'rewind', 'fast-forward',
                         'progress', 'current-time', 'duration',

@@ -2,7 +2,9 @@
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fhajiahmadandishmand41-code%2Fjametulhoda%2Ftree%2Farena%2F01a0bf9d-jametulhoda&env=DATABASE_URL,SITE_URL,APP_ENV,UPLOAD_STORAGE,UPLOAD_BASE_URL,S3_ENDPOINT,S3_REGION,S3_BUCKET,S3_ACCESS_KEY_ID,S3_SECRET_ACCESS_KEY)
 
-> **وضعیت:** نسخه اصلاح‌شده در شاخه `arena/01a0bf9d-jametulhoda` است. استقرار production هنوز تأیید نشده و URL نهایی Vercel در دسترس نیست. قبل از انتشار، [گزارش بررسی و محدودیت‌های باقی‌مانده](docs/AUDIT_FA.md) و [راهنمای استقرار](docs/DEPLOYMENT_FA.md) را بخوانید. دکمه بالا جایگزین تنظیم دیتابیس و storage نیست.
+> **وضعیت:** نسخه اصلاح‌شده در شاخه `arena/01a0bf9d-jametulhoda` است. GitHub CI شامل Docker build موفق شده و Vercel از اتصال GitHub یک Preview ساخته است. این Preview محافظت‌شده است و صحت runtime production هنوز تأیید نشده است. قبل از انتشار، [گزارش بررسی و محدودیت‌های باقی‌مانده](docs/AUDIT_FA.md) و [راهنمای استقرار](docs/DEPLOYMENT_FA.md) را بخوانید. دکمه بالا جایگزین تنظیم دیتابیس و storage نیست.
+
+[مشاهده Preview واقعی Vercel — نیازمند ورود مجاز به Vercel](https://jametulhoda-git-arena-01a0bf9d-jametulhoda-eshop4.vercel.app)
 
 # مدرسه علمیه جامعه‌الهدی
 
@@ -19,7 +21,7 @@
 
 ## اجرای محلی
 
-نیازمندی‌ها: PHP 8.3+ با `pdo_pgsql`, `mbstring`, `fileinfo`, `gd` (JPEG/WebP), `dom`, `curl`, `zip`؛ Composer 2؛ PostgreSQL 15+.
+نیازمندی‌ها: PHP 8.3+ با `pdo_pgsql`, `mbstring`, `fileinfo`, `gd` (JPEG/WebP), `dom`, `curl`, `zip`؛ Composer 2؛ PostgreSQL 15+. `composer.lock` و `package-lock.json` نسخه وابستگی‌ها را قفل می‌کنند.
 
 ```sh
 composer install --no-dev
@@ -65,6 +67,7 @@ npm ci
 npm run test:http
 npx playwright install chromium
 npm run test:browser
+node tests/links.mjs
 ```
 
 نتایج و تصاویر آزمون‌ها در `test-results/` تولید می‌شوند و وارد Git نمی‌شوند. Workflow در `.github/workflows/ci.yml` برای lint، schema تکرارپذیر، HTTP، مرورگر و Docker build فراهم شده است. وجود workflow به‌تنهایی به معنی موفق‌بودن CI نیست؛ وضعیت واقعی در گزارش ثبت می‌شود.

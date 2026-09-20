@@ -12,6 +12,7 @@ $metaTitle = !empty($pageTitle) ? $pageTitle . ' | ' . $siteName : $siteName;
 $metaDesc = $pageDesc ?? $siteSlogan;
 $canonicalPath = $_SERVER['SCRIPT_NAME'] ?? '/';
 if (basename($canonicalPath)==='index.php') $canonicalPath=rtrim(dirname($canonicalPath), '/').'/';
+if ($currentPage==='book.php' && !empty($_GET['id'])) $canonicalPath .= '?id='.(int)$_GET['id'];
 if (!empty($_GET['slug'])) $canonicalPath .= '?slug='.rawurlencode($_GET['slug']);
 $canonical = SITE_URL ? rtrim(SITE_URL,'/') . '/' . ltrim(substr($canonicalPath, strlen(BASE_PATH)),'/') : '';
 ?>
@@ -21,6 +22,7 @@ $canonical = SITE_URL ? rtrim(SITE_URL,'/') . '/' . ltrim(substr($canonicalPath,
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#163b37">
+<meta name="plyr-sprite" content="<?= siteUrl('assets/vendor/plyr.svg') ?>">
 <meta name="csrf-token" content="<?= sanitize(generateCsrfToken()) ?>">
 <title><?= sanitize($metaTitle) ?></title>
 <meta name="description" content="<?= sanitize($metaDesc) ?>">

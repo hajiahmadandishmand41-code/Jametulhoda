@@ -80,7 +80,7 @@ Container Images اکنون beta مستندشده است. ساختار `services
 5. با اتصال Vercel فعال، `vercel deploy` برای preview و پس از تأیید `vercel --prod` اجرا کنید.
 6. URL واقعی، logs، صفحات اصلی، فایل‌ها، login/logout، CSRF، session بین instanceها، upload/delete S3 و headers را روی deployment تست کنید. URL واقعی را فقط پس از موفقیت در README قرار دهید.
 
-**نتیجه این محیط:** CLI نصب و فراخوانی شد اما login معتبر Vercel در دسترس نبود. Neon URL و S3 credential نیز تنظیم نبودند. هیچ deployment production یا URL واقعی ساخته/تأیید نشده است.** برای ادامه، اتصال Vercel را در محیط خود فعال کنید؛ secret را در گفتگو ارسال نکنید.
+**نتیجه این محیط:** CLI login معتبر ندارد و deploy مستقیم CLI رد شد. با push روی شاخه، اتصال موجود GitHub به Vercel به‌صورت خودکار Preview ساخت و وضعیت success برای commit `4fe20e3` ثبت شد. [آدرس واقعی Preview](https://jametulhoda-git-arena-01a0bf9d-jametulhoda-eshop4.vercel.app) پشت Deployment Protection است؛ تلاش برای مشاهده به صفحه ورود Vercel رفت. بنابراین runtime سایت، Neon و S3 واقعی و production logs هنوز قابل تأیید نیستند. Docker build در GitHub CI موفق شد.** برای ادامه، محیط Vercel و دسترسی مشاهده/لاگ را از حساب خود تنظیم کنید؛ secret را در گفتگو ارسال نکنید.
 
 ## ۶. انتشار و بازگشت
 

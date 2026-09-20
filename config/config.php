@@ -8,7 +8,7 @@
 
 function env_value(string $key, string $default = ''): string {
     $value = getenv($key);
-    return ($value === false) ? $default : $value;
+    return ($value === false || $value === '') ? $default : $value;
 }
 
 define('APP_ENV', env_value('APP_ENV', env_value('VERCEL') ? 'production' : 'development'));

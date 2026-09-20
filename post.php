@@ -434,8 +434,8 @@ function showCopyMsg() {
         if (!plyrInstance && typeof Plyr !== 'undefined') {
             plyrInstance = new Plyr(videoEl, {
                 controls: ['play-large','play','progress','current-time','duration','mute','volume','fullscreen'],
-                loadSprite: false,
-                iconUrl: '',
+                loadSprite: true,
+                iconUrl: document.querySelector('meta[name=plyr-sprite]')?.content,
                 blankVideo: '',
                 autoplay: false,
                 resetOnEnd: false,

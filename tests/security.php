@@ -4,7 +4,9 @@ require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/media.php';
 require_once __DIR__ . '/../includes/auth.php';
 $checks=0;
+putenv('JHD_EMPTY_TEST=');
 function check(bool $ok,string $label): void { global $checks; if(!$ok)throw new RuntimeException($label);$checks++; }
+check(env_value('JHD_EMPTY_TEST','default')==='default','empty environment uses safe defaults');
 check(siteUrl('news.php')===BASE_PATH.'/news.php','relative URL');
 check(siteUrl('//evil.example')==='','protocol relative URL rejected');
 check(siteUrl("javascript:alert(1)")==='','unsafe scheme rejected');

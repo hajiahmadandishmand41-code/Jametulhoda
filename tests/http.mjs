@@ -26,6 +26,10 @@ r=await api.get('/post.php?slug='+title);let html=await r.text();check('publishe
 for(const url of new Set([...html.matchAll(/(?:src|href)="(\/uploads\/[^"?]+)"/g)].map(m=>m[1]))){stored.push(url); const a=await api.get(url);check('stored file accessible '+url,a.status()===200,String(a.status()));}
 r=await api.get('/admin/books/create.php');csrf=token(await r.text());
 r=await api.post('/admin/books/create.php',{multipart:{csrf_token:csrf,title:'qa-book-'+stamp,description:'کتاب آزمون',pdf_file:{name:'document.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF')}},maxRedirects:0});check('upload PDF + create book',r.status()===303,String(r.status()));
+r=await api.get('/books.php?q=qa-book-'+stamp);
+const bookId=(await r.text()).match(/book\.php\?id=(\d+)/)?.[1];
+check('book linked in library',Boolean(bookId));
+if(bookId){r=await api.get('/book.php?id='+bookId);check('book detail exists',r.status()===200);r=await api.get('/book.php?id='+bookId+'&download=pdf');check('book PDF download',r.status()===200 && r.headers()['content-type']?.includes('application/pdf'));}
 for(const section of ['articles','news','lessons']){r=await api.get('/admin/'+section+'/create.php');csrf=token(await r.text());r=await api.post('/admin/'+section+'/create.php',{form:{csrf_token:csrf,title:'qa-'+section+'-'+stamp,content:'<p>Test content</p>',status:'published',level:'beginner','page_section[]':'home'},maxRedirects:0});check('create '+section,r.status()===303,String(r.status()));if(r.status()!==303)fs.writeFileSync('test-results/'+section+'-failure.html',await r.text());}
 if(id){
 // Editing retains existing media and updates content using prepared statements.

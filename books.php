@@ -100,14 +100,14 @@ $pages = (int)ceil($total / $limit);
           </div>
           <!-- Book Info -->
           <div class="book-card-body">
-            <h3 class="book-title"><?= sanitize($b['title']) ?></h3>
+            <h3 class="book-title"><a href="<?= siteUrl('book.php?id='.(int)$b['id']) ?>"><?= sanitize($b['title']) ?></a></h3>
             <?php if ($b['description']): ?>
             <p class="book-desc"><?= sanitize(excerpt($b['description'], 100)) ?></p>
             <?php endif; ?>
             <!-- Download Buttons -->
             <div class="book-downloads mt-auto">
               <?php if ($b['pdf_file']): ?>
-              <a href="<?= siteUrl($b['pdf_file']) ?>"
+              <a href="<?= siteUrl('book.php?id='.(int)$b['id'].'&download=pdf') ?>"
                  class="btn btn-danger btn-sm w-100 mb-2"
                  download title="دانلود PDF">
                 <i class="bi bi-file-pdf ms-1"></i>دانلود PDF
@@ -118,7 +118,7 @@ $pages = (int)ceil($total / $limit);
               </button>
               <?php endif; ?>
               <?php if ($b['word_file']): ?>
-              <a href="<?= siteUrl($b['word_file']) ?>"
+              <a href="<?= siteUrl('book.php?id='.(int)$b['id'].'&download=word') ?>"
                  class="btn btn-primary btn-sm w-100"
                  download title="دانلود Word">
                 <i class="bi bi-file-word ms-1"></i>دانلود Word

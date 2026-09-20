@@ -2,7 +2,7 @@
 
 ## جمع‌بندی صریح
 
-**این تحویل هنوز تأیید نهایی production-ready و Deploy موفق نیست.** زیرساخت PHP/PostgreSQL، بخش مهمی از امنیت و upload، routing و رابط سایت اصلاح شده و تست محلی واقعی دارد. Vercel، Neon واقعی و S3 واقعی بدون دسترسی تنظیم‌شده قابل تأیید نبودند. قابلیت‌های جدیدی که در پروژه اولیه وجود نداشتند، همگی در این مرحله پیاده نشده‌اند. موارد باقی‌مانده در پایان گزارش آمده‌اند.
+**این تحویل هنوز تأیید نهایی production-ready نیست؛ Build و Preview Deployment موفق ثبت شده، اما runtime عمومیِ deployment محافظت‌شده قابل تأیید نیست.** زیرساخت PHP/PostgreSQL، بخش مهمی از امنیت و upload، routing و رابط سایت اصلاح شده و تست محلی واقعی دارد. پس از push، اتصال GitHub به Vercel به‌صورت خودکار Preview ساخت. محتوای آن پشت Deployment Protection بود؛ Neon واقعی، S3 واقعی و runtime آن بدون دسترسی مشاهده قابل تأیید نبودند. قابلیت‌های جدیدی که در پروژه اولیه وجود نداشتند، همگی در این مرحله پیاده نشده‌اند. موارد باقی‌مانده در پایان گزارش آمده‌اند.
 
 مبنای بررسی: commit `ac9c7e7`، مخزن واقعی در ریشه، نه پروژه جدید داخل پوشه تو‌در‌تو. پس از دریافت تاریخچه کامل قابل دسترسی، مخزن یک commit اولیه داشت. صفحات و فرم‌های سالم حفظ شدند؛ حذف کدها عمدتاً مربوط به schema mutation هنگام درخواست وب، installer ناامن، مسیرهای آپلود پراکنده و هدر جایگزین‌شده است.
 
@@ -21,7 +21,8 @@
 11. document root کل مخزن بود و built-in PHP server بدون router امن می‌توانست فایل‌های SQL و راهنما را سرو کند. فایل‌های `*.htaccess` با نام نادرست حفاظت واقعی ایجاد نمی‌کردند.
 12. فونت، Bootstrap و player به CDN وابسته بودند؛ سیستم پوسته هماهنگ وجود نداشت؛ منوی قبلی دسترس‌پذیری و responsive ناقص داشت.
 13. محاسبه تاریخ جلالی offset اشتباه داشت. جستجو فقط پست‌ها را پوشش می‌داد.
-14. ثبت‌نام عمومی، پروفایل دانشجو و مدیریت دیدگاه‌ها در مخزن اولیه وجود نداشتند؛ فایل یا دیتابیسی برای آن‌ها مشاهده نشد.
+14. صفحه خانه به `book.php` لینک می‌داد اما این فایل در مخزن نبود؛ در خزیدن لینک‌ها 404 آن پیدا شد. صفحه جزئیات و دانلود امن کتاب اضافه و به کتابخانه و جستجو متصل شد.
+15. ثبت‌نام عمومی، پروفایل دانشجو و مدیریت دیدگاه‌ها در مخزن اولیه وجود نداشتند؛ فایل یا دیتابیسی برای آن‌ها مشاهده نشد.
 
 ## انجام شد — قابل مشاهده در کد
 
@@ -64,13 +65,15 @@
 
 تست محیط محلی، نه Vercel: PHP بومی **8.4.11-dev** از runtime آزمایشی خارج از repository با `pdo_pgsql` و PostgreSQL بومی **18.4** روی دیتابیس disposable. محیط native استاندارد PHP 8.3/Apache در این sandbox موجود نبود. برای lint و unit نیز PHP WebAssembly استفاده شد. این تفاوت با Docker هدف عمداً ذکر می‌شود.
 
-- **۷۷ فایل PHP** در زمان اجرای lint: بدون خطای syntax. فایل‌های vendor و node_modules جزو شمارش نبودند.
-- **۲۲ assertion امنیت/URL/MIME/CSRF/XSS/تاریخ** در `tests/security.php`: موفق.
+- **۷۸ فایل PHP** در زمان اجرای lint: بدون خطای syntax. فایل‌های vendor و node_modules جزو شمارش نبودند.
+- **۲۳ assertion امنیت/URL/MIME/CSRF/XSS/تاریخ** در `tests/security.php`: موفق.
 - schema دوبار روی PGlite/PostgreSQL و بارها روی PostgreSQL بومی بدون خطا اعمال شد؛ داده‌های تست حفظ شدند.
-- **۷۱ assertion HTTP** در `tests/http.mjs`: موفق؛ شامل صفحات عمومی، alias رسانه/فایل، category/search، 404های امنیتی، redirect ورود، login/logout و dashboard، پنل‌ها، ایجاد پست/مقاله/خبر/درس/کتاب، ویرایش، مشاهده، لایک با/بدون CSRF، کاربر editor و رد دسترسی آن، تماس، حذف GET بدون mutation، POST حذف، حذف واقعی URL فایل‌ها.
+- **۷۴ assertion HTTP** در `tests/http.mjs`: موفق؛ شامل صفحات عمومی، alias رسانه/فایل، category/search، 404های امنیتی، redirect ورود، login/logout و dashboard، پنل‌ها، ایجاد پست/مقاله/خبر/درس/کتاب، جزئیات/دانلود کتاب، ویرایش، مشاهده، لایک با/بدون CSRF، کاربر editor و رد دسترسی آن، تماس، حذف GET بدون mutation، POST حذف، حذف واقعی URL فایل‌ها.
 - آپلود محلی **PNG، PDF، MP3 و MP4 کوچک**، دریافت فایل از URL و سپس 404 پس از حذف: موفق. تصویر جعلی با نام jpg و محتوای PHP رد شد. runtime محلی فاقد GD WebP بود و fallback PNG آزموده شد؛ خروجی WebP در Docker هنوز نیاز به تست دارد.
 - مرورگر Chromium/Playwright: خانه دسکتاپ، موبایل 390px، باز/بسته‌شدن منو، حفظ dark mode پس از reload؛ بدون خطای JS یا پاسخ 4xx/5xx در بارگذاری خانه نهایی.
 - عرض‌های 320، 360، 390، 768، 1024 و 1440 بررسی شدند؛ overflow 320px شناسایی و اصلاح شد.
+- خزیدن لینک‌های HTML داخلی و assets: در آخرین اجرای محلی ۷۹ URL بررسی شد و لینک شکسته‌ای باقی نماند؛ این آزمون لینک‌های خارجی را پوشش نمی‌دهد.
+- زیرمسیر `/school`، URL اصلی/asset/login/sitemap/robots/404، canonical تنظیم‌شده و HTTP Range با پاسخ 206 برای ۲۰ بایت بررسی شدند.
 - تمام آزمون‌های فوق روی داده مصنوعی واضح `qa-*` اجرا شدند؛ هیچ اتصال/تغییری در دیتابیس واقعی کاربر انجام نشد.
 
 آزمون HTTP تکرارشدنی است ولی داده تولید می‌کند؛ روی production اجرا نشود. نمونه PDF صرفاً fixture کنترل upload است، نه تأیید parsing همه ساختارهای PDF. اولین آزمون multipart حدود 90KB در harness آزمایشی Node/PHP timeout شد؛ fixtureهای کوچک بعدی موفق بودند. این محدودیت harness و عدم تست بار/آپلود حجیم نباید به عنوان موفقیت upload بزرگ گزارش شود.
@@ -78,10 +81,10 @@
 ## Vercel، Build و GitHub
 
 - `Dockerfile.vercel` و `vercel.json` مطابق مستندات container بررسی و اصلاح شدند؛ container پشتیبانی‌شده beta است، نه فرض runtime PHP سنتی Vercel.
-- دستور `vercel whoami` اجرا شد: **login معتبر وجود ندارد**. URL نهایی و deployment production ایجاد نشده است.
+- دستور `vercel whoami` و `vercel deploy --yes` اجرا شدند: **credential CLI وجود ندارد**. پس از push، اتصال GitHub خودکار deployment Preview ایجاد کرد؛ GitHub status برای commit `4fe20e3` عبارت **Deployment has completed / success** را ثبت کرد. URL واقعی: https://jametulhoda-git-arena-01a0bf9d-jametulhoda-eshop4.vercel.app . این URL محافظت‌شده است و درخواست مشاهده به login Vercel رفت؛ موفقیت build معادل تأیید runtime نیست.
 - Neon URL و S3 credential در محیط نبودند؛ اتصال Neon/TLS و put/get/delete واقعی S3 تأیید نشده‌اند.
-- Docker daemon/CLI در sandbox موجود نبود؛ Docker build محلی اجرا نشده است. Composer binary نیز از میزبان دانلود در دسترس نبود؛ نصب SDK و lockfile در این محیط تأیید نشده بود.
-- CI برای PHP 8.3، PostgreSQL 16، Composer، HTTP، browser و Docker build اضافه شده است. نتیجه اجرای واقعی CI، در صورت در دسترس بودن پس از push، جداگانه به همین گزارش افزوده می‌شود.
+- Docker daemon/CLI و Composer بومی در sandbox موجود نبودند، اما در GitHub CI واقعی نصب Composer dependencies، PHP 8.3، migration روی PostgreSQL 16، تست‌های HTTP و browser و **Docker build همگی موفق شدند**. `composer.lock` دقیق خروجی CI با checksum SHA-256 تأییدشده به مخزن اضافه شد.
+- اجرای موفق CI: https://github.com/hajiahmadandishmand41-code/jametulhoda/actions/runs/35524059191 . دو اجرای اولیه ناموفق بودند؛ نقص metadata Composer و مشکلات اجرای آزمایشی پیگیری شدند و اجرای فوق سبز شد. برای commit نهایی نیز workflow مجدداً اجرا می‌شود؛ نتیجه نهایی در انتهای گزارش ثبت خواهد شد.
 
 ## امنیت و Rotate
 
@@ -89,8 +92,8 @@
 
 ## خطاها و کارهای باقی‌مانده — مانع تأیید production
 
-1. Deploy واقعی Vercel، تست URL نهایی، console و server logs محیط production، اتصال Neon و S3 واقعی.
-2. تأیید Docker build PHP 8.3 و Composer dependencies/lockfile در محیط build قابل دسترسی.
+1. دسترسی به Preview محافظت‌شده و تست محتوای واقعی، console و server logs، اتصال Neon و S3 واقعی؛ سپس انتشار production. Preview deployment از GitHub ساخته شده است، ولی end-to-end production قابل تأیید نیست.
+2. آزمون runtime container در محیط نهایی، به‌ویژه session بین instanceها و GD WebP/S3. Docker build PHP 8.3 و Composer dependencies در CI تأیید شده‌اند؛ این مورد دیگر مانع build نیست.
 3. **آپلود مستقیم presigned/multipart برای فایل‌های بزرگ**؛ فرم فعلی server-upload است و محدودیت بدنه Vercel را دور نمی‌زند. ویدیو 200MB روی Vercel هنوز پشتیبانی/تست نشده است.
 4. تکمیل transaction و recovery در تمام فرم‌های ویرایش/آپلود چندتایی؛ برخی uploadهای جزئی می‌توانند فایل جدید بدون مرجع باقی بگذارند. حذف فایل قدیمی در edit اکنون صف‌شده و با بررسی مراجع محافظت می‌شود، اما rollback کامل همه مراحل هنوز تکمیل نیست.
 5. مهاجرت واقعی داده‌ها و فایل‌های هاست قبلی، بررسی orphanها، FK/charset/sequenceهای داده واردشده، backup و restore.

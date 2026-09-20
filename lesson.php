@@ -265,8 +265,8 @@ function copyLessonLink(url) {
     if (!audioEl) return;
     var plyrAudio = new Plyr(audioEl, {
         controls: ['play','progress','current-time','duration','mute','volume'],
-        loadSprite: false,
-        iconUrl: '',
+        loadSprite: true,
+        iconUrl: document.querySelector('meta[name=plyr-sprite]')?.content,
         i18n: {
             play: 'پخش', pause: 'مکث', mute: 'بی‌صدا',
             unmute: 'صدا', volume: 'صدا'

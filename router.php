@@ -2,6 +2,7 @@
 /** Shared front controller for Apache containers and local PHP development. */
 require_once __DIR__ . '/config/config.php';
 if (env_value('VERCEL') && (int)($_SERVER['CONTENT_LENGTH'] ?? 0)>4*1024*1024) { http_response_code(413); exit('حجم درخواست بیش از حد مجاز است.'); }
+foreach ($_GET as $value) { if (!is_string($value)) { http_response_code(400); exit('Invalid query parameter'); } }
 $path = rawurldecode(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/');
 if (BASE_PATH) {
     if ($path === BASE_PATH) $path='/';
@@ -44,6 +45,7 @@ if (preg_match('~^/assets/[a-zA-Z0-9_./-]+\.(css|js|svg|png|jpe?g|webp|gif|woff2
 }
 if (in_array($path, ['/audio','/video'], true)) $_GET['kind']=ltrim($path,'/');
 $routes = require __DIR__ . '/config/routes.php';
+if (preg_match('~^/book/(\d+)/?$~', $path, $bookMatch)) { $path='/book.php'; $_GET['id']=$bookMatch[1]; }
 if (preg_match('~^/(post|lesson|speech|category)/([^/]+)/?$~u', $path, $match)) {
     $path='/'.$match[1].'.php'; $_GET['slug']=$match[2];
 }

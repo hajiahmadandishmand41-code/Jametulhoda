@@ -124,3 +124,21 @@
 | `update.sql` | حذف SQL MySQL منسوخ و ارجاع به migration مرجع. |
 | `uploads/.htaccess` | قانون دفاعی عدم اجرای upload روی Apache؛ بدون فایل کاربر در Git. |
 | `vercel.json` | حفظ سرویس container و route forwarding؛ حذف runtime غیرضروری. |
+
+## اصلاحات پس از نخستین دور CI
+
+| فایل | تغییر تکمیلی |
+|---|---|
+| `composer.lock` | خروجی نصب موفق Composer در CI، بازیابی‌شده با تأیید SHA-256؛ pin تمام وابستگی‌های PHP. |
+| `Dockerfile.vercel` | نصب بر اساس lockfile. |
+| `book.php` | تکمیل controller مفقود جزئیات کتاب و دانلود فقط از storage مجاز. |
+| `books.php` | اتصال عنوان کتاب و دکمه دریافت به controller واقعی. |
+| `assets/vendor/plyr.svg` | sprite محلی player؛ حذف وابستگی آیکن پلیر به CDN. |
+| `tests/links.mjs` | خزیدن لینک‌های داخلی و assetهای HTML و شکست آزمون در صورت 4xx/5xx. |
+| `includes/storage.php` | پیش‌فرض امن env خالی، تشخیص مسیر legacy و صف حذف پس از بررسی ارجاعات. |
+| `includes/content-delete.php` | لغو حذف فایل در صورت استفاده مشترک یا شکست ویرایش. |
+| `admin/*/edit.php` | به تعویق انداختن حذف فایل قدیمی تا پس از ذخیره موفق. |
+| `admin/media/index.php` | جلوگیری از حذف فایل مورد استفاده در محتوا. |
+| `.github/workflows/ci.yml` | metadata صحیح، wait/readiness، diagnostics، تست لینک و خطاهای log؛ حذف snapshot موقت پس از ثبت lock. |
+
+تغییرات فقط روی شاخه session push شده‌اند؛ main جابه‌جا یا بازنویسی نشده است.

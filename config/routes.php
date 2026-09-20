@@ -1,6 +1,8 @@
 <?php
 // Explicit allowlist: no arbitrary PHP files or configuration can be requested.
 return [
+    '/book.php' => 'book.php',
+    '/book' => 'book.php',
     '/audio' => 'media-library.php',
     '/video' => 'media-library.php',
     '/files' => 'books.php',

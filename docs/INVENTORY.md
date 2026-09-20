@@ -37,6 +37,8 @@
 
 | URL | PHP controller |
 |---|---|
+| `/book.php` | `book.php` |
+| `/book` | `book.php` |
 | `/audio` | `media-library.php` |
 | `/video` | `media-library.php` |
 | `/files` | `books.php` |
@@ -159,7 +161,7 @@
 | `/speeches` | `speeches.php` |
 | `/speeches.php` | `speeches.php` |
 
-Detail aliases `/post/{slug}`, `/lesson/{slug}`, `/speech/{slug}`, `/category/{slug}` are resolved by the router. There are no public register/profile routes. `/login` aliases staff login; `/dashboard` aliases staff dashboard. Public files and video/audio are catalog routes, not authorization bypasses.
+Detail aliases `/post/{slug}`, `/lesson/{slug}`, `/speech/{slug}`, `/category/{slug}` and `/book/{id}` are resolved by the router. There are no public register/profile routes. `/login` aliases staff login; `/dashboard` aliases staff dashboard.
 
 ## Data model
 

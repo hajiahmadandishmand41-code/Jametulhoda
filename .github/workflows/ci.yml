@@ -39,11 +39,8 @@ jobs:
           cache: npm
       - name: Validate and install PHP dependencies
         run: |
-          composer validate --no-check-lock --no-check-publish
+          composer validate --no-check-publish
           composer install --no-interaction --prefer-dist --no-dev 2>&1 | tee /tmp/composer-install.log
-      - name: Dependency lock snapshot
-        run: php -r 'foreach(str_split(base64_encode(gzencode(file_get_contents("composer.lock"))),2000) as $i=>$chunk) echo "::notice title=Dependency lock chunk $i::$chunk\n"; echo "::notice title=Lock checksum::".hash_file("sha256","composer.lock")."\n";'
-
       - run: find . -name '*.php' -not -path './vendor/*' -not -path './node_modules/*' -print0 | xargs -0 -n1 php -l
       - run: php tests/security.php && php bin/migrate.php && php bin/migrate.php
       - name: Temporary test administrator
@@ -56,8 +53,11 @@ jobs:
       - name: Integration and browser tests
         run: |
           php -S 0.0.0.0:8080 router.php > test-server.log 2>&1 &
+          curl --retry 10 --retry-connrefused --retry-delay 1 --fail --silent http://127.0.0.1:8080/ > /dev/null
           npm run test:http 2>&1 | tee /tmp/http-tests.log
           npm run test:browser 2>&1 | tee /tmp/browser-tests.log
+          node tests/links.mjs
+          if grep -Ei "PHP (Warning|Fatal|Parse)|Application failure|Upload failed" test-server.log; then exit 1; fi
       - name: Failure diagnostics
         if: failure()
         run: |

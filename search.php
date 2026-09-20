@@ -43,7 +43,7 @@ $pages = (int)ceil($total / $limit);
     </div>
     <?php if (!empty($posts)): ?>
     <div class="row g-4">
-        <?php foreach ($posts as $p): $resultUrl = $p['target']==='book' ? siteUrl('books.php?q='.urlencode($p['title'])) : siteUrl(($p['target']==='lesson'?'lesson.php':'post.php').'?slug='.urlencode($p['slug'])); ?>
+        <?php foreach ($posts as $p): $resultUrl = $p['target']==='book' ? siteUrl('book.php?id='.(int)$p['id']) : siteUrl(($p['target']==='lesson'?'lesson.php':'post.php').'?slug='.urlencode($p['slug'])); ?>
         <div class="col-md-6 col-lg-4">
             <article class="news-card h-100">
                 <div class="news-card-img-wrap">
