@@ -40,14 +40,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!empty($_FILES['cover_image']['name']) && $_FILES['cover_image']['error'] === UPLOAD_ERR_OK) {
                 $up = uploadImage($_FILES['cover_image'], 'book-covers');
                 if ($up) {
-                    if ($coverImg) deleteStoredFile($coverImg);
+                    if ($coverImg) scheduleFileDeletion($coverImg);
                     $coverImg = $up;
                 } else {
                     $error = 'خطا در آپلود تصویر جلد.';
                 }
             }
             if (!$error && !empty($_POST['remove_cover'])) {
-                if ($coverImg) deleteStoredFile($coverImg);
+                if ($coverImg) scheduleFileDeletion($coverImg);
                 $coverImg = '';
             }
 
@@ -55,14 +55,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$error && !empty($_FILES['pdf_file']['name']) && $_FILES['pdf_file']['error'] === UPLOAD_ERR_OK) {
                 $up = uploadBookFile($_FILES['pdf_file'], 'pdf');
                 if ($up) {
-                    if ($pdfFile) deleteStoredFile($pdfFile);
+                    if ($pdfFile) scheduleFileDeletion($pdfFile);
                     $pdfFile = $up;
                 } else {
                     $error = 'خطا در آپلود فایل PDF.';
                 }
             }
             if (!$error && !empty($_POST['remove_pdf'])) {
-                if ($pdfFile) deleteStoredFile($pdfFile);
+                if ($pdfFile) scheduleFileDeletion($pdfFile);
                 $pdfFile = '';
             }
 
@@ -70,14 +70,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$error && !empty($_FILES['word_file']['name']) && $_FILES['word_file']['error'] === UPLOAD_ERR_OK) {
                 $up = uploadBookFile($_FILES['word_file'], 'word');
                 if ($up) {
-                    if ($wordFile) deleteStoredFile($wordFile);
+                    if ($wordFile) scheduleFileDeletion($wordFile);
                     $wordFile = $up;
                 } else {
                     $error = 'خطا در آپلود فایل Word.';
                 }
             }
             if (!$error && !empty($_POST['remove_word'])) {
-                if ($wordFile) deleteStoredFile($wordFile);
+                if ($wordFile) scheduleFileDeletion($wordFile);
                 $wordFile = '';
             }
 

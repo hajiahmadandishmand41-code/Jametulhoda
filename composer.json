@@ -16,5 +16,7 @@
   "config": {
     "sort-packages": true,
     "allow-plugins": false
-  }
+  },
+  "description": "Persian RTL Islamic education website with PostgreSQL and configurable persistent storage.",
+  "license": "proprietary"
 }

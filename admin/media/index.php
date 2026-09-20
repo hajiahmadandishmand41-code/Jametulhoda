@@ -39,7 +39,12 @@ if (!empty($_POST['delete'])) {
     $id = (int)$_POST['delete'];
     $stmt = getDB()->prepare('SELECT url FROM stored_files WHERE id=?');
     $stmt->execute([$id]);
-    if ($url=$stmt->fetchColumn()) deleteStoredFile($url);
+    if ($url=$stmt->fetchColumn()) {
+        if (storedFileIsReferenced($url)) {
+            $_SESSION['flash_msg']='فایل به محتوا متصل است؛ ابتدا آن را از محتوا جدا کنید.';
+            $_SESSION['flash_type']='warning';
+        } else deleteStoredFile($url);
+    }
     redirect(siteUrl('admin/media/'));
 }
 $rows = getDB()->query('SELECT * FROM stored_files ORDER BY created_at DESC LIMIT 200')->fetchAll();

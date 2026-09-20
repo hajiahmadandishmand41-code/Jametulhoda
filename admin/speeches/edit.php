@@ -44,14 +44,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!empty($_FILES['featured_image']['name']) && $_FILES['featured_image']['error'] === UPLOAD_ERR_OK) {
                 $up = uploadImage($_FILES['featured_image'], 'posts');
                 if ($up) {
-                    if ($featImg) deleteStoredFile($featImg);
+                    if ($featImg) scheduleFileDeletion($featImg);
                     $featImg = $up;
                 } else {
                     $error = 'خطا در آپلود تصویر.';
                 }
             }
             if (!$error && !empty($_POST['remove_featured'])) {
-                if ($featImg) deleteStoredFile($featImg);
+                if ($featImg) scheduleFileDeletion($featImg);
                 $featImg = '';
             }
 
@@ -60,14 +60,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ensureFeaturedVideoColumn();
                 $upV = uploadFeaturedVideo($_FILES['featured_video']);
                 if ($upV) {
-                    if ($featVid) deleteStoredFile($featVid);
+                    if ($featVid) scheduleFileDeletion($featVid);
                     $featVid = $upV;
                 } else {
                     $error = 'خطا در آپلود ویدیو.';
                 }
             }
             if (!$error && !empty($_POST['remove_featured_video'])) {
-                if ($featVid) deleteStoredFile($featVid);
+                if ($featVid) scheduleFileDeletion($featVid);
                 $featVid = '';
             }
 

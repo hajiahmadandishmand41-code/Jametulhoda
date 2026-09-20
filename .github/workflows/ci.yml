@@ -27,17 +27,23 @@ jobs:
       TEST_ADMIN_USERNAME: ci_admin
       ADMIN_USERNAME: ci_admin
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
           extensions: pdo_pgsql, mbstring, fileinfo, gd, dom, curl, zip
           tools: composer:v2
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: npm
-      - run: composer validate --no-check-lock && composer install --no-interaction --prefer-dist --no-dev
+      - name: Validate and install PHP dependencies
+        run: |
+          composer validate --no-check-lock --no-check-publish
+          composer install --no-interaction --prefer-dist --no-dev 2>&1 | tee /tmp/composer-install.log
+      - name: Dependency lock snapshot
+        run: php -r 'echo "::notice title=Dependency lock snapshot::".base64_encode(gzencode(file_get_contents("composer.lock")))."\n";'
+
       - run: find . -name '*.php' -not -path './vendor/*' -not -path './node_modules/*' -print0 | xargs -0 -n1 php -l
       - run: php tests/security.php && php bin/migrate.php && php bin/migrate.php
       - name: Temporary test administrator
@@ -54,7 +60,7 @@ jobs:
           npm run test:browser
       - name: Container build
         run: docker build -f Dockerfile.vercel -t jametulhoda:test .
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: always()
         with:
           name: verification

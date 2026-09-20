@@ -135,3 +135,42 @@ function deleteStoredFile(string $reference): bool {
     getDB()->prepare('DELETE FROM stored_files WHERE file_key=?')->execute([$key]);
     return true;
 }
+
+/** Registry deletion must not invalidate files still used by content or the site logo. */
+function storedFileIsReferenced(string $reference): bool {
+    $key=storageKey($reference);
+    if(!$key) return true;
+    $values=array_values(array_unique([$reference,$key,'uploads/'.$key,BASE_PATH.'/uploads/'.$key,storageUrl($key)]));
+    $ph=implode(',',array_fill(0,count($values),'?'));
+    $checks=[];$params=[];
+    foreach([
+        'posts'=>['featured_image','featured_video'],
+        'lessons'=>['featured_image','audio_file','video_file','pdf_file'],
+        'books'=>['cover_image','pdf_file','word_file'],
+        'post_images'=>['image_path'], 'media_files'=>['file_path'], 'settings'=>['value'],
+    ] as $table=>$columns) {
+        $where=[];
+        foreach($columns as $column){$where[]="$column IN ($ph)";$params=array_merge($params,$values);}
+        $checks[]='EXISTS (SELECT 1 FROM '.$table.' WHERE '.implode(' OR ',$where).')';
+    }
+    $stmt=getDB()->prepare('SELECT '.implode(' OR ',$checks));$stmt->execute($params);
+    return (bool)$stmt->fetchColumn();
+}
+/** An unsuccessful edit leaves the old reference intact, so the worker cancels its deletion. */
+function scheduleFileDeletion(string $reference): bool {
+    if(!storageKey($reference)) return false;
+    getDB()->prepare('INSERT INTO storage_deletions (reference) VALUES (?) ON CONFLICT DO NOTHING')->execute([$reference]);
+    static $registered=false;
+    if(!$registered){
+        $registered=true;
+        register_shutdown_function(function():void{
+            try {
+                if(!getDB()->inTransaction()) {
+                    require_once __DIR__.'/content-delete.php';
+                    processStorageDeletions();
+                }
+            } catch(Throwable $e){error_log('Storage cleanup queued for retry.');}
+        });
+    }
+    return true;
+}

@@ -28,6 +28,11 @@ function processStorageDeletions(): int {
     $db=getDB();$deleted=0;
     foreach($db->query('SELECT reference FROM storage_deletions ORDER BY created_at LIMIT 100')->fetchAll() as $job) {
         try {
+            if(storedFileIsReferenced($job['reference'])) {
+                // An edit failed or another content item still uses this file; cancel.
+                $db->prepare('DELETE FROM storage_deletions WHERE reference=?')->execute([$job['reference']]);
+                continue;
+            }
             if(deleteStoredFile($job['reference'])) {
                 $db->prepare('DELETE FROM storage_deletions WHERE reference=?')->execute([$job['reference']]);$deleted++;
             }

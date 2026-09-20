@@ -92,7 +92,7 @@ function deleteMediaFile(int $mediaId, string $refType, int $refId): bool {
         if ($row && !empty($row['file_path'])) {
             // file_path نسبی مثل uploads/audio/file.mp3 است
             // UPLOAD_DIR مسیر کامل uploads است
-            deleteStoredFile($row['file_path']);
+            scheduleFileDeletion($row['file_path']);
         }
 
         $db->prepare(

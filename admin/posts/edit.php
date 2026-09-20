@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $up = uploadImage($_FILES['featured_image'], 'posts');
                 if ($up) {
                     // حذف تصویر قدیمی
-                    if ($featImg) deleteStoredFile($featImg);
+                    if ($featImg) scheduleFileDeletion($featImg);
                     $featImg = $up;
                 } else {
                     $error = 'خطا در آپلود تصویر شاخص.';
@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // حذف تصویر شاخص
             if (!$error && !empty($_POST['remove_featured'])) {
-                if ($featImg) deleteStoredFile($featImg);
+                if ($featImg) scheduleFileDeletion($featImg);
                 $featImg = '';
             }
 
@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$error && !empty($_FILES['featured_video']['name'])) {
                 $upV = uploadFeaturedVideo($_FILES['featured_video']);
                 if ($upV) {
-                    if ($featVid) deleteStoredFile($featVid);
+                    if ($featVid) scheduleFileDeletion($featVid);
                     $featVid = $upV;
                 } else {
                     $error = 'خطا در آپلود ویدیو شاخص. فرمت‌های مجاز: MP4، WebM، MOV، MKV (حداکثر 200MB)';
@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // حذف ویدیو شاخص
             if (!$error && !empty($_POST['remove_featured_video'])) {
-                if ($featVid) deleteStoredFile($featVid);
+                if ($featVid) scheduleFileDeletion($featVid);
                 $featVid = '';
             }
 
@@ -132,7 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $imgData = $imgRow->fetch();
                         if ($imgData && $imgData['image_path']) {
                             $fp = $imgData['image_path'];
-                            deleteStoredFile($fp);
+                            scheduleFileDeletion($fp);
                         }
                         $db->prepare("DELETE FROM post_images WHERE id=? AND post_id=?")->execute([(int)$imgId, $id]);
                     }

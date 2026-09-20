@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($up) {
                     if ($featImg) {
                         $old = $featImg;
-                        deleteStoredFile($old);
+                        scheduleFileDeletion($old);
                     }
                     $featImg = $up;
                 } else {
@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$error && !empty($_POST['remove_image'])) {
                 if ($featImg) {
                     $old = $featImg;
-                    deleteStoredFile($old);
+                    scheduleFileDeletion($old);
                 }
                 $featImg = '';
             }
@@ -80,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($audioUp) {
                         if ($audioPath) {
                             $old = $audioPath;
-                            deleteStoredFile($old);
+                            scheduleFileDeletion($old);
                         }
                         $audioPath = $audioUp;
                     } else {
@@ -107,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$error && !empty($_POST['remove_audio'])) {
                 if ($audioPath) {
                     $old = $audioPath;
-                    deleteStoredFile($old);
+                    scheduleFileDeletion($old);
                 }
                 $audioPath = '';
             }
@@ -118,14 +118,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ensureFeaturedVideoColumn();
                 $upV = uploadFeaturedVideo($_FILES['video_file']);
                 if ($upV) {
-                    if ($videoPath) deleteStoredFile($videoPath);
+                    if ($videoPath) scheduleFileDeletion($videoPath);
                     $videoPath = $upV;
                 } else {
                     $error = 'خطا در آپلود ویدیو. فرمت‌های مجاز: MP4، WebM، MOV (حداکثر 200MB)';
                 }
             }
             if (!$error && !empty($_POST['remove_video'])) {
-                if ($videoPath) deleteStoredFile($videoPath);
+                if ($videoPath) scheduleFileDeletion($videoPath);
                 $videoPath = '';
             }
 
@@ -134,14 +134,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$error && !empty($_FILES['pdf_file']['name']) && $_FILES['pdf_file']['error'] === UPLOAD_ERR_OK) {
                 $upPdf = uploadBookFile($_FILES['pdf_file'], 'pdf');
                 if ($upPdf) {
-                    if ($pdfPath) deleteStoredFile($pdfPath);
+                    if ($pdfPath) scheduleFileDeletion($pdfPath);
                     $pdfPath = $upPdf;
                 } else {
                     $error = 'خطا در آپلود PDF.';
                 }
             }
             if (!$error && !empty($_POST['remove_pdf'])) {
-                if ($pdfPath) deleteStoredFile($pdfPath);
+                if ($pdfPath) scheduleFileDeletion($pdfPath);
                 $pdfPath = '';
             }
 

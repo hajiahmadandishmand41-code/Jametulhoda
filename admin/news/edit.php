@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!empty($_FILES['featured_image']['name']) && $_FILES['featured_image']['error'] === UPLOAD_ERR_OK) {
                 $up = uploadImage($_FILES['featured_image'], 'posts');
                 if ($up) {
-                    if ($featImg) deleteStoredFile($featImg);
+                    if ($featImg) scheduleFileDeletion($featImg);
                     $featImg = $up;
                 } else {
                     $error = 'خطا در آپلود تصویر.';
@@ -43,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if (!$error && !empty($_POST['remove_featured'])) {
-                if ($featImg) deleteStoredFile($featImg);
+                if ($featImg) scheduleFileDeletion($featImg);
                 $featImg = '';
             }
 
