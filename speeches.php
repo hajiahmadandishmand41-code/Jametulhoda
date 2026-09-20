@@ -23,7 +23,7 @@ $where  = ["p.post_type = 'speech'", "p.status = 'published'"];
 $params = [];
 
 if ($search) {
-    $where[]  = "(p.title LIKE ? OR p.summary LIKE ? OR p.content LIKE ?)";
+    $where[]  = "(p.title ILIKE ? OR p.summary ILIKE ? OR p.content ILIKE ?)";
     $params[] = '%' . $search . '%';
     $params[] = '%' . $search . '%';
     $params[] = '%' . $search . '%';
@@ -31,7 +31,7 @@ if ($search) {
 
 // جستجوی سخنران — ابتدا در ستون speaker، سپس در محتوا
 if ($speaker) {
-    $where[]  = "(p.speaker LIKE ? OR p.content LIKE ? OR p.summary LIKE ? OR p.title LIKE ?)";
+    $where[]  = "(p.speaker ILIKE ? OR p.content ILIKE ? OR p.summary ILIKE ? OR p.title ILIKE ?)";
     $params[] = '%' . $speaker . '%';
     $params[] = '%' . $speaker . '%';
     $params[] = '%' . $speaker . '%';
@@ -44,7 +44,7 @@ if ($category) {
 }
 
 if ($year) {
-    $where[]  = "YEAR(p.published_at) = ?";
+    $where[]  = "EXTRACT(YEAR FROM p.published_at) = ?";
     $params[] = $year;
 }
 
@@ -87,7 +87,7 @@ $pages = $total > 0 ? (int)ceil($total / $limit) : 1;
 $availableYears = [];
 try {
     $yStmt = $db->prepare(
-        "SELECT DISTINCT YEAR(published_at) AS yr FROM posts
+        "SELECT DISTINCT EXTRACT(YEAR FROM published_at) AS yr FROM posts
          WHERE post_type='speech' AND status='published'
          ORDER BY yr DESC"
     );
@@ -102,7 +102,7 @@ try {
         "SELECT c.*, COUNT(p.id) AS cnt
          FROM categories c
          JOIN posts p ON p.category_id = c.id AND p.post_type='speech' AND p.status='published'
-         GROUP BY c.id HAVING cnt > 0
+         GROUP BY c.id HAVING COUNT(p.id) > 0
          ORDER BY c.name"
     );
     $scStmt->execute();
@@ -135,7 +135,7 @@ $likeUrl      = siteUrl('ajax/like.php');
     </div>
 </div>
 
-<main class="py-4 py-lg-5">
+<div class="py-4 py-lg-5">
     <div class="container">
 
         <!-- ─── هدر صفحه ─────────────────────────────────────────── -->
@@ -433,7 +433,7 @@ $likeUrl      = siteUrl('ajax/like.php');
             </div>
         </div>
     </div>
-</main>
+</div>
 
 <style>
 /* ─── Speech Cards ─────────────────────────────────── */

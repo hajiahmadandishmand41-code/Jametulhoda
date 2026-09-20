@@ -1,11 +1,18 @@
-FROM php:8.3-cli
-
+FROM composer:2 AS composer
+FROM php:8.3-apache
 WORKDIR /var/www/html
-
-RUN docker-php-ext-install pdo pdo_mysql
-
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq-dev libonig-dev libzip-dev libpng-dev libjpeg62-turbo-dev libwebp-dev libxml2-dev ca-certificates unzip \
+    && docker-php-ext-configure gd --with-jpeg --with-webp \
+    && docker-php-ext-install -j$(nproc) pdo_pgsql mbstring zip gd dom opcache \
+    && a2enmod rewrite headers \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=composer /usr/bin/composer /usr/local/bin/composer
+COPY composer.json ./
+RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 COPY . .
-
-ENV PORT=8080
-
-CMD ["sh", "-c", "php -S 0.0.0.0:${PORT:-8080} -t /var/www/html"]
+COPY config/production.ini /usr/local/etc/php/conf.d/production.ini
+RUN printf '<Directory /var/www/html>\nAllowOverride All\nRequire all granted\n</Directory>\nServerTokens Prod\nServerSignature Off\n' > /etc/apache2/conf-enabled/application.conf
+ENV PORT=80
+EXPOSE 80
+CMD ["sh", "-c", "sed -i \"s/Listen 80/Listen ${PORT:-80}/\" /etc/apache2/ports.conf; sed -i \"s/:80>/:${PORT:-80}>/\" /etc/apache2/sites-available/000-default.conf; exec apache2-foreground"]

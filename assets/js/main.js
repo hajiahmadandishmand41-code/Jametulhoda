@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', function () {
             method: 'POST',
             body:   formData,
             credentials: 'same-origin',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-Token': document.querySelector('meta[name=csrf-token]')?.content || '' }
         })
         .then(function (res) {
             if (!res.ok) throw new Error('HTTP ' + res.status);

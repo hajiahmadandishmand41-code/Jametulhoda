@@ -20,7 +20,7 @@ $offset = ($page - 1) * $limit;
 $where  = ["status = 'published'"];
 $params = [];
 if ($search) {
-    $where[]  = "(title LIKE ? OR content LIKE ? OR summary LIKE ? OR teacher LIKE ?)";
+    $where[]  = "(title ILIKE ? OR content ILIKE ? OR summary ILIKE ? OR teacher ILIKE ?)";
     $params   = array_merge($params, ["%$search%", "%$search%", "%$search%", "%$search%"]);
 }
 if ($level)  { $where[] = "level = ?"; $params[] = $level; }
@@ -39,7 +39,7 @@ try {
     $stmt->execute(array_merge($params, [$limit, $offset]));
     $lessons = $stmt->fetchAll();
 } catch (PDOException $e) {
-    error_log('lessons.php query error: ' . $e->getMessage());
+    error_log('lessons.php query error: ' . get_class($e));
 }
 
 function levelLabel2(string $l): string {
@@ -58,7 +58,7 @@ function levelLabel2(string $l): string {
     </div>
 </div>
 
-<main class="py-5">
+<div class="py-5">
     <div class="container">
         <div class="page-header mb-4">
             <h1 class="page-title"><i class="bi bi-play-circle-fill ms-2 text-gold"></i>درس‌های آموزشی</h1>
@@ -136,6 +136,6 @@ function levelLabel2(string $l): string {
         <?php endif; ?>
         <?php endif; ?>
     </div>
-</main>
+</div>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

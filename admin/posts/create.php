@@ -61,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ensureFeaturedVideoColumn();
                 $stmt = $db->prepare(
                     "INSERT INTO posts (title, slug, summary, content, featured_image, featured_video, post_type, page_section, category_id, author_id, status, is_featured, published_at, created_at, updated_at)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())"
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) RETURNING id"
                 );
                 $stmt->execute([
                     $title, $slug, $summary, $content, $featImg, $featVid,
@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $admin2['id'],
                     $status, $is_featured, $pub_date
                 ]);
-                $postId = (int)$db->lastInsertId();
+                $postId = (int)$stmt->fetchColumn();
 
                 // تصاویر اضافی
                 if (!empty($_FILES['images']['name'][0])) {

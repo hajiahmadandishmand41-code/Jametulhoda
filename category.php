@@ -33,7 +33,7 @@ require_once __DIR__ . '/includes/header.php';
     <li class="breadcrumb-item"><a href="<?= siteUrl() ?>">صفحه اصلی</a></li>
     <li class="breadcrumb-item active"><?= sanitize($cat['name']) ?></li>
 </ol></nav></div></div>
-<main class="py-5"><div class="container">
+<div class="py-5"><div class="container">
     <div class="page-header mb-4">
         <h1 class="page-title"><i class="bi bi-grid ms-2 text-gold"></i><?= sanitize($cat['name']) ?></h1>
         <?php if ($cat['description']): ?><p class="text-mid"><?= sanitize($cat['description']) ?></p><?php endif; ?>
@@ -64,5 +64,5 @@ require_once __DIR__ . '/includes/header.php';
     </div>
     <?php if ($pages > 1): ?><div class="mt-5"><?= paginate($total, $limit, $page, siteUrl('category.php?slug=' . urlencode($slug) . '&page=%d')) ?></div><?php endif; ?>
     <?php endif; ?>
-</div></main>
+</div></div>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

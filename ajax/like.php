@@ -10,18 +10,8 @@ require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/functions.php';
 
-// شروع session امن بدون نیاز به auth.php
-if (session_status() === PHP_SESSION_NONE) {
-    $sessionParams = [
-        'cookie_httponly' => true,
-        'cookie_samesite' => 'Lax',
-    ];
-    if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
-        $sessionParams['cookie_secure'] = true;
-    }
-    session_set_cookie_params($sessionParams);
-    @session_start();
-}
+require_once __DIR__ . '/../includes/auth.php';
+startSecureSession();
 
 ob_end_clean();
 
@@ -36,6 +26,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+
+if (!verifyCsrfToken($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '')) {
+    http_response_code(403); echo json_encode(['success'=>false,'error'=>'csrf']); exit;
+}
 // دریافت post_id از POST یا JSON body
 $postId = 0;
 $rawInput = file_get_contents('php://input');
@@ -72,46 +66,11 @@ try {
     exit;
 }
 
-// اطمینان از وجود جدول post_likes
-try {
-    $db = getDB();
-    $db->exec(
-        "CREATE TABLE IF NOT EXISTS `post_likes` (
-            `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
-            `post_id`    INT UNSIGNED NOT NULL,
-            `ip_hash`    VARCHAR(64)  NOT NULL,
-            `created_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (`id`),
-            UNIQUE KEY `uq_like` (`post_id`, `ip_hash`),
-            KEY `idx_post` (`post_id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
-    );
-} catch (PDOException $e) {
-    // اگر InnoDB کار نکرد، MyISAM امتحان کن
-    try {
-        $db->exec(
-            "CREATE TABLE IF NOT EXISTS `post_likes` (
-                `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                `post_id`    INT UNSIGNED NOT NULL,
-                `ip_hash`    VARCHAR(64)  NOT NULL,
-                `created_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (`id`),
-                UNIQUE KEY `uq_like` (`post_id`, `ip_hash`),
-                KEY `idx_post` (`post_id`)
-            ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4"
-        );
-    } catch (PDOException $e2) {
-        error_log('like.php: cannot create post_likes: ' . $e2->getMessage());
-        echo json_encode(['success' => false, 'error' => 'table_error', 'liked' => false, 'count' => 0]);
-        exit;
-    }
-}
-
 // toggle لایک
 try {
     $result = toggleLike($postId);
 } catch (\Throwable $e) {
-    error_log('like.php unhandled: ' . $e->getMessage());
+    error_log('like.php unhandled: ' . get_class($e));
     $result = ['success' => false, 'liked' => false, 'count' => 0, 'error' => 'server_error'];
 }
 

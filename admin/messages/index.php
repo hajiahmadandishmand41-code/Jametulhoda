@@ -9,43 +9,23 @@ require_once __DIR__ . '/../includes/header.php';
 $db = getDB();
 
 // اطمینان از وجود جدول (با is_read)
-$db->exec(
-    "CREATE TABLE IF NOT EXISTS `contact_messages` (
-        `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
-        `name`       VARCHAR(200) NOT NULL,
-        `email`      VARCHAR(200) DEFAULT NULL,
-        `phone`      VARCHAR(50)  DEFAULT NULL,
-        `subject`    VARCHAR(300) DEFAULT NULL,
-        `message`    TEXT         NOT NULL,
-        `ip_address` VARCHAR(45)  DEFAULT NULL,
-        `is_read`    TINYINT(1)   NOT NULL DEFAULT 0,
-        `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (`id`),
-        KEY `idx_is_read` (`is_read`),
-        KEY `idx_created` (`created_at`)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
-);
+/* Schema installed by CLI migration. */
 
 // Migration: اگر ستون is_read وجود نداشت اضافه کن
-try {
-    $chk = $db->query("SHOW COLUMNS FROM contact_messages LIKE 'is_read'");
-    if ($chk->rowCount() === 0) {
-        $db->exec("ALTER TABLE contact_messages ADD COLUMN `is_read` TINYINT(1) NOT NULL DEFAULT 0");
-    }
-} catch (\Throwable $e) {}
+/* Schema installed by CLI migration. */
 
 // علامت‌گذاری به‌عنوان خوانده‌شده
-if (isset($_GET['read']) && is_numeric($_GET['read'])) {
+if (isset($_POST['read']) && is_numeric($_POST['read'])) {
     $db->prepare("UPDATE contact_messages SET is_read=1 WHERE id=? AND is_read=0")
-       ->execute([(int)$_GET['read']]);
+       ->execute([(int)$_POST['read']]);
     header('Location: ' . siteUrl('admin/messages/'));
     exit;
 }
 
 // حذف پیام
-if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
-    if (verifyCsrfToken($_GET[CSRF_TOKEN_NAME] ?? '')) {
-        $db->prepare("DELETE FROM contact_messages WHERE id=?")->execute([(int)$_GET['delete']]);
+if (isset($_POST['delete']) && is_numeric($_POST['delete'])) {
+    if (verifyCsrfToken($_POST[CSRF_TOKEN_NAME] ?? '')) {
+        $db->prepare("DELETE FROM contact_messages WHERE id=?")->execute([(int)$_POST['delete']]);
         $_SESSION['flash_msg']  = 'پیام حذف شد.';
         $_SESSION['flash_type'] = 'success';
     }
@@ -166,7 +146,7 @@ $newCount = (int)$db->query("SELECT COUNT(*) FROM contact_messages WHERE is_read
                             <i class="bi bi-reply-fill"></i>
                         </a>
                         <?php endif; ?>
-                        <a href="?delete=<?= $msg['id'] ?>&<?= CSRF_TOKEN_NAME ?>=<?= urlencode(generateCsrfToken()) ?>"
+                        <a href="?delete=<?= $msg['id'] ?>"
                            class="btn btn-sm btn-outline-danger"
                            onclick="return confirm('حذف این پیام؟')">
                             <i class="bi bi-trash"></i>

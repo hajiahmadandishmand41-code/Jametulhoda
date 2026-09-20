@@ -11,14 +11,8 @@ function env_value(string $key, string $default = ''): string {
     return ($value === false) ? $default : $value;
 }
 
-// Database
-define('DB_HOST',    env_value('DB_HOST'));
-define('DB_PORT',    env_value('DB_PORT', '3306'));
-define('DB_NAME',    env_value('DB_NAME'));
-define('DB_USER',    env_value('DB_USER'));
-define('DB_PASS',    env_value('DB_PASS'));
-define('DB_SOCKET',  env_value('DB_SOCKET'));
-define('DB_CHARSET', env_value('DB_CHARSET', 'utf8mb4'));
+define('APP_ENV', env_value('APP_ENV', env_value('VERCEL') ? 'production' : 'development'));
+define('BASE_PATH', rtrim('/' . trim(env_value('BASE_PATH'), '/'), '/'));
 
 // Site
 define('SITE_NAME',   'مدرسه علمیه جامعه‌الهدی');
@@ -29,7 +23,13 @@ define('SITE_PHONE',  env_value('SITE_PHONE', '0798228441'));
 define('SITE_ADDRESS',env_value('SITE_ADDRESS', 'کابل، افغانستان'));
 
 // Upload
-define('UPLOAD_DIR',    __DIR__ . '/../uploads/');
+define('UPLOAD_STORAGE', env_value('UPLOAD_STORAGE', 'local'));
+define('UPLOAD_DIR', rtrim(env_value('UPLOAD_LOCAL_PATH', __DIR__ . '/../uploads'), '/') . '/');
+define('UPLOAD_BASE_URL', rtrim(env_value('UPLOAD_BASE_URL', BASE_PATH . '/uploads'), '/'));
+define('UPLOAD_IMAGES', 'images');
+define('UPLOAD_AUDIO', 'audio');
+define('UPLOAD_VIDEO', 'video');
+define('UPLOAD_DOCUMENTS', 'documents');
 define('MAX_FILE_SIZE', 20 * 1024 * 1024);
 define('MAX_VIDEO_SIZE', 200 * 1024 * 1024);
 define('ALLOWED_IMG',   ['image/jpeg','image/png','image/gif','image/webp']);
@@ -54,3 +54,25 @@ ini_set('log_errors', '1');
 
 // Timezone
 date_default_timezone_set('Asia/Kabul');
+
+// All entrypoints share non-disclosing failures and response hardening.
+if (PHP_SAPI !== 'cli') {
+    if (!ob_get_level()) ob_start();
+    header('X-Content-Type-Options: nosniff');
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+    if (APP_ENV === 'production') header('X-Frame-Options: SAMEORIGIN');
+    header("Permissions-Policy: camera=(), microphone=(), geolocation=()");
+    header("Content-Security-Policy: object-src 'none'; base-uri 'self'" . (APP_ENV === 'production' ? "; frame-ancestors 'self'" : ''));
+    if (APP_ENV === 'production') header('Strict-Transport-Security: max-age=31536000');
+}
+set_exception_handler(function (Throwable $e): void {
+    $id = bin2hex(random_bytes(6));
+    // Do not log DSNs, submitted passwords, SQL values or storage credentials.
+    error_log('Application failure ' . $id . ': ' . get_class($e) . ' at ' . basename($e->getFile()) . ':' . $e->getLine());
+    if (PHP_SAPI === 'cli') { fwrite(STDERR, "Operation failed; reference: $id\n"); exit(1); }
+    while (ob_get_level()) ob_end_clean();
+    http_response_code(503);
+    header('Content-Type: text/html; charset=utf-8');
+    header('Cache-Control: no-store');
+    echo '<!doctype html><html lang="fa" dir="rtl"><meta charset="utf-8"><title>سرویس موقتاً در دسترس نیست</title><h1>لطفاً کمی بعد دوباره تلاش کنید.</h1><p>شناسه پیگیری: ' . $id . '</p></html>';
+});

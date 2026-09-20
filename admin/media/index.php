@@ -5,7 +5,7 @@
 $adminTitle = 'مدیریت رسانه';
 require_once __DIR__ . '/../includes/header.php';
 
-$uploadPath = __DIR__ . '/../../uploads/';
+
 $error = $success = '';
 
 // آپلود تصاویر
@@ -34,44 +34,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['images']['name'][0]
     }
 }
 
-// حذف تصویر
-if (!empty($_GET['delete'])) {
-    if (!verifyCsrfToken($_GET[CSRF_TOKEN_NAME] ?? '')) {
-        $_SESSION['flash_msg']  = 'خطای امنیتی. دوباره تلاش کنید.';
-        $_SESSION['flash_type'] = 'danger';
-        redirect(siteUrl('admin/media/'));
-    }
-    $filename = basename($_GET['delete']);
-    $fp = $uploadPath . 'media/' . $filename;
-    if (file_exists($fp) && !is_dir($fp)) {
-        @unlink($fp);
-        $_SESSION['flash_msg']  = 'تصویر حذف شد.';
-        $_SESSION['flash_type'] = 'success';
-    }
+if (!empty($_POST['delete'])) {
+    requirePostCsrf();
+    $id = (int)$_POST['delete'];
+    $stmt = getDB()->prepare('SELECT url FROM stored_files WHERE id=?');
+    $stmt->execute([$id]);
+    if ($url=$stmt->fetchColumn()) deleteStoredFile($url);
     redirect(siteUrl('admin/media/'));
 }
-
-// خواندن تصاویر آپلودشده
-$images = [];
-$mediaDir = $uploadPath . 'media/';
-if (!is_dir($mediaDir)) @mkdir($mediaDir, 0755, true);
-if (is_dir($mediaDir)) {
-    $files = array_diff(scandir($mediaDir), ['.','..']);
-    foreach ($files as $f) {
-        $ext = strtolower(pathinfo($f, PATHINFO_EXTENSION));
-        if (in_array($ext, ['jpg','jpeg','png','gif','webp'])) {
-            $fp = $mediaDir . $f;
-            $images[] = [
-                'name' => $f,
-                'path' => 'uploads/media/' . $f,
-                'size' => filesize($fp),
-                'time' => filemtime($fp),
-            ];
-        }
-    }
-    // مرتب‌سازی: جدیدترین اول
-    usort($images, fn($a, $b) => $b['time'] - $a['time']);
-}
+$rows = getDB()->query('SELECT * FROM stored_files ORDER BY created_at DESC LIMIT 200')->fetchAll();
+$images = array_map(fn($row) => ['name'=>$row['id'], 'path'=>$row['url'], 'size'=>$row['size'], 'time'=>strtotime($row['created_at'])], $rows);
 ?>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h5 class="mb-0"><i class="bi bi-images ms-2"></i>مدیریت رسانه</h5>
@@ -112,7 +84,7 @@ if (is_dir($mediaDir)) {
                     <div class="position-absolute bottom-0 start-0 end-0 d-flex justify-content-between p-1" style="background:rgba(0,0,0,.6)">
                         <a href="<?= imgUrl($img['path']) ?>" target="_blank" class="btn btn-xs text-white p-0" style="font-size:.7rem" title="مشاهده"><i class="bi bi-eye"></i></a>
                         <button onclick="copyToClipboard('<?= imgUrl($img['path']) ?>')" class="btn btn-xs text-white p-0" style="font-size:.7rem" title="کپی لینک"><i class="bi bi-link-45deg"></i></button>
-                        <a href="?delete=<?= urlencode($img['name']) ?>&<?= CSRF_TOKEN_NAME ?>=<?= urlencode(generateCsrfToken()) ?>" class="btn btn-xs text-danger p-0" style="font-size:.7rem" data-confirm="حذف این تصویر؟" title="حذف"><i class="bi bi-trash"></i></a>
+                        <a href="?delete=<?= urlencode($img['name']) ?>" class="btn btn-xs text-danger p-0" style="font-size:.7rem" data-confirm="حذف این تصویر؟" title="حذف"><i class="bi bi-trash"></i></a>
                     </div>
                 </div>
                 <div class="text-muted mt-1" style="font-size:.7rem;overflow:hidden;white-space:nowrap;text-overflow:ellipsis" title="<?= sanitize($img['name']) ?>"><?= sanitize($img['name']) ?></div>

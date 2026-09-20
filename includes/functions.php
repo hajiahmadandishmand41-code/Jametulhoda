@@ -4,6 +4,7 @@
  */
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/storage.php';
 
 // ─── Security ────────────────────────────────────────────────────────────────
 
@@ -12,6 +13,8 @@ function sanitize(string $str): string {
 }
 
 function generateCsrfToken(): string {
+    require_once __DIR__ . '/auth.php';
+    startSecureSession();
     if (empty($_SESSION[CSRF_TOKEN_NAME])) {
         $_SESSION[CSRF_TOKEN_NAME] = bin2hex(random_bytes(32));
     }
@@ -29,24 +32,22 @@ function csrfField(): string {
 // ─── URL ─────────────────────────────────────────────────────────────────────
 
 function siteUrl(string $path = ''): string {
-    if (SITE_URL) {
-        $base = rtrim(SITE_URL, '/');
-    } else {
-        $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
-        $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        $base   = $scheme . '://' . $host;
-    }
-    return $base . '/' . ltrim($path, '/');
+    $path = str_replace(['"', "'", '<', '>'], ['%22','%27','%3C','%3E'], $path);
+    // Root-relative URLs do not trust Host/forwarded headers and survive domain changes.
+    if (preg_match('~^https://~i', $path)) return filter_var($path, FILTER_VALIDATE_URL) ? $path : '';
+    if (preg_match('~^(?:[a-z][a-z0-9+.-]*:|//)~i', $path) || str_contains($path, "\r") || str_contains($path, "\n")) return '';
+    return BASE_PATH . '/' . ltrim($path, '/');
 }
 
 function redirect(string $url): void {
-    header('Location: ' . $url);
+    if ((!str_starts_with($url, BASE_PATH . '/') || str_starts_with($url, '//')) && !(SITE_URL && str_starts_with($url, rtrim(SITE_URL, '/') . '/'))) throw new InvalidArgumentException('Unsafe redirect');
+    if (strpbrk($url, "\r\n") !== false) throw new InvalidArgumentException('Unsafe redirect');
+    header('Location: ' . $url, true, ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' ? 303 : 302);
     exit;
 }
 
 function currentUrl(): string {
-    $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
-    return $scheme . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+    return rtrim(SITE_URL, '/') . '/' . ltrim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/', '/');
 }
 
 // ─── Slug ─────────────────────────────────────────────────────────────────────
@@ -61,12 +62,13 @@ function makeSlug(string $text): string {
 }
 
 function uniqueSlug(string $table, string $text, int $excludeId = 0): string {
+    if (!in_array($table, ['posts','lessons','categories'], true)) throw new InvalidArgumentException('Invalid slug table');
     $db   = getDB();
     $base = makeSlug($text);
     $slug = $base;
     $i    = 1;
     while (true) {
-        $sql  = "SELECT COUNT(*) FROM `$table` WHERE slug = ? AND id != ?";
+        $sql  = "SELECT COUNT(*) FROM $table WHERE slug = ? AND id != ?";
         $stmt = $db->prepare($sql);
         $stmt->execute([$slug, $excludeId]);
         if ((int)$stmt->fetchColumn() === 0) break;
@@ -83,7 +85,7 @@ function persianDate(string $datetime): string {
     if (!$ts) return $datetime;
     $monthNames = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
     $parts = explode('-', date('Y-m-d', $ts));
-    $gy = (int)$parts[0]; $gm = (int)$parts[1]; $gd = (int)$parts[2];
+    $gy = (int)$parts[0] - 1600; $gm = (int)$parts[1]; $gd = (int)$parts[2] - 1;
     $leap = ($gy % 4 === 0 && $gy % 100 !== 0) || ($gy % 400 === 0);
     $monthDays = [31,28+($leap?1:0),31,30,31,30,31,31,30,31,30,31];
     $g_d_no = 365*$gy + (int)(($gy+3)/4) - (int)(($gy+99)/100) + (int)(($gy+399)/400);
@@ -112,97 +114,24 @@ function timeAgo(string $datetime): string {
 
 function imgUrl(string $path): string {
     if (!$path) return siteUrl('assets/images/placeholder.svg');
-    if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) return $path;
-    return siteUrl(ltrim($path, '/'));
+    $key = storageKey($path);
+    if ($key) return storageUrl($key);
+    return siteUrl($path);
 }
 
 function uploadImage(array $file, string $subdir = 'posts'): string {
-    if (empty($file['name']) || $file['error'] !== UPLOAD_ERR_OK) return '';
-    if ($file['size'] > MAX_FILE_SIZE) return '';
-
-    // بررسی نوع فایل
-    $finfo    = finfo_open(FILEINFO_MIME_TYPE);
-    $mimeType = finfo_file($finfo, $file['tmp_name']);
-    finfo_close($finfo);
-
-    if (!in_array($mimeType, ALLOWED_IMG, true)) return '';
-
-    $ext     = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-    $allowed = ['jpg','jpeg','png','gif','webp'];
-    if (!in_array($ext, $allowed, true)) $ext = 'jpg';
-
-    $dir = rtrim(UPLOAD_DIR, '/') . '/' . trim($subdir, '/');
-    if (!is_dir($dir) && !@mkdir($dir, 0755, true)) return '';
-
-    $filename = uniqid('img_', true) . '.' . $ext;
-    $dest     = $dir . '/' . $filename;
-
-    if (!move_uploaded_file($file['tmp_name'], $dest)) return '';
-
-    return 'uploads/' . ($subdir ? trim($subdir, '/') . '/' : '') . $filename;
+    return uploadFile($file, 'image', $subdir ?: UPLOAD_IMAGES);
 }
 
 function uploadAudio(array $file): string {
-    if (empty($file['name']) || $file['error'] !== UPLOAD_ERR_OK) return '';
-    if ($file['size'] > MAX_FILE_SIZE) return '';
-
-    $finfo    = finfo_open(FILEINFO_MIME_TYPE);
-    $mimeType = finfo_file($finfo, $file['tmp_name']);
-    finfo_close($finfo);
-
-    // بعضی سرورها mime audio/mpeg یا application/octet-stream می‌دهند
-    $allowedMime = array_merge(ALLOWED_AUDIO, [
-        'application/octet-stream',
-        'application/x-octet-stream',
-        'audio/x-mp3',
-        'audio/x-mpeg-3',
-        'audio/mpeg3',
-    ]);
-    $ext         = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-    $allowedExt  = ['mp3','ogg','wav','m4a','mp4'];
-
-    // پذیرش بر اساس پسوند یا MIME
-    if (!in_array($mimeType, $allowedMime, true) && !in_array($ext, $allowedExt, true)) return '';
-    if (!in_array($ext, $allowedExt, true)) $ext = 'mp3';
-
-    $dir = rtrim(UPLOAD_DIR, '/') . '/audio';
-    if (!is_dir($dir) && !@mkdir($dir, 0755, true)) return '';
-
-    $filename = uniqid('audio_', true) . '.' . $ext;
-    $dest     = $dir . '/' . $filename;
-
-    if (!move_uploaded_file($file['tmp_name'], $dest)) return '';
-
-    return 'uploads/audio/' . $filename;
+    return uploadFile($file, 'audio', UPLOAD_AUDIO);
 }
 
 /**
  * آپلود ویدیو شاخص
  */
 function uploadFeaturedVideo(array $file): string {
-    if (empty($file['name']) || $file['error'] !== UPLOAD_ERR_OK) return '';
-
-    $finfo    = finfo_open(FILEINFO_MIME_TYPE);
-    $mimeType = finfo_file($finfo, $file['tmp_name']);
-    finfo_close($finfo);
-
-    $ext        = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-    $allowedExt = ['mp4','webm','mov','mkv','ogv','m4v'];
-
-    if (!in_array($ext, $allowedExt, true)) return '';
-
-    $maxVideoSize = 200 * 1024 * 1024;
-    if ($file['size'] > $maxVideoSize) return '';
-
-    $dir = rtrim(UPLOAD_DIR, '/') . '/videos';
-    if (!is_dir($dir) && !@mkdir($dir, 0755, true)) return '';
-
-    $filename = uniqid('featvid_', true) . '.' . $ext;
-    $dest     = $dir . '/' . $filename;
-
-    if (!move_uploaded_file($file['tmp_name'], $dest)) return '';
-
-    return 'uploads/videos/' . $filename;
+    return uploadFile($file, 'video', UPLOAD_VIDEO);
 }
 
 /**
@@ -240,20 +169,13 @@ function renderFeaturedVideo(string $videoPath, string $posterPath = '', string 
  * ذخیره Thumbnail خودکار از base64
  */
 function saveBase64Thumbnail(string $base64Data, string $subdir = 'posts'): string {
-    if (empty($base64Data)) return '';
-    $base64Data = preg_replace('/^data:image\/\w+;base64,/', '', $base64Data);
-    $imageData  = base64_decode($base64Data, true);
-    if (!$imageData || strlen($imageData) < 100) return '';
-
-    $dir = rtrim(UPLOAD_DIR, '/') . '/' . trim($subdir, '/');
-    if (!is_dir($dir) && !@mkdir($dir, 0755, true)) return '';
-
-    $filename = uniqid('thumb_', true) . '.jpg';
-    $dest     = $dir . '/' . $filename;
-
-    if (file_put_contents($dest, $imageData) === false) return '';
-
-    return 'uploads/' . trim($subdir, '/') . '/' . $filename;
+    if (strlen($base64Data) > MAX_FILE_SIZE * 1.4) return '';
+    if (!preg_match('~^data:image/(?:jpeg|png|webp);base64,~', $base64Data)) return '';
+    $data = base64_decode(substr($base64Data, strpos($base64Data, ',')+1), true);
+    if (!$data) return '';
+    $tmp = tempnam(sys_get_temp_dir(), 'jhd-thumb-');
+    try { file_put_contents($tmp, $data); return storeValidatedFile($tmp, 'image', $subdir); }
+    finally { unlink($tmp); }
 }
 
 // ─── Posts ────────────────────────────────────────────────────────────────────
@@ -262,18 +184,7 @@ function saveBase64Thumbnail(string $base64Data, string $subdir = 'posts'): stri
  * اطمینان از وجود ستون featured_video در جدول posts
  */
 function ensureFeaturedVideoColumn(): void {
-    static $done = false;
-    if ($done) return;
-    try {
-        $db = getDB();
-        $check = $db->query("SHOW COLUMNS FROM posts LIKE 'featured_video'");
-        if ($check->rowCount() === 0) {
-            $db->exec("ALTER TABLE posts ADD COLUMN `featured_video` VARCHAR(500) DEFAULT NULL AFTER `featured_image`");
-        }
-        $done = true;
-    } catch (PDOException $e) {
-        // بی‌صدا رد شو
-    }
+    // Schema managed by bin/migrate.php.
 }
 
 /**
@@ -281,76 +192,14 @@ function ensureFeaturedVideoColumn(): void {
  * اضافه کردن ستون‌های summary و page_section اگر وجود ندارند
  */
 function ensureLessonsColumns(): void {
-    static $done = false;
-    if ($done) return;
-    try {
-        $db = getDB();
-
-        // ستون summary
-        $chk = $db->query("SHOW COLUMNS FROM lessons LIKE 'summary'");
-        if ($chk->rowCount() === 0) {
-            $db->exec("ALTER TABLE lessons ADD COLUMN `summary` TEXT DEFAULT NULL AFTER `content`");
-        }
-
-        // ستون page_section
-        $chk2 = $db->query("SHOW COLUMNS FROM lessons LIKE 'page_section'");
-        if ($chk2->rowCount() === 0) {
-            $db->exec("ALTER TABLE lessons ADD COLUMN `page_section` VARCHAR(255) NOT NULL DEFAULT 'home' AFTER `status`");
-        }
-
-        // ستون views اگر وجود نداشت
-        $chk3 = $db->query("SHOW COLUMNS FROM lessons LIKE 'views'");
-        if ($chk3->rowCount() === 0) {
-            $db->exec("ALTER TABLE lessons ADD COLUMN `views` INT UNSIGNED NOT NULL DEFAULT 0");
-        }
-
-        // ستون level
-        $chk4 = $db->query("SHOW COLUMNS FROM lessons LIKE 'level'");
-        if ($chk4->rowCount() === 0) {
-            $db->exec("ALTER TABLE lessons ADD COLUMN `level` ENUM('beginner','intermediate','advanced') DEFAULT NULL AFTER `page_section`");
-        }
-
-        // ستون sort_order
-        $chk5 = $db->query("SHOW COLUMNS FROM lessons LIKE 'sort_order'");
-        if ($chk5->rowCount() === 0) {
-            $db->exec("ALTER TABLE lessons ADD COLUMN `sort_order` INT NOT NULL DEFAULT 0 AFTER `level`");
-        }
-
-        // ستون video_file
-        $chk6 = $db->query("SHOW COLUMNS FROM lessons LIKE 'video_file'");
-        if ($chk6->rowCount() === 0) {
-            $db->exec("ALTER TABLE lessons ADD COLUMN `video_file` VARCHAR(500) DEFAULT NULL");
-        }
-
-        // ستون pdf_file
-        $chk7 = $db->query("SHOW COLUMNS FROM lessons LIKE 'pdf_file'");
-        if ($chk7->rowCount() === 0) {
-            $db->exec("ALTER TABLE lessons ADD COLUMN `pdf_file` VARCHAR(500) DEFAULT NULL");
-        }
-
-        $done = true;
-    } catch (PDOException $e) {
-        // بی‌صدا رد شو
-        error_log('ensureLessonsColumns error: ' . $e->getMessage());
-    }
+    // Schema managed by bin/migrate.php.
 }
 
 /**
  * Migration ایمن برای ستون speaker در جدول posts
  */
 function ensureSpeakerColumn(): void {
-    static $done = false;
-    if ($done) return;
-    try {
-        $db  = getDB();
-        $chk = $db->query("SHOW COLUMNS FROM posts LIKE 'speaker'");
-        if ($chk->rowCount() === 0) {
-            $db->exec("ALTER TABLE posts ADD COLUMN `speaker` VARCHAR(200) DEFAULT NULL AFTER `summary`");
-        }
-        $done = true;
-    } catch (PDOException $e) {
-        error_log('ensureSpeakerColumn error: ' . $e->getMessage());
-    }
+    // Schema managed by bin/migrate.php.
 }
 
 /**
@@ -386,7 +235,7 @@ function getPosts(array $opts = []): array {
         $params[] = $opts['type'];
     }
     if (!empty($opts['search'])) {
-        $where[]  = "(p.title LIKE ? OR p.summary LIKE ? OR p.content LIKE ?)";
+        $where[]  = "(p.title ILIKE ? OR p.summary ILIKE ? OR p.content ILIKE ?)";
         $s        = '%' . $opts['search'] . '%';
         $params   = array_merge($params, [$s, $s, $s]);
     }
@@ -398,7 +247,7 @@ function getPosts(array $opts = []): array {
         $params[] = (int)$opts['cat'];
     }
     if (!empty($opts['section'])) {
-        $where[]  = "FIND_IN_SET(?, REPLACE(REPLACE(p.page_section, ' ', ''), ',,', ','))";
+        $where[]  = "? = ANY(string_to_array(REPLACE(p.page_section, ' ', ''), ','))";
         $params[] = $opts['section'];
     }
 
@@ -432,7 +281,7 @@ function countPosts(array $opts = []): int {
         $params[] = $opts['type'];
     }
     if (!empty($opts['search'])) {
-        $where[]  = "(p.title LIKE ? OR p.summary LIKE ? OR p.content LIKE ?)";
+        $where[]  = "(p.title ILIKE ? OR p.summary ILIKE ? OR p.content ILIKE ?)";
         $s        = '%' . $opts['search'] . '%';
         $params   = array_merge($params, [$s, $s, $s]);
     }
@@ -441,7 +290,7 @@ function countPosts(array $opts = []): int {
         $params[] = (int)$opts['cat'];
     }
     if (!empty($opts['section'])) {
-        $where[]  = "FIND_IN_SET(?, REPLACE(REPLACE(p.page_section, ' ', ''), ',,', ','))";
+        $where[]  = "? = ANY(string_to_array(REPLACE(p.page_section, ' ', ''), ','))";
         $params[] = $opts['section'];
     }
 
@@ -526,7 +375,7 @@ function getSetting(string $key, string $default = ''): string {
     if ($cache === null) {
         $db = getDB();
         try {
-            $rows  = $db->query("SELECT `key`, `value` FROM settings")->fetchAll();
+            $rows  = $db->query("SELECT key, value FROM settings")->fetchAll();
             $cache = array_column($rows, 'value', 'key');
         } catch (PDOException $e) {
             $cache = [];
@@ -613,42 +462,7 @@ function excerpt(string $text, int $chars = 150): string {
  * ایجاد جدول لایک‌ها اگر وجود ندارد
  */
 function ensureLikesTable(): void {
-    static $done = false;
-    if ($done) return;
-    try {
-        $db = getDB();
-        // InnoDB اول، اگر شکست خورد MyISAM امتحان می‌شود
-        try {
-            $db->exec(
-                "CREATE TABLE IF NOT EXISTS `post_likes` (
-                    `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                    `post_id`    INT UNSIGNED NOT NULL,
-                    `ip_hash`    VARCHAR(64)  NOT NULL,
-                    `created_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    PRIMARY KEY (`id`),
-                    UNIQUE KEY `uq_like` (`post_id`, `ip_hash`),
-                    KEY `idx_post` (`post_id`)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
-            );
-        } catch (PDOException $e) {
-            // فال‌بک به MyISAM (برای هاست‌های قدیمی)
-            $db->exec(
-                "CREATE TABLE IF NOT EXISTS `post_likes` (
-                    `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                    `post_id`    INT UNSIGNED NOT NULL,
-                    `ip_hash`    VARCHAR(64)  NOT NULL,
-                    `created_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    PRIMARY KEY (`id`),
-                    UNIQUE KEY `uq_like` (`post_id`, `ip_hash`),
-                    KEY `idx_post` (`post_id`)
-                ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4"
-            );
-        }
-        $done = true;
-    } catch (PDOException $e) {
-        error_log('ensureLikesTable error: ' . $e->getMessage());
-        // بی‌صدا رد شو — toggleLike خودش خطا برمی‌گرداند
-    }
+    // Schema managed by bin/migrate.php.
 }
 
 /**
@@ -721,7 +535,7 @@ function toggleLike(int $postId): array {
             }
             $liked = false;
         } else {
-            $db->prepare("INSERT IGNORE INTO post_likes (post_id, ip_hash, created_at) VALUES (?, ?, NOW())")
+            $db->prepare("INSERT INTO post_likes (post_id, ip_hash, created_at) VALUES (?, ?, NOW()) ON CONFLICT (post_id, ip_hash) DO NOTHING")
                ->execute([$postId, $ipHash]);
             if (!isset($_SESSION['liked_posts'])) {
                 $_SESSION['liked_posts'] = [];
@@ -739,7 +553,7 @@ function toggleLike(int $postId): array {
         return ['liked' => $liked, 'count' => $count, 'success' => true];
 
     } catch (PDOException $e) {
-        error_log('toggleLike error: ' . $e->getMessage());
+        error_log('toggleLike error: ' . get_class($e));
         return ['liked' => false, 'count' => 0, 'success' => false, 'error' => 'db_error'];
     }
 }
@@ -795,28 +609,7 @@ function renderLikeButton(int $postId, int $count, bool $liked, string $size = '
 // استفاده می‌شود. در غیر این صورت این نسخه fallback است.
 if (!function_exists('ensureMediaTable')) {
     function ensureMediaTable(): void {
-        static $done = false;
-        if ($done) return;
-        try {
-            $db = getDB();
-            $db->exec(
-                "CREATE TABLE IF NOT EXISTS `media_files` (
-                    `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                    `ref_type`   VARCHAR(30)  NOT NULL DEFAULT 'post',
-                    `ref_id`     INT UNSIGNED NOT NULL,
-                    `kind`       ENUM('image','video','audio','document') NOT NULL DEFAULT 'image',
-                    `file_path`  VARCHAR(500) NOT NULL,
-                    `title`      VARCHAR(300) DEFAULT NULL,
-                    `created_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    PRIMARY KEY (`id`),
-                    KEY `idx_ref` (`ref_type`, `ref_id`),
-                    KEY `idx_kind` (`kind`)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
-            );
-            $done = true;
-        } catch (PDOException $e) {
-            // بی‌صدا رد شو
-        }
+        // Schema managed by bin/migrate.php.
     }
 }
 
@@ -826,28 +619,7 @@ if (!function_exists('ensureMediaTable')) {
  * ایجاد جدول کتاب‌ها
  */
 function ensureBooksTable(): void {
-    static $done = false;
-    if ($done) return;
-    try {
-        $db = getDB();
-        $db->exec(
-            "CREATE TABLE IF NOT EXISTS `books` (
-                `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                `title`       VARCHAR(400) NOT NULL,
-                `description` TEXT             NULL,
-                `cover_image` VARCHAR(350)     NULL,
-                `pdf_file`    VARCHAR(350)     NULL,
-                `word_file`   VARCHAR(350)     NULL,
-                `downloads`   INT UNSIGNED NOT NULL DEFAULT 0,
-                `created_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                `updated_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                PRIMARY KEY (`id`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
-        );
-        $done = true;
-    } catch (PDOException $e) {
-        error_log('ensureBooksTable error: ' . $e->getMessage());
-    }
+    // Schema managed by bin/migrate.php.
 }
 
 /**
@@ -864,7 +636,7 @@ function getBooks(array $opts = []): array {
         $where  = ['1=1'];
         $params = [];
         if ($search) {
-            $where[]  = "(title LIKE ? OR description LIKE ?)";
+            $where[]  = "(title ILIKE ? OR description ILIKE ?)";
             $s        = '%' . $search . '%';
             $params[] = $s;
             $params[] = $s;
@@ -892,7 +664,7 @@ function countBooks(array $opts = []): int {
         $where  = ['1=1'];
         $params = [];
         if ($search) {
-            $where[]  = "(title LIKE ? OR description LIKE ?)";
+            $where[]  = "(title ILIKE ? OR description ILIKE ?)";
             $s        = '%' . $search . '%';
             $params[] = $s;
             $params[] = $s;
@@ -910,38 +682,46 @@ function countBooks(array $opts = []): int {
  * آپلود فایل کتاب (PDF یا Word)
  */
 function uploadBookFile(array $file, string $type = 'pdf'): string {
-    $allowedPdf  = ['application/pdf', 'application/x-pdf'];
-    $allowedWord = [
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/vnd.ms-word'
-    ];
-    $allowedExts = ($type === 'pdf') ? ['pdf'] : ['doc', 'docx'];
+    return uploadFile($file, $type === 'pdf' ? 'pdf' : 'word', UPLOAD_DOCUMENTS);
+}
 
-    $ext  = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-    $mime = $file['type'] ?? '';
-
-    if (!in_array($ext, $allowedExts, true)) {
-        return '';
-    }
-
-    // بررسی mime با اندکی انعطاف برای هاست‌های مختلف
-    if ($type === 'pdf' && !in_array($mime, $allowedPdf, true) && $ext !== 'pdf') {
-        return '';
-    }
-
-    if ($file['size'] > MAX_FILE_SIZE) {
-        return '';
-    }
-
-    $uploadDir = UPLOAD_DIR . 'books/';
-    if (!is_dir($uploadDir)) @mkdir($uploadDir, 0755, true);
-
-    $safeName = uniqid('book_', true) . '.' . $ext;
-    $dest     = $uploadDir . $safeName;
-
-    if (@move_uploaded_file($file['tmp_name'], $dest)) {
-        return 'uploads/books/' . $safeName;
-    }
-    return '';
+/** Conservative rich text allowlist. Never render database HTML verbatim. */
+function safeRichText(?string $html): string {
+    if (!$html) return '';
+    $dom = new DOMDocument('1.0', 'UTF-8');
+    $previous = libxml_use_internal_errors(true);
+    $dom->loadHTML('<?xml encoding="UTF-8"><div>' . $html . '</div>', LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING);
+    libxml_clear_errors(); libxml_use_internal_errors($previous);
+    $allowed = ['p','div','span','strong','b','em','i','u','ul','ol','li','blockquote','h2','h3','h4','h5','br','hr','a','img','table','thead','tbody','tr','th','td'];
+    $clean = function (DOMNode $node) use (&$clean,$allowed): void {
+        foreach (iterator_to_array($node->childNodes) as $child) {
+            if ($child instanceof DOMComment || $child instanceof DOMProcessingInstruction) { $node->removeChild($child); continue; }
+            if (!($child instanceof DOMElement)) continue;
+            $tag = strtolower($child->tagName);
+            if (in_array($tag,['script','style','iframe','object','embed','svg','math','form','input','button','meta','link','base'],true)) { $node->removeChild($child); continue; }
+            $clean($child);
+            if (!in_array($tag,$allowed,true)) {
+                while ($child->firstChild) $node->insertBefore($child->firstChild,$child);
+                $node->removeChild($child); continue;
+            }
+            foreach (iterator_to_array($child->attributes) as $attr) {
+                $name=strtolower($attr->name); $value=$attr->value;
+                $keep = in_array($name,['title','alt'],true);
+                if (($tag==='a' && $name==='href') || ($tag==='img' && $name==='src')) {
+                    $keep = safeExternalUrl($value)!=='' || (str_starts_with($value,'/') && !str_starts_with($value,'//') && !str_contains($value,'\\'));
+                }
+                if (!$keep) $child->removeAttribute($attr->name);
+            }
+            if ($tag==='a') $child->setAttribute('rel','noopener noreferrer');
+            if ($tag==='img') { $child->setAttribute('loading','lazy'); $child->setAttribute('decoding','async'); }
+        }
+    };
+    $body=$dom->getElementsByTagName('body')->item(0);
+    if (!$body) return '';
+    $clean($body); $out='';
+    foreach ($body->childNodes as $child) $out.=$dom->saveHTML($child);
+    return $out;
+}
+function safeExternalUrl(string $url): string {
+    return preg_match('~^https://~i', $url) && filter_var($url,FILTER_VALIDATE_URL) && !preg_match('/[<>"\x00-\x20]/', $url) ? $url : '';
 }

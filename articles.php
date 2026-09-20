@@ -25,7 +25,7 @@ $pages = (int)ceil($total / $limit);
   </div>
 </div>
 
-<main class="py-5">
+<div class="py-5">
   <div class="container">
     <!-- Page Header -->
     <div class="page-header mb-4">
@@ -135,6 +135,6 @@ $pages = (int)ceil($total / $limit);
     <?php endif; ?>
     <?php endif; ?>
   </div>
-</main>
+</div>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

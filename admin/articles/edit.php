@@ -43,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['flash_type'] = 'success';
                 redirect(siteUrl('admin/articles/edit.php?id=' . $id));
             } catch (PDOException $e) {
-                $error = 'خطا در ذخیره تغییرات: ' . $e->getMessage();
+                $error = 'خطا در ذخیره تغییرات: ';
             }
         }
     }

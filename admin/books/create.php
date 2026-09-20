@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // آپلود تصویر جلد
             if (!empty($_FILES['cover_image']['name']) && $_FILES['cover_image']['error'] === UPLOAD_ERR_OK) {
-                $up = uploadImage($_FILES['cover_image'], 'books/covers');
+                $up = uploadImage($_FILES['cover_image'], 'book-covers');
                 if ($up) {
                     $coverImg = $up;
                 } else {
@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['flash_type'] = 'success';
                     redirect(siteUrl('admin/books/'));
                 } catch (PDOException $e) {
-                    error_log('books create error: ' . $e->getMessage());
+                    error_log('books create error: ' . get_class($e));
                     $error = 'خطا در ذخیره‌سازی. لطفاً دوباره تلاش کنید.';
                 }
             }

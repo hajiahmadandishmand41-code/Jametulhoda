@@ -1,0 +1,64 @@
+name: PHP and PostgreSQL checks
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: jhd_test
+          POSTGRES_USER: jhd_test
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      APP_ENV: development
+      DATABASE_URL: postgresql://jhd_test@127.0.0.1:5432/jhd_test?sslmode=disable
+      SESSION_DRIVER: database
+      UPLOAD_STORAGE: local
+      SITE_URL: https://example.test
+      TEST_ADMIN_USERNAME: ci_admin
+      ADMIN_USERNAME: ci_admin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_pgsql, mbstring, fileinfo, gd, dom, curl, zip
+          tools: composer:v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: composer validate --no-check-lock && composer install --no-interaction --prefer-dist --no-dev
+      - run: find . -name '*.php' -not -path './vendor/*' -not -path './node_modules/*' -print0 | xargs -0 -n1 php -l
+      - run: php tests/security.php && php bin/migrate.php && php bin/migrate.php
+      - name: Temporary test administrator
+        run: |
+          password=$(openssl rand -hex 24)
+          echo "::add-mask::$password"
+          echo "TEST_ADMIN_PASSWORD=$password" >> "$GITHUB_ENV"
+          ADMIN_PASSWORD="$password" php bin/create-admin.php
+      - run: npm ci && npx playwright install --with-deps chromium
+      - name: Integration and browser tests
+        run: |
+          php -S 0.0.0.0:8080 router.php > test-server.log 2>&1 &
+          npm run test:http
+          npm run test:browser
+      - name: Container build
+        run: docker build -f Dockerfile.vercel -t jametulhoda:test .
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verification
+          path: |
+            test-results/
+            test-server.log
+            composer.lock

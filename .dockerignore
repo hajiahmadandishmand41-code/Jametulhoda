@@ -1,0 +1,11 @@
+.git
+.env
+.env.*
+.vercel
+node_modules
+vendor
+uploads
+tests
+*.log
+test-results
+.github

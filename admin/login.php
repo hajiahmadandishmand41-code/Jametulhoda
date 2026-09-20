@@ -53,9 +53,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ورود مدیر — <?= sanitize(SITE_NAME) ?></title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="<?= siteUrl('assets/vendor/bootstrap.rtl.min.css') ?>">
+<link rel="stylesheet" href="<?= siteUrl('assets/vendor/icons/bootstrap-icons.min.css') ?>">
+
 <style>
 * { box-sizing: border-box; }
 body { font-family: 'Vazirmatn', sans-serif; background: linear-gradient(135deg, #0f2317 0%, #2d6a4f 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
@@ -77,11 +77,14 @@ body { font-family: 'Vazirmatn', sans-serif; background: linear-gradient(135deg,
 .back-link { text-align: center; margin-top: 16px; font-size: .85rem; }
 .back-link a { color: #40916c; }
 </style>
+<script src="<?= siteUrl('assets/js/theme.js') ?>"></script>
+<link rel="stylesheet" href="<?= siteUrl('assets/css/design-system.css') ?>">
+<script src="<?= siteUrl('assets/js/interface.js') ?>" defer></script>
 </head>
-<body>
+<body><button style="position:fixed;bottom:20px;left:20px;z-index:1000;background:var(--jhd-surface)" class="jhd-icon-btn" data-theme-toggle aria-label="تغییر پوسته" aria-pressed="false"><i class="bi bi-moon"></i></button>
 <div class="login-card">
     <div class="login-header">
-        <img src="<?= siteUrl('assets/images/logo.jpg') ?>" alt="لوگو" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕌</text></svg>'">
+        <img src="<?= imgUrl(getSetting('site_logo', 'assets/images/logo.jpg')) ?>" alt="لوگو" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕌</text></svg>'">
         <h1><?= sanitize(SITE_NAME) ?></h1>
         <p>پنل مدیریت</p>
     </div>

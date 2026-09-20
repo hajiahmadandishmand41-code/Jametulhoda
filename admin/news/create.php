@@ -37,16 +37,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $slug  = uniqueSlug('posts', $title);
                     $stmt  = $db->prepare(
                         "INSERT INTO posts (title, slug, summary, content, featured_image, post_type, page_section, author_id, status, published_at, created_at, updated_at)
-                         VALUES (?, ?, ?, ?, ?, 'news', 'home,news', ?, ?, ?, NOW(), NOW())"
+                         VALUES (?, ?, ?, ?, ?, 'news', 'home,news', ?, ?, ?, NOW(), NOW()) RETURNING id"
                     );
                     $stmt->execute([$title, $slug, $summary ?: null, $content ?: null, $featImg ?: null, $admin['id'], $status, $pub_date]);
-                    $newId = (int)$db->lastInsertId();
+                    $newId = (int)$stmt->fetchColumn();
 
                     $_SESSION['flash_msg']  = 'خبر با موفقیت ذخیره شد.';
                     $_SESSION['flash_type'] = 'success';
                     redirect(siteUrl('admin/news/edit.php?id=' . $newId));
                 } catch (PDOException $e) {
-                    $error = 'خطا در ذخیره خبر: ' . $e->getMessage();
+                    $error = 'خطا در ذخیره خبر: ';
                 }
             }
         }

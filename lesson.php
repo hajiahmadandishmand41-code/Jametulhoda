@@ -69,7 +69,7 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </div>
 
-<main class="py-5">
+<div class="py-5">
     <div class="container">
         <div class="row g-4">
             <!-- محتوای اصلی -->
@@ -162,7 +162,7 @@ require_once __DIR__ . '/includes/header.php';
                     <!-- محتوای کامل -->
                     <?php if ($lesson['content']): ?>
                     <div class="single-post-content mt-4">
-                        <?= $lesson['content'] ?>
+                        <?= safeRichText($lesson['content']) ?>
                     </div>
                     <?php endif; ?>
 
@@ -245,7 +245,7 @@ require_once __DIR__ . '/includes/header.php';
             </div>
         </div>
     </div>
-</main>
+</div>
 
 <script>
 function copyLessonLink(url) {

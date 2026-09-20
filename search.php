@@ -4,16 +4,28 @@ $pageTitle = $q ? 'جستجو: ' . $q : 'جستجو';
 require_once __DIR__ . '/includes/header.php';
 $page  = max(1, (int)($_GET['page'] ?? 1));
 $limit = POSTS_PER_PAGE;
-$posts = $q ? getPosts(['search' => $q, 'limit' => $limit, 'offset' => ($page - 1) * $limit]) : [];
-// جستجو در همه پست‌های منتشرشده بدون فیلتر section — کاربر هر چی پیدا کرد ببینه
-$total = $q ? countPosts(['search' => $q]) : 0;
+$q = mb_substr($q, 0, 200);
+$searchSql = "FROM (
+    SELECT id,title,slug,summary,content,featured_image,post_type,published_at,created_at,'post' AS target FROM posts WHERE status='published'
+    UNION ALL
+    SELECT id,title,slug,summary,content,featured_image,'lesson',created_at,created_at,'lesson' FROM lessons WHERE status='published'
+    UNION ALL
+    SELECT id,title,NULL,description,description,cover_image,'book',created_at,created_at,'book' FROM books
+) results WHERE title ILIKE ? OR summary ILIKE ? OR content ILIKE ?";
+$posts=[]; $total=0;
+if ($q) {
+    $params=array_fill(0,3,'%'.$q.'%');
+    $stmt=getDB()->prepare('SELECT COUNT(*) '.$searchSql); $stmt->execute($params); $total=(int)$stmt->fetchColumn();
+    $stmt=getDB()->prepare('SELECT * '.$searchSql.' ORDER BY published_at DESC LIMIT ? OFFSET ?');
+    $stmt->execute(array_merge($params,[$limit,($page-1)*$limit])); $posts=$stmt->fetchAll();
+}
 $pages = (int)ceil($total / $limit);
 ?>
 <div class="breadcrumb-bar"><div class="container"><nav><ol class="breadcrumb mb-0">
     <li class="breadcrumb-item"><a href="<?= siteUrl() ?>">صفحه اصلی</a></li>
     <li class="breadcrumb-item active">جستجو</li>
 </ol></nav></div></div>
-<main class="py-5"><div class="container">
+<div class="py-5"><div class="container">
     <div class="page-header mb-4"><h1 class="page-title"><i class="bi bi-search ms-2 text-gold"></i>جستجو در سایت</h1><div class="section-divider"></div></div>
     <form method="get" class="mb-5">
         <div class="input-group input-group-lg" style="max-width:600px">
@@ -31,7 +43,7 @@ $pages = (int)ceil($total / $limit);
     </div>
     <?php if (!empty($posts)): ?>
     <div class="row g-4">
-        <?php foreach ($posts as $p): ?>
+        <?php foreach ($posts as $p): $resultUrl = $p['target']==='book' ? siteUrl('books.php?q='.urlencode($p['title'])) : siteUrl(($p['target']==='lesson'?'lesson.php':'post.php').'?slug='.urlencode($p['slug'])); ?>
         <div class="col-md-6 col-lg-4">
             <article class="news-card h-100">
                 <div class="news-card-img-wrap">
@@ -41,9 +53,9 @@ $pages = (int)ceil($total / $limit);
                 </div>
                 <div class="news-card-body">
                     <div class="news-card-meta"><span class="text-muted small"><i class="bi bi-calendar3 ms-1"></i><?= persianDate($p['published_at'] ?? $p['created_at']) ?></span></div>
-                    <h3 class="news-card-title"><a href="<?= siteUrl('post.php?slug=' . urlencode($p['slug'])) ?>"><?= sanitize($p['title']) ?></a></h3>
+                    <h3 class="news-card-title"><a href="<?= $resultUrl ?>"><?= sanitize($p['title']) ?></a></h3>
                     <?php if ($p['summary']): ?><p class="news-card-summary"><?= sanitize(excerpt($p['summary'], 120)) ?></p><?php endif; ?>
-                    <div class="news-card-footer"><a href="<?= siteUrl('post.php?slug=' . urlencode($p['slug'])) ?>" class="btn-read-more">ادامه مطلب <i class="bi bi-arrow-left"></i></a></div>
+                    <div class="news-card-footer"><a href="<?= $resultUrl ?>" class="btn-read-more">ادامه مطلب <i class="bi bi-arrow-left"></i></a></div>
                 </div>
             </article>
         </div>
@@ -52,5 +64,5 @@ $pages = (int)ceil($total / $limit);
     <?php if ($pages > 1): ?><div class="mt-5"><?= paginate($total, $limit, $page, siteUrl('search.php') . '?q=' . urlencode($q) . '&page=%d') ?></div><?php endif; ?>
     <?php endif; ?>
     <?php endif; ?>
-</div></main>
+</div></div>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

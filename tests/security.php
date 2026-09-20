@@ -1,0 +1,32 @@
+<?php
+putenv('SESSION_DRIVER=files');
+require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/media.php';
+require_once __DIR__ . '/../includes/auth.php';
+$checks=0;
+function check(bool $ok,string $label): void { global $checks; if(!$ok)throw new RuntimeException($label);$checks++; }
+check(siteUrl('news.php')===BASE_PATH.'/news.php','relative URL');
+check(siteUrl('//evil.example')==='','protocol relative URL rejected');
+check(siteUrl("javascript:alert(1)")==='','unsafe scheme rejected');
+check(siteUrl("news.php\r\nX-Test:bad")==='','header injection rejected');
+check(storageKey('../config/config.php')==='','traversal rejected');
+check(storageKey('uploads/../secret.pdf')==='','upload traversal rejected');
+check(storageKey('https://untrusted.example/file.pdf')==='','foreign storage rejected');
+check(storageKey('uploads/posts/test.jpg')==='posts/test.jpg','legacy key supported');
+check(storageKey('assets/images/logo.jpg')==='', 'assets are not uploads');
+check(storageKey('posts/shell.php')==='','executable rejected');
+check(validateUpload(__DIR__.'/fixtures/image.png','image')['mime']==='image/png','image content inspected');
+check(validateUpload(__FILE__,'image')===null,'PHP disguised as image rejected');
+check(validateUpload(__FILE__,'pdf')===null,'PHP disguised as PDF rejected');
+check(validateUpload(__DIR__.'/fixtures/audio.mp3','audio')['extension']==='mp3','MP3 content');
+check(validateUpload(__DIR__.'/fixtures/video.mp4','video')['extension']==='mp4','MP4 content');
+$html=safeRichText('<p onclick="evil()">Hello <strong>world</strong></p><script>evil()</script><a href="javascript:alert(1)">x</a><img src="x" onerror="evil()"><svg onload="evil()"/>');
+check(!str_contains($html,'evil()') && !str_contains($html,'javascript:') && !str_contains($html,'<svg'),'rich text XSS');
+check(str_contains($html,'<strong>world</strong>'),'safe formatting retained');
+check(persianDate('2024-03-20')==='1 فروردین 1403','Jalali new year');
+check(persianDate('2026-09-20')==='29 شهریور 1405','Jalali current date');
+$token=generateCsrfToken();
+check(verifyCsrfToken($token),'valid CSRF');
+check(!verifyCsrfToken('bad'),'invalid CSRF');
+check(strlen($token)===64,'CSRF entropy');
+echo "$checks security checks passed\n";

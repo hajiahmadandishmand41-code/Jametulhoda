@@ -1,0 +1,137 @@
+<?php
+require_once __DIR__ . '/../config/database.php';
+
+/** Only generated keys/legacy upload references from our own origin can be deleted. */
+function storageKey(string $value): string {
+    $root = dirname(__DIR__) . '/';
+    if (str_starts_with($value, $root)) $value = substr($value, strlen($root));
+    if (str_starts_with($value, UPLOAD_DIR)) $value = 'uploads/' . substr($value, strlen(UPLOAD_DIR));
+    if (str_starts_with($value, UPLOAD_BASE_URL . '/')) $value = substr($value, strlen(UPLOAD_BASE_URL) + 1);
+    elseif (str_starts_with($value, BASE_PATH . '/uploads/')) $value = substr($value, strlen(BASE_PATH . '/uploads/'));
+    elseif (str_starts_with($value, 'uploads/')) $value = substr($value, 8);
+    if (!in_array(explode('/', $value)[0], ['posts','lessons','books','book-covers','site','media',UPLOAD_IMAGES,UPLOAD_AUDIO,UPLOAD_VIDEO,UPLOAD_DOCUMENTS], true)) return '';
+    if (!preg_match('~^(?:[a-zA-Z0-9_-]+/)+[a-zA-Z0-9_.-]+\.(?:jpg|jpeg|png|gif|webp|mp3|ogg|wav|m4a|mp4|webm|mov|mkv|pdf|doc|docx)$~D', $value) || str_contains($value, '..')) return '';
+    return $value;
+}
+function storageUrl(string $key): string {
+    if (!storageKey($key) || $key !== storageKey($key)) throw new InvalidArgumentException('Invalid storage key');
+    return UPLOAD_BASE_URL . '/' . implode('/', array_map('rawurlencode', explode('/', $key)));
+}
+function storageClient(): \Aws\S3\S3Client {
+    static $client;
+    if (!is_file(__DIR__ . '/../vendor/autoload.php')) throw new RuntimeException('Run composer install.');
+    require_once __DIR__ . '/../vendor/autoload.php';
+    if (!str_starts_with(env_value('S3_ENDPOINT'), 'https://') || !str_starts_with(UPLOAD_BASE_URL, 'https://')) throw new RuntimeException('S3 and public storage require HTTPS.');
+    return $client ??= new \Aws\S3\S3Client([
+        'version'=>'latest', 'region'=>env_value('S3_REGION', 'auto'),
+        'endpoint'=>env_value('S3_ENDPOINT'),
+        'use_path_style_endpoint'=>env_value('S3_PATH_STYLE', 'true') === 'true',
+        'credentials'=>['key'=>env_value('S3_ACCESS_KEY_ID'), 'secret'=>env_value('S3_SECRET_ACCESS_KEY')],
+        'http'=>['connect_timeout'=>10, 'timeout'=>60],
+    ]);
+}
+function validateUpload(string $path, string $kind): ?array {
+    $maps = [
+        'image'=>['image/jpeg'=>'jpg','image/png'=>'png','image/gif'=>'gif','image/webp'=>'webp'],
+        'audio'=>['audio/mpeg'=>'mp3','audio/ogg'=>'ogg','audio/wav'=>'wav','audio/x-wav'=>'wav','audio/mp4'=>'m4a','audio/x-m4a'=>'m4a'],
+        'video'=>['video/mp4'=>'mp4','video/webm'=>'webm','video/ogg'=>'ogg','video/quicktime'=>'mov','video/x-matroska'=>'mkv'],
+        'pdf'=>['application/pdf'=>'pdf'],
+        'word'=>['application/msword'=>'doc','application/vnd.openxmlformats-officedocument.wordprocessingml.document'=>'docx'],
+    ];
+    if (!isset($maps[$kind]) || !is_file($path)) return null;
+    $size = filesize($path);
+    if (!$size || $size > ($kind === 'video' ? MAX_VIDEO_SIZE : MAX_FILE_SIZE)) return null;
+    $mime = (new finfo(FILEINFO_MIME_TYPE))->file($path);
+    // ZIP containers must be genuine DOCX, not arbitrary archives or macro-enabled files.
+    if ($kind === 'word' && in_array($mime, ['application/zip','application/vnd.openxmlformats-officedocument.wordprocessingml.document'], true)) {
+        $zip = new ZipArchive();
+        if ($zip->open($path) !== true) return null;
+        $valid = $zip->locateName('[Content_Types].xml') !== false && $zip->locateName('word/document.xml') !== false;
+        for ($i=0; $i<$zip->numFiles; $i++) {
+            if (preg_match('~(?:vbaProject|\.exe$|\.php$|\.js$|\.bin$)~i', $zip->getNameIndex($i))) $valid = false;
+        }
+        $zip->close();
+        if (!$valid) return null;
+        $mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    }
+    if (!isset($maps[$kind][$mime])) return null;
+    if ($kind === 'image') {
+        $info = @getimagesize($path);
+        if (!$info || $info[0]*$info[1] > 20000000) return null;
+    }
+    if ($kind === 'pdf') {
+        $f=fopen($path, 'rb'); $magic=fread($f,5); fclose($f);
+        if ($magic !== '%PDF-') return null;
+    }
+    return ['mime'=>$mime,'extension'=>$maps[$kind][$mime],'size'=>$size];
+}
+function storeValidatedFile(string $path, string $kind, string $folder): string {
+    if (!preg_match('/^[a-zA-Z0-9_-]+$/D', $folder)) return '';
+    $info = validateUpload($path, $kind);
+    if (!$info) return '';
+    $temporary = null;
+    try {
+        // Decode/re-encode images: remove metadata and trailing executable/polyglot data.
+        if ($kind === 'image') {
+            $image = @imagecreatefromstring(file_get_contents($path));
+            if (!$image) return '';
+            $temporary = tempnam(sys_get_temp_dir(), 'jhd-');
+            $webp = function_exists('imagewebp');
+            $encoded = $webp ? imagewebp($image, $temporary, 85) : imagepng($image, $temporary);
+            imagedestroy($image);
+            if (!$encoded || !filesize($temporary)) return '';
+            $path = $temporary; $info = ['mime'=>$webp ? 'image/webp' : 'image/png','extension'=>$webp ? 'webp' : 'png','size'=>filesize($path)];
+        }
+        $key = $folder . '/' . bin2hex(random_bytes(20)) . '.' . $info['extension'];
+        $url = storageUrl($key);
+        if (UPLOAD_STORAGE === 's3') {
+            storageClient()->putObject([
+                'Bucket'=>env_value('S3_BUCKET'),'Key'=>$key,'SourceFile'=>$path,
+                'ContentType'=>$info['mime'], 'CacheControl'=>'public,max-age=31536000,immutable',
+                'ContentDisposition'=>in_array($kind, ['pdf','word'], true) ? 'attachment' : 'inline',
+            ]);
+            storageClient()->headObject(['Bucket'=>env_value('S3_BUCKET'),'Key'=>$key]);
+            $head=curl_init($url);
+            curl_setopt_array($head,[CURLOPT_NOBODY=>true,CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>15,CURLOPT_FOLLOWLOCATION=>false]);
+            curl_exec($head); $status=curl_getinfo($head,CURLINFO_HTTP_CODE); curl_close($head);
+            if($status!==200) {
+                storageClient()->deleteObject(['Bucket'=>env_value('S3_BUCKET'),'Key'=>$key]);
+                throw new RuntimeException('Public storage URL is not accessible.');
+            }
+        } elseif (UPLOAD_STORAGE === 'local' && APP_ENV !== 'production' && !env_value('VERCEL')) {
+            $dir = UPLOAD_DIR . $folder;
+            if (!is_dir($dir) && !mkdir($dir,0755,true)) return '';
+            if (!copy($path, UPLOAD_DIR . $key)) return '';
+            chmod(UPLOAD_DIR . $key,0644);
+        } else throw new RuntimeException('Persistent S3 storage required in production.');
+        try {
+            getDB()->prepare('INSERT INTO stored_files (file_key,url,mime,size) VALUES (?,?,?,?)')->execute([$key,$url,$info['mime'],$info['size']]);
+        } catch (Throwable $e) {
+            if (UPLOAD_STORAGE === 's3') storageClient()->deleteObject(['Bucket'=>env_value('S3_BUCKET'),'Key'=>$key]);
+            else @unlink(UPLOAD_DIR . $key);
+            throw $e;
+        }
+        return $url;
+    } catch (Throwable $e) {
+        error_log('Upload failed: ' . get_class($e));
+        return '';
+    } finally { if ($temporary && is_file($temporary)) unlink($temporary); }
+}
+function uploadFile(array $file, string $kind, string $folder): string {
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file($file['tmp_name'] ?? '')) return '';
+    return storeValidatedFile($file['tmp_name'], $kind, $folder);
+}
+function deleteStoredFile(string $reference): bool {
+    $key = storageKey($reference);
+    if (!$key) return false;
+    if (UPLOAD_STORAGE === 's3') {
+        storageClient()->deleteObject(['Bucket'=>env_value('S3_BUCKET'),'Key'=>$key]);
+    } elseif (UPLOAD_STORAGE === 'local' && APP_ENV !== 'production' && !env_value('VERCEL')) {
+        $path = realpath(UPLOAD_DIR . $key);
+        $base = realpath(UPLOAD_DIR);
+        if ($path && (!$base || !str_starts_with($path, $base . '/') || !is_file($path))) return false;
+        if ($path && !unlink($path)) return false;
+    } else return false;
+    getDB()->prepare('DELETE FROM stored_files WHERE file_key=?')->execute([$key]);
+    return true;
+}
