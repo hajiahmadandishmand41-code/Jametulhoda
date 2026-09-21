@@ -6,9 +6,19 @@
  * Secrets are read from environment variables so they are not committed to Git.
  */
 
+$APP_LOCAL_CONFIG = [];
+$localConfigFile = __DIR__ . '/local.php';
+if (is_file($localConfigFile)) {
+    $loaded = require $localConfigFile;
+    if (is_array($loaded)) $APP_LOCAL_CONFIG = $loaded;
+}
+
 function env_value(string $key, string $default = ''): string {
+    global $APP_LOCAL_CONFIG;
     $value = getenv($key);
-    return ($value === false || $value === '') ? $default : $value;
+    if ($value !== false && $value !== '') return (string)$value;
+    if (isset($APP_LOCAL_CONFIG[$key]) && $APP_LOCAL_CONFIG[$key] !== '') return (string)$APP_LOCAL_CONFIG[$key];
+    return $default;
 }
 
 define('APP_ENV', env_value('APP_ENV', env_value('VERCEL') ? 'production' : 'development'));
