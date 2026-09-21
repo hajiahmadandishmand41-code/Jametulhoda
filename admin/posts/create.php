@@ -1,6 +1,7 @@
 <?php
 /**
- * admin/posts/create.php — ایجاد مطلب جدید + تولید خودکار Thumbnail از ویدیو
+ * admin/posts/create.php — ایجاد مطلب (گزارش / مقاله / پژوهش / پرسش و پاسخ / خبر)
+ * ستون فقرات: موضوعات (post_topics) + نوع مطلب post_type
  */
 $adminTitle = 'مطلب جدید';
 require_once __DIR__ . '/../includes/header.php';
@@ -16,8 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $title       = trim($_POST['title']       ?? '');
         $summary     = trim($_POST['summary']     ?? '');
         $content     = $_POST['content']          ?? '';
-        $post_type   = in_array($_POST['post_type'] ?? '', ['news','article','announcement','speech','program','religious'])
-                       ? $_POST['post_type'] : 'news';
+        $allowedTypes=['report','article','research','qa','announcement','speech','news','program','religious'];
+        $post_type   = in_array($_POST['post_type'] ?? '', $allowedTypes) ? $_POST['post_type'] : 'article';
         $category_id = (int)($_POST['category_id'] ?? 0);
         $status      = in_array($_POST['status'] ?? '', ['published','draft']) ? $_POST['status'] : 'draft';
         $is_featured = (int)!empty($_POST['is_featured']);
@@ -25,11 +26,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                        ? date('Y-m-d H:i:s', strtotime($_POST['published_at']))
                        : date('Y-m-d H:i:s');
 
-        // بخش‌های نمایش
         $sections = $_POST['page_section'] ?? [];
         if (!is_array($sections)) $sections = [$sections];
         $page_section = implode(',', array_filter(array_map('trim', $sections)));
         if (!$page_section) $page_section = 'other';
+
+        $topicIds = $_POST['topic_ids'] ?? [];
+        if(!is_array($topicIds)) $topicIds=[$topicIds];
+        $topicIds=array_filter(array_map('intval',$topicIds));
 
         if (!$title) {
             $error = 'عنوان مطلب الزامی است.';
@@ -39,19 +43,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $featImg = '';
             $featVid = '';
 
-            // آپلود تصویر شاخص دستی
             if (!empty($_FILES['featured_image']['name'])) {
                 $featImg = uploadImage($_FILES['featured_image'], 'posts');
                 if (!$featImg) $error = 'خطا در آپلود تصویر شاخص. فرمت‌های مجاز: JPG، PNG، GIF، WebP';
             }
-
-            // تولید خودکار Thumbnail از ویدیو (اگر تصویر شاخص آپلود نشد)
             if (!$featImg && !empty($_POST['auto_thumbnail'])) {
                 $thumbPath = saveBase64Thumbnail($_POST['auto_thumbnail'], 'posts');
                 if ($thumbPath) $featImg = $thumbPath;
             }
-
-            // آپلود ویدیو شاخص (مستقل از فایل‌های ویدیویی گالری)
             if (!$error && !empty($_FILES['featured_video']['name'])) {
                 $featVid = uploadFeaturedVideo($_FILES['featured_video']);
                 if (!$featVid) $error = 'خطا در آپلود ویدیو شاخص. فرمت‌های مجاز: MP4، WebM، MOV، MKV (حداکثر 200MB)';
@@ -73,7 +72,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
                 $postId = (int)$stmt->fetchColumn();
 
-                // تصاویر اضافی
+                // اتصال موضوعات (ستون فقرات)
+                if($topicIds){
+                    $ins=$db->prepare("INSERT INTO post_topics (post_id, topic_id) VALUES (?,?) ON CONFLICT DO NOTHING");
+                    foreach($topicIds as $tid) $ins->execute([$postId,$tid]);
+                }
+
                 if (!empty($_FILES['images']['name'][0])) {
                     foreach ($_FILES['images']['name'] as $k => $name) {
                         if ($name && $_FILES['images']['error'][$k] === UPLOAD_ERR_OK) {
@@ -93,7 +97,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
 
-                // آپلود چند فایل صوتی/ویدیویی
                 if (!empty($_FILES['audio_files']['name'][0])) {
                     handleMediaUploads('post', $postId, $_FILES['audio_files'], 'audio');
                 }
@@ -110,9 +113,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $categories      = getCategories();
+$allTopics       = getTopics(['limit'=>200]);
+$topicTree       = getTopicTree();
 $selectedSections = is_array($_POST['page_section'] ?? null)
                    ? $_POST['page_section']
                    : explode(',', $_POST['page_section'] ?? 'home,news');
+$selectedTopicIds = $_POST['topic_ids'] ?? [];
+if(!is_array($selectedTopicIds)) $selectedTopicIds=[$selectedTopicIds];
 ?>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h5 class="mb-0"><i class="bi bi-plus-circle ms-2"></i>مطلب جدید</h5>
@@ -125,11 +132,9 @@ $selectedSections = is_array($_POST['page_section'] ?? null)
 
 <form method="post" enctype="multipart/form-data" class="admin-form" id="createPostForm">
     <?= csrfField() ?>
-    <!-- فیلد مخفی برای Thumbnail خودکار از ویدیو -->
     <input type="hidden" name="auto_thumbnail" id="autoThumbnailData">
 
     <div class="row g-4">
-        <!-- ستون اصلی -->
         <div class="col-lg-8">
             <div class="admin-card mb-4">
                 <div class="admin-card-header">محتوای مطلب</div>
@@ -149,7 +154,6 @@ $selectedSections = is_array($_POST['page_section'] ?? null)
                 </div>
             </div>
 
-            <!-- تصویر شاخص -->
             <div class="admin-card mb-4">
                 <div class="admin-card-header">تصویر شاخص</div>
                 <div class="admin-card-body">
@@ -162,7 +166,6 @@ $selectedSections = is_array($_POST['page_section'] ?? null)
                 </div>
             </div>
 
-            <!-- ویدیو شاخص (جدا از گالری) -->
             <div class="admin-card mb-4">
                 <div class="admin-card-header"><i class="bi bi-camera-video-fill ms-2 text-danger"></i>ویدیو شاخص (اختیاری)</div>
                 <div class="admin-card-body">
@@ -172,7 +175,6 @@ $selectedSections = is_array($_POST['page_section'] ?? null)
                 </div>
             </div>
 
-            <!-- تصاویر اضافی -->
             <div class="admin-card mb-4">
                 <div class="admin-card-header">تصاویر اضافی (اختیاری)</div>
                 <div class="admin-card-body">
@@ -181,16 +183,14 @@ $selectedSections = is_array($_POST['page_section'] ?? null)
                 </div>
             </div>
 
-            <!-- فایل‌های صوتی چندگانه -->
             <div class="admin-card mb-4">
-                <div class="admin-card-header"><i class="bi bi-mic-fill ms-2"></i>فایل‌های صوتی (اختیاری — برای سخنرانی‌ها)</div>
+                <div class="admin-card-header"><i class="bi bi-mic-fill ms-2"></i>فایل‌های صوتی (اختیاری)</div>
                 <div class="admin-card-body">
                     <input type="file" name="audio_files[]" class="form-control" accept="audio/*,.mp3,.ogg,.wav,.m4a" multiple>
-                    <div class="form-text">MP3، OGG، WAV، M4A — تا 20MB برای هر فایل. برای Playlist می‌توانید چند فایل انتخاب کنید.</div>
+                    <div class="form-text">MP3، OGG، WAV، M4A — تا 20MB برای هر فایل.</div>
                 </div>
             </div>
 
-            <!-- فایل‌های ویدیویی چندگانه -->
             <div class="admin-card">
                 <div class="admin-card-header"><i class="bi bi-camera-video-fill ms-2"></i>فایل‌های ویدیویی (اختیاری)</div>
                 <div class="admin-card-body">
@@ -206,10 +206,7 @@ $selectedSections = is_array($_POST['page_section'] ?? null)
             </div>
         </div>
 
-
-        <!-- ستون جانبی -->
         <div class="col-lg-4">
-            <!-- انتشار -->
             <div class="admin-card mb-3">
                 <div class="admin-card-header">انتشار</div>
                 <div class="admin-card-body">
@@ -226,7 +223,7 @@ $selectedSections = is_array($_POST['page_section'] ?? null)
                     </div>
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" name="is_featured" id="is_featured" value="1" <?= !empty($_POST['is_featured'])?'checked':'' ?>>
-                        <label class="form-check-label" for="is_featured">نمایش در اسلایدر (برجسته)</label>
+                        <label class="form-check-label" for="is_featured">ویژه</label>
                     </div>
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-success"><i class="bi bi-send ms-1"></i>ذخیره مطلب</button>
@@ -234,23 +231,35 @@ $selectedSections = is_array($_POST['page_section'] ?? null)
                 </div>
             </div>
 
-            <!-- نوع و دسته -->
             <div class="admin-card mb-3">
-                <div class="admin-card-header">نوع و دسته‌بندی</div>
+                <div class="admin-card-header">نوع مطلب &amp; موضوعات</div>
                 <div class="admin-card-body">
                     <div class="mb-3">
-                        <label class="form-label">نوع مطلب</label>
+                        <label class="form-label">نوع مطلب <span class="text-danger">*</span></label>
                         <select name="post_type" class="form-select">
-                            <option value="news"         <?= ($_POST['post_type']??'news')==='news'?'selected':'' ?>>📰 خبر</option>
-                            <option value="article"      <?= ($_POST['post_type']??'')==='article'?'selected':'' ?>>📄 مقاله</option>
+                            <option value="report"       <?= ($_POST['post_type']??'')==='report'?'selected':'' ?>>📋 گزارش</option>
+                            <option value="article"      <?= ($_POST['post_type']??'article')==='article'?'selected':'' ?>>📄 مقاله</option>
+                            <option value="research"     <?= ($_POST['post_type']??'')==='research'?'selected':'' ?>>🔬 پژوهش</option>
+                            <option value="qa"           <?= ($_POST['post_type']??'')==='qa'?'selected':'' ?>>❓ پرسش و پاسخ</option>
                             <option value="announcement" <?= ($_POST['post_type']??'')==='announcement'?'selected':'' ?>>📢 اطلاعیه</option>
-                            <option value="speech"       <?= ($_POST['post_type']??'')==='speech'?'selected':'' ?>>🎤 سخنرانی</option>
-                            <option value="program"      <?= ($_POST['post_type']??'')==='program'?'selected':'' ?>>📅 برنامه آموزشی</option>
-                            <option value="religious"    <?= ($_POST['post_type']??'')==='religious'?'selected':'' ?>>⭐ فعالیت مذهبی</option>
+                            <option value="news"         <?= ($_POST['post_type']??'')==='news'?'selected':'' ?>>📰 خبر</option>
+                            <option value="speech"       <?= ($_POST['post_type']??'')==='speech'?'selected':'' ?>>🎤 سخنرانی/بیان</option>
                         </select>
+                        <div class="form-text">گزارش‌ها در صفحهٔ اصلی برجسته می‌شوند. پژوهش و مقاله در بخش مقالات و پژوهش.</div>
                     </div>
-                    <div>
-                        <label class="form-label">دسته‌بندی</label>
+                    <div class="mb-2"><label class="form-label fw-bold"><i class="bi bi-diagram-3 ms-1"></i> موضوعات (ستون فقرات) — چند انتخابی</label></div>
+                    <div style="max-height:240px;overflow:auto;border:1px solid #e8e6dc;border-radius:10px;padding:10px;background:#fafaf7">
+                        <?php if(empty($allTopics)): ?><div class="text-muted small">موضوعی وجود ندارد — از <a href="<?= siteUrl('admin/topics/') ?>">مدیریت موضوعات</a> اضافه کنید.</div>
+                        <?php else: foreach($allTopics as $t): $indent = $t['parent_id'] ? 'style="padding-inline-start:18px"' : ''; ?>
+                        <label class="form-check" <?= $indent ?>>
+                            <input type="checkbox" class="form-check-input" name="topic_ids[]" value="<?= $t['id'] ?>" <?= in_array($t['id'], (array)$selectedTopicIds)?'checked':'' ?>>
+                            <span class="form-check-label small"><?= sanitize($t['name']) ?></span>
+                        </label>
+                        <?php endforeach; endif; ?>
+                    </div>
+                    <div class="form-text mt-2">اتصال به موضوعات باعث نمایش در صفحهٔ موضوع و پیوند داخلی می‌شود.</div>
+                    <div class="mt-3">
+                        <label class="form-label">دسته‌بندی قدیمی (اختیاری)</label>
                         <select name="category_id" class="form-select">
                             <option value="">— بدون دسته —</option>
                             <?php foreach ($categories as $cat): ?>
@@ -263,11 +272,10 @@ $selectedSections = is_array($_POST['page_section'] ?? null)
                 </div>
             </div>
 
-            <!-- بخش‌های نمایش -->
             <div class="admin-card">
                 <div class="admin-card-header"><i class="bi bi-layout-text-window ms-2"></i>نمایش در کدام بخش‌ها؟</div>
                 <div class="admin-card-body">
-                    <p class="text-muted small mb-3">این مطلب در کدام صفحات نمایش داده شود؟</p>
+                    <p class="text-muted small mb-3">تقاطع قدیمی page_section — برای سازگاری باقی مانده.</p>
                     <?php
                     $sectionOpts = [
                         'home'          => '🏠 صفحه اصلی',
@@ -294,11 +302,6 @@ $selectedSections = is_array($_POST['page_section'] ?? null)
 </form>
 
 <script>
-/**
- * تولید خودکار Thumbnail از اولین فریم ویدیو
- * وقتی ادمین ویدیو انتخاب می‌کند و تصویر شاخصی انتخاب نشده،
- * فریم اول ویدیو به‌صورت canvas گرفته می‌شود و در فیلد مخفی ذخیره می‌شود.
- */
 (function() {
     var videoInput     = document.getElementById('videoFilesInput');
     var imageInput     = document.getElementById('featuredImageInput');
@@ -306,78 +309,50 @@ $selectedSections = is_array($_POST['page_section'] ?? null)
     var featPreview    = document.getElementById('featPreview');
     var thumbNotice    = document.getElementById('autoThumbNotice');
     var thumbProgress  = document.getElementById('videoThumbProgress');
-
     if (!videoInput) return;
-
     videoInput.addEventListener('change', function() {
         var file = this.files[0];
         if (!file) return;
-
-        // اگر تصویر شاخص دستی انتخاب شده، نیازی به تولید خودکار نیست
         if (imageInput && imageInput.files.length > 0) return;
         if (thumbDataInput && thumbDataInput.value) return;
-
-        // نمایش progress
         if (thumbProgress) thumbProgress.style.display = 'block';
         if (thumbNotice)   thumbNotice.style.display   = 'none';
-
         var objectUrl = URL.createObjectURL(file);
         var videoEl   = document.createElement('video');
         videoEl.muted    = true;
         videoEl.preload  = 'metadata';
         videoEl.playsInline = true;
         videoEl.style.display = 'none';
-
         videoEl.addEventListener('loadedmetadata', function() {
-            // Seek به ثانیه ۱ (یا ۱۰٪ طول ویدیو، هر کدام کوچک‌تر)
             var seekTime = Math.min(1, videoEl.duration * 0.1);
             videoEl.currentTime = seekTime;
         });
-
         videoEl.addEventListener('seeked', function() {
             var w = videoEl.videoWidth  || 640;
             var h = videoEl.videoHeight || 360;
-
-            // حداکثر 1280x720 برای بهینه‌سازی حجم
             var maxW = 1280;
             if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
-
             var canvas = document.createElement('canvas');
             canvas.width  = w;
             canvas.height = h;
             var ctx = canvas.getContext('2d');
             ctx.drawImage(videoEl, 0, 0, w, h);
-
             var dataUrl = canvas.toDataURL('image/jpeg', 0.82);
-
-            // ذخیره در فیلد مخفی
             if (thumbDataInput) thumbDataInput.value = dataUrl;
-
-            // نمایش پیش‌نمایش
-            if (featPreview) {
-                featPreview.src           = dataUrl;
-                featPreview.style.display = 'block';
-            }
+            if (featPreview) { featPreview.src = dataUrl; featPreview.style.display = 'block'; }
             if (thumbProgress) thumbProgress.style.display = 'none';
             if (thumbNotice)   thumbNotice.style.display   = 'flex';
-
-            // آزاد کردن حافظه
             URL.revokeObjectURL(objectUrl);
             videoEl.remove();
         });
-
         videoEl.addEventListener('error', function() {
-            // در صورت خطا، بدون thumbnail ادامه بده
             if (thumbProgress) thumbProgress.style.display = 'none';
             URL.revokeObjectURL(objectUrl);
             videoEl.remove();
         });
-
         document.body.appendChild(videoEl);
         videoEl.src = objectUrl;
     });
-
-    // اگر تصویر دستی انتخاب شد، thumbnail خودکار را پاک کن
     if (imageInput) {
         imageInput.addEventListener('change', function() {
             if (this.files.length > 0) {
@@ -386,22 +361,15 @@ $selectedSections = is_array($_POST['page_section'] ?? null)
             }
         });
     }
-
-    // پیش‌نمایش ویدیو شاخص
     var featVidInput = document.getElementById('featuredVideoInput');
     var featVidPrev  = document.getElementById('featVideoPreview');
     if (featVidInput && featVidPrev) {
         featVidInput.addEventListener('change', function() {
             var f = this.files[0];
-            if (!f) {
-                featVidPrev.style.display = 'none';
-                featVidPrev.removeAttribute('src');
-                return;
-            }
+            if (!f) { featVidPrev.style.display = 'none'; featVidPrev.removeAttribute('src'); return; }
             var u = URL.createObjectURL(f);
-            featVidPrev.src           = u;
+            featVidPrev.src = u;
             featVidPrev.style.display = 'block';
-            featVidPrev.onload        = function() { URL.revokeObjectURL(u); };
         });
     }
 })();

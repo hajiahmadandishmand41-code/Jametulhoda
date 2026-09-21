@@ -1,440 +1,345 @@
 <?php
 /**
- * index.php — صفحه اصلی جامعه‌الهدی
- * بازنویسی‌شده: معرفی مدرسه + اخبار + مقالات + سخنرانی‌ها + درس‌ها + کتاب‌ها
+ * index.php — صفحه اصلی محتوامحور جامعه‌الهدی (spec §10)
+ * ترتیب: hero کوتاه → موضوعات منتخب → گزارش‌ها → مقالات → درس‌ها → کتابخانه → رسانه → موضوع منتخب → اطلاعیه‌ها
  */
 $pageTitle = '';
+$pageDesc = 'مدرسه علمیه جامعه‌الهدی — آرشیو گزارش‌های دینی، مقالات و پژوهش‌ها، کتابخانه، دروس حوزوی درس‌به‌درس، ویدیو و صوت با محوریت موضوعات دینی.';
 require_once __DIR__ . '/config/config.php';
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/auth.php';
-
 startSecureSession();
 
 $db = getDB();
-ensureSpeakerColumn();
 
-// ─── داده‌ها ──────────────────────────────────────────────────────────────────
-
-// اخبار برجسته برای اسلایدر
-$featured = getPosts(['limit' => 5, 'featured' => 1, 'section' => 'home']);
-
-// آخرین اخبار
-$latestNews = getPosts(['limit' => 5, 'type' => 'news', 'section' => 'home']);
-
-// آخرین مقالات
-$latestArticles = getPosts(['limit' => 5, 'type' => 'article', 'section' => 'home']);
-
-// آخرین سخنرانی‌ها
-$latestSpeeches = getPosts(['limit' => 5, 'type' => 'speech', 'section' => 'home']);
-
-// آخرین درس‌ها
-$latestLessons = [];
-try {
-    ensureLessonsColumns();
-    $lStmt = $db->prepare(
-        "SELECT * FROM lessons
-         WHERE status='published'
-           AND (page_section IS NULL OR page_section = '' OR 'home' = ANY(string_to_array(REPLACE(page_section,' ',''),',')))
-         ORDER BY id DESC LIMIT 5"
-    );
-    $lStmt->execute();
-    $latestLessons = $lStmt->fetchAll();
-} catch (PDOException $e) {}
-
-// آخرین کتاب‌ها
-$latestBooks = [];
-try {
-    ensureBooksTable();
-    $bStmt = $db->prepare("SELECT * FROM books ORDER BY created_at DESC LIMIT 5");
-    $bStmt->execute();
-    $latestBooks = $bStmt->fetchAll();
-} catch (PDOException $e) {}
-
-// لایک‌ها (bulk — بدون N+1)
-$newsLikeMap    = getLikeCountsBulk(array_column($latestNews,     'id'));
-$artLikeMap     = getLikeCountsBulk(array_column($latestArticles, 'id'));
-$speechLikeMap  = getLikeCountsBulk(array_column($latestSpeeches, 'id'));
-$featLikeMap    = getLikeCountsBulk(array_column($featured,       'id'));
-
-$likedInSession = $_SESSION['liked_posts'] ?? [];
-$likeUrl        = siteUrl('ajax/like.php');
-
-// ─── تابع رندر تصویر/ویدیو کارت ──────────────────────────────────────────────
-function renderCardMedia(array $post, string $size = 'card'): string {
-    $hasImg  = !empty($post['featured_image']);
-    $hasVid  = !empty($post['featured_video']);
-    $imgUrl  = $hasImg ? imgUrl($post['featured_image']) : '';
-    $vidUrl  = $hasVid ? siteUrl($post['featured_video']) : '';
-    $altText = sanitize($post['title']);
-
-    if ($hasVid) {
-        $posterAttr = $imgUrl ? ' poster="'.htmlspecialchars($imgUrl,ENT_QUOTES).'"' : '';
-        $inner = $hasImg
-            ? '<img src="'.htmlspecialchars($imgUrl,ENT_QUOTES).'" alt="'.$altText.'" class="video-thumb__poster" loading="lazy">'
-            : '<video class="video-thumb__native" src="'.htmlspecialchars($vidUrl,ENT_QUOTES).'" preload="metadata" muted playsinline'.$posterAttr.'></video>';
-        $btnSize  = $size === 'hero' ? '' : ' play-btn-circle--sm';
-        $sizeClass = $size === 'hero' ? 'hero-media-wrap' : 'video-thumb';
-        return sprintf(
-            '<div class="%s" data-video="%s" data-poster="%s" role="button" tabindex="0" title="پخش ویدیو">%s<div class="video-play-overlay"><div class="play-btn-circle%s"><i class="bi bi-play-fill"></i></div></div><span class="video-badge-card"><i class="bi bi-camera-video-fill"></i> ویدیو</span></div>',
-            $sizeClass, htmlspecialchars($vidUrl,ENT_QUOTES), htmlspecialchars($imgUrl,ENT_QUOTES), $inner, $btnSize
-        );
-    }
-    if ($hasImg) {
-        return sprintf('<img src="%s" alt="%s" class="%s" loading="lazy" decoding="async">',
-            htmlspecialchars($imgUrl,ENT_QUOTES), $altText,
-            $size === 'hero' ? 'd-block w-100 hero-img' : 'news-card-img');
-    }
-    $icon = match($post['post_type'] ?? 'news') {
-        'article' => 'bi-file-text', 'speech' => 'bi-mic',
-        'announcement' => 'bi-megaphone', default => 'bi-newspaper',
-    };
-    return sprintf('<div class="%s"><i class="bi %s"></i></div>',
-        $size === 'hero' ? 'hero-placeholder' : 'news-card-img-placeholder', $icon);
+// ─── داده‌ها ───────────────────────────────────────────────────────────────
+$featuredTopics = getTopics(['active'=>1,'featured'=>1,'limit'=>6]);
+if(count($featuredTopics)<6){
+    // supplement with most used topics (by post_topics count)
+    try{
+        $stmt=getDB()->query("SELECT t.*, COUNT(pt.post_id) AS cnt FROM topics t LEFT JOIN post_topics pt ON pt.topic_id=t.id WHERE t.is_active=1 GROUP BY t.id ORDER BY cnt DESC, t.sort_order ASC LIMIT 6");
+        $sup=$stmt->fetchAll();
+        // merge unique
+        $ids=array_column($featuredTopics,'id');
+        foreach($sup as $s){ if(!in_array($s['id'],$ids)) $featuredTopics[]=$s; if(count($featuredTopics)>=6) break; }
+    }catch(PDOException $e){}
 }
+$latestReports = getPosts(['type'=>'report','limit'=>6]);
+if(empty($latestReports)){
+    // fallback to news as reports if no report exists yet
+    $latestReports = getPosts(['type'=>'news','limit'=>6]);
+}
+$latestArticles = [];
+try{
+    $stmt=getDB()->prepare("SELECT p.*, c.name AS cat_name FROM posts p LEFT JOIN categories c ON c.id=p.category_id WHERE p.status='published' AND p.post_type IN ('article','research') ORDER BY p.published_at DESC LIMIT 6");
+    $stmt->execute(); $latestArticles=$stmt->fetchAll();
+}catch(PDOException $e){ $latestArticles=getPosts(['type'=>'article','limit'=>6]); }
 
+$latestLessons = [];
+try{
+    $stmt=getDB()->prepare("SELECT l.*, lc.title AS collection_title, lc.slug AS collection_slug, lv.title AS volume_title FROM lessons l LEFT JOIN lesson_collections lc ON lc.id=l.collection_id LEFT JOIN lesson_volumes lv ON lv.id=l.volume_id WHERE l.status='published' ORDER BY l.created_at DESC LIMIT 6");
+    $stmt->execute(); $latestLessons=$stmt->fetchAll();
+}catch(PDOException $e){}
+
+$latestBooks = getBooks(['limit'=>8]);
+$recentVideos = [];
+$recentAudios = [];
+try{
+    $stmt=getDB()->prepare("SELECT m.*, p.title AS post_title, p.slug AS post_slug FROM media_files m LEFT JOIN posts p ON p.id=m.ref_id AND m.ref_type='post' WHERE m.kind='video' ORDER BY m.id DESC LIMIT 4");
+    $stmt->execute(); $recentVideos=$stmt->fetchAll();
+    $stmt=getDB()->prepare("SELECT m.*, l.title AS lesson_title, l.slug AS lesson_slug FROM media_files m LEFT JOIN lessons l ON l.id=m.ref_id AND m.ref_type='lesson' WHERE m.kind='audio' ORDER BY m.id DESC LIMIT 4");
+    $stmt->execute(); $recentAudios=$stmt->fetchAll();
+    // fallback to lessons audio_file
+    if(empty($recentAudios)){
+        $stmt=getDB()->prepare("SELECT * FROM lessons WHERE status='published' AND audio_file IS NOT NULL AND audio_file<>'' ORDER BY id DESC LIMIT 4");
+        $stmt->execute(); $recentAudios=$stmt->fetchAll();
+    }
+}catch(PDOException $e){}
+
+$specialBanner = getActiveBanner();
+
+// موضوع منتخب برای بخش 9 — اولین featured یا mahdaviat
+$featuredTopic = getTopicBySlug('mahdaviat');
+if(!$featuredTopic && !empty($featuredTopics)) $featuredTopic=$featuredTopics[0];
+$featuredTopicPosts = $featuredTopic ? getPostsByTopic((int)$featuredTopic['id'], ['limit'=>3]) : [];
+$featuredTopicBooks = $featuredTopic ? getBooksByTopic((int)$featuredTopic['id'], 3) : [];
+$featuredTopicLessons = $featuredTopic ? getLessonsByTopic((int)$featuredTopic['id'], 3) : [];
+// also videos/audios linked via post_topics/lesson_topics could be fetched via above but we show what we have
+
+$announcements = getPosts(['type'=>'announcement','limit'=>3]);
+
+// breadcrumbs for home — no need, but for SEO we add Organization already in header
 require_once __DIR__ . '/includes/header.php';
 require __DIR__ . '/includes/home-intro.php';
 ?>
 
-<!-- ─── اسلایدر اخبار برجسته ─────────────────────────────────────────────── -->
-<?php if (!empty($featured)): ?>
-<section class="hero-section">
-    <div id="heroCarousel" class="carousel slide carousel-fade" data-bs-ride="carousel" data-bs-interval="5500">
-        <div class="carousel-indicators">
-            <?php foreach ($featured as $i => $item): ?>
-            <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="<?= $i ?>"
-                    <?= $i === 0 ? 'class="active" aria-current="true"' : '' ?> aria-label="اسلاید <?= $i+1 ?>"></button>
-            <?php endforeach; ?>
-        </div>
-        <div class="carousel-inner">
-            <?php foreach ($featured as $i => $item):
-                $fLiked = in_array((int)$item['id'], $likedInSession, true);
-                $fCount = $featLikeMap[(int)$item['id']] ?? 0;
-                $hasVid = !empty($item['featured_video']);
-                $vidUrl = $hasVid ? siteUrl($item['featured_video']) : '';
-                $poster = !empty($item['featured_image']) ? imgUrl($item['featured_image']) : '';
-                $fIcon  = $fLiked ? '<i class="bi bi-heart-fill like-icon text-danger"></i>' : '<i class="bi bi-heart like-icon"></i>';
-            ?>
-            <div class="carousel-item <?= $i === 0 ? 'active' : '' ?>">
-                <?php if ($hasVid && $i === 0): ?>
-                <div class="hero-autoplay-wrap" style="position:relative;overflow:hidden;">
-                    <video class="d-block w-100 hero-img" id="heroAutoVideo" src="<?= htmlspecialchars($vidUrl,ENT_QUOTES) ?>"
-                           controls muted playsinline preload="none"
-                           <?= $poster ? 'poster="'.htmlspecialchars($poster,ENT_QUOTES).'"' : '' ?> style="object-fit:cover;"></video>
-                    <span class="hero-video-badge"><i class="bi bi-camera-video-fill"></i> ویدیو</span>
-                </div>
-                <?php elseif ($hasVid): ?>
-                <div class="hero-media-wrap" data-video="<?= htmlspecialchars($vidUrl,ENT_QUOTES) ?>" data-poster="<?= htmlspecialchars($poster,ENT_QUOTES) ?>" role="button" tabindex="0">
-                    <?= $poster ? '<img src="'.$poster.'" class="d-block w-100 hero-img" alt="'.sanitize($item['title']).'" loading="lazy">' : '<video class="d-block w-100 hero-img" src="'.htmlspecialchars($vidUrl,ENT_QUOTES).'" preload="metadata" muted playsinline></video>' ?>
-                    <div class="video-play-overlay"><div class="play-btn-circle"><i class="bi bi-play-fill"></i></div></div>
-                    <span class="hero-video-badge"><i class="bi bi-camera-video-fill"></i> ویدیو</span>
-                </div>
-                <?php elseif (!empty($item['featured_image'])): ?>
-                <img src="<?= imgUrl($item['featured_image']) ?>" class="d-block w-100 hero-img" alt="<?= sanitize($item['title']) ?>" loading="<?= $i===0?'eager':'lazy' ?>">
-                <?php else: ?>
-                <div class="hero-placeholder d-flex align-items-center justify-content-center"><i class="bi bi-newspaper text-white" style="font-size:5rem;opacity:.25"></i></div>
-                <?php endif; ?>
-                <div class="carousel-caption">
-                    <div class="caption-inner">
-                        <?= postTypeBadge($item['post_type']) ?>
-                        <h2 class="caption-title"><?= sanitize($item['title']) ?></h2>
-                        <?php if (!empty($item['summary'])): ?>
-                        <p class="caption-summary d-none d-md-block"><?= sanitize(excerpt($item['summary'], 120)) ?></p>
-                        <?php endif; ?>
-                        <div class="d-flex align-items-center justify-content-center gap-2 flex-wrap mt-3">
-                            <a href="<?= siteUrl('post.php?slug=' . urlencode($item['slug'])) ?>" class="btn btn-gold">
-                                <i class="bi bi-arrow-left ms-2"></i>ادامه مطلب
-                            </a>
-                            <button type="button" class="btn-like <?= $fLiked ? 'liked' : '' ?>"
-                                    data-post-id="<?= (int)$item['id'] ?>" data-url="<?= htmlspecialchars($likeUrl,ENT_QUOTES) ?>"
-                                    style="background:rgba(255,255,255,.95)">
-                                <?= $fIcon ?><span class="like-count"><?= $fCount > 0 ? number_format($fCount) : '' ?></span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <?php endforeach; ?>
-        </div>
-        <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
-            <span class="carousel-control-prev-icon"></span><span class="visually-hidden">قبلی</span>
-        </button>
-        <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
-            <span class="carousel-control-next-icon"></span><span class="visually-hidden">بعدی</span>
-        </button>
-    </div>
+<?php if($specialBanner): ?>
+<section class="jhd-banner-special py-3" style="background:linear-gradient(90deg,#163b37,#245c4c);color:#fff">
+<div class="container d-flex flex-wrap align-items-center justify-content-between gap-3">
+<div><strong><?= sanitize($specialBanner['title']) ?></strong><?php if($specialBanner['content']): ?> <span class="opacity-75 small ms-2"><?= sanitize(excerpt($specialBanner['content'],120)) ?></span><?php endif; ?></div>
+<?php if($specialBanner['link_url']): ?><a href="<?= sanitize(safeExternalUrl($specialBanner['link_url']) ?: siteUrl($specialBanner['link_url'])) ?>" class="btn btn-sm" style="background:#ded0aa;color:#163b37;font-weight:700"><?= sanitize($specialBanner['link_text'] ?: 'مشاهده') ?> <i class="bi bi-arrow-left"></i></a><?php endif; ?>
+</div>
 </section>
 <?php endif; ?>
 
-
-<!-- ─── معرفی مدرسه ────────────────────────────────────────────────────────── -->
-<?php
-$aboutTitle = getSetting('about_title', 'درباره مدرسه علمیه جامعه‌الهدی');
-$aboutText  = getSetting('about_text',  'مدرسه علمیه جامعه‌الهدی یکی از مراکز معتبر آموزش علوم اسلامی در افغانستان است که با هدف تربیت عالمان دینی و ترویج معارف اهل‌بیت (ع) فعالیت می‌نماید.');
-$aboutImg   = getSetting('about_image', '');
+<!-- 3. موضوعات منتخب -->
+<section class="py-5" style="background:var(--jhd-surface);border-bottom:1px solid var(--jhd-border)">
+<div class="container">
+<div class="jhd-section-heading">
+<div><span class="jhd-eyebrow">ستون فقرات محتوا</span><h2>موضوعات منتخب</h2><p>هر موضوع، مرکز محتوایی شامل مقالات، گزارش‌ها، کتاب‌ها، دروس و رسانه‌های مرتبط</p></div>
+<a class="jhd-text-link" href="<?= siteUrl('topics.php') ?>">همه موضوعات <i class="bi bi-arrow-left"></i></a>
+</div>
+<?php if(empty($featuredTopics)): ?>
+<div class="text-center py-4 text-muted small">موضوعی ثبت نشده است.</div>
+<?php else: ?>
+<div class="row g-3 g-md-4">
+<?php foreach($featuredTopics as $tp):
+    $childCount = count(getTopicChildren((int)$tp['id']));
+    $cnt = countPostsByTopic((int)$tp['id']);
 ?>
-<section class="section-about py-5" style="background:#fff;">
-    <div class="container">
-        <div class="row g-4 align-items-center">
-            <?php if ($aboutImg): ?>
-            <div class="col-lg-4">
-                <img src="<?= imgUrl($aboutImg) ?>" alt="مدرسه جامعه‌الهدی" class="img-fluid rounded-4 shadow" style="max-height:300px;width:100%;object-fit:cover">
-            </div>
-            <?php endif; ?>
-            <div class="<?= $aboutImg ? 'col-lg-8' : 'col-12 text-center' ?>">
-                <h2 class="section-title mb-3"><i class="bi bi-building ms-2 text-gold"></i><?= sanitize($aboutTitle) ?></h2>
-                <div class="section-divider mb-3"></div>
-                <p class="text-secondary lh-lg" style="font-size:1.05rem"><?= nl2br(sanitize($aboutText)) ?></p>
-                <a href="<?= siteUrl('about.php') ?>" class="btn btn-outline-primary mt-2">
-                    بیشتر بدانید <i class="bi bi-arrow-left ms-1"></i>
-                </a>
-            </div>
-        </div>
-    </div>
+<div class="col-6 col-lg-4">
+<a href="<?= siteUrl('topic.php?slug='.urlencode($tp['slug'])) ?>" class="topic-card h-100 text-decoration-none">
+<?php if($tp['cover_image']): ?><img src="<?= imgUrl($tp['cover_image']) ?>" alt="<?= sanitize($tp['name']) ?>" style="width:100%;height:140px;object-fit:cover;border-radius:8px" loading="lazy"><?php endif; ?>
+<h3><?= sanitize($tp['name']) ?></h3>
+<?php if($tp['intro'] ?: $tp['description']): ?><p><?= sanitize(excerpt($tp['intro'] ?: $tp['description'], 110)) ?></p><?php endif; ?>
+<span class="topic-meta"><i class="bi bi-collection ms-1"></i><?= number_format($cnt) ?> مطلب <?php if($childCount): ?>· <?= $childCount ?> زیرموضوع<?php endif; ?></span>
+</a>
+</div>
+<?php endforeach; ?>
+</div>
+<?php endif; ?>
+</div>
 </section>
 
+<!-- 4. آخرین گزارش‌های دینی و فعالیت‌های مدرسه -->
+<section class="py-5">
+<div class="container">
+<div class="d-flex justify-content-between align-items-end mb-4">
+<div><h2 class="section-title mb-1"><i class="bi bi-newspaper ms-2 text-gold"></i> آخرین گزارش‌ها</h2><div class="section-divider"></div><p class="text-muted small mb-0">فعالیت‌ها، جلسات، محافل، مراسم و برنامه‌های علمی مدرسه</p></div>
+<a href="<?= siteUrl('reports.php') ?>" class="btn btn-outline-secondary btn-sm">همه گزارش‌ها <i class="bi bi-arrow-left ms-1"></i></a>
+</div>
+<?php if(empty($latestReports)): ?>
+<div class="text-center py-5 text-muted"><i class="bi bi-inbox display-4 d-block mb-2 opacity-25"></i> گزارشی منتشر نشده است.</div>
+<?php else: ?>
+<div class="row g-4">
+<?php foreach($latestReports as $r): $hasImg=$r['featured_image']; $hasVid=!empty($r['featured_video']); ?>
+<div class="col-md-6 col-lg-4">
+<article class="news-card h-100">
+<div class="news-card-img-wrap">
+<?php if($hasVid): ?><div class="video-thumb" data-video="<?= siteUrl($r['featured_video']) ?>" data-poster="<?= $hasImg?imgUrl($r['featured_image']):'' ?>"><?php if($hasImg): ?><img src="<?= imgUrl($r['featured_image']) ?>" alt="<?= sanitize($r['title']) ?>" class="news-card-img" loading="lazy"><?php else: ?><video class="news-card-img" src="<?= siteUrl($r['featured_video']) ?>" preload="metadata" muted playsinline></video><?php endif; ?><div class="video-play-overlay"><div class="play-btn-circle play-btn-circle--sm"><i class="bi bi-play-fill"></i></div></div><span class="video-badge-card"><i class="bi bi-camera-video-fill"></i> ویدیو</span></div>
+<?php elseif($hasImg): ?><img src="<?= imgUrl($r['featured_image']) ?>" alt="<?= sanitize($r['title']) ?>" class="news-card-img" loading="lazy"><?php else: ?><div class="news-card-img-placeholder"><i class="bi bi-newspaper"></i></div><?php endif; ?>
+<div class="news-card-badge"><?= postTypeBadge($r['post_type']) ?></div>
+</div>
+<div class="news-card-body">
+<div class="news-card-meta"><span class="text-muted small"><i class="bi bi-calendar3 ms-1"></i><?= persianDate($r['published_at'] ?? $r['created_at']) ?></span><?php if($r['cat_name']): ?><span class="badge bg-light text-dark border" style="font-size:.70rem"><?= sanitize($r['cat_name']) ?></span><?php endif; ?></div>
+<h3 class="news-card-title"><a href="<?= siteUrl('post.php?slug='.urlencode($r['slug'])) ?>"><?= sanitize($r['title']) ?></a></h3>
+<?php if($r['summary']): ?><p class="news-card-summary"><?= sanitize(excerpt($r['summary'],120)) ?></p><?php endif; ?>
+<?php $tpcs=getTopicsForPost((int)$r['id']); if($tpcs): ?><div class="d-flex flex-wrap gap-1 mt-2"><?php foreach(array_slice($tpcs,0,2) as $t): ?><a href="<?= siteUrl('topic.php?slug='.urlencode($t['slug'])) ?>" class="badge bg-light text-dark border" style="font-size:.70rem"><?= sanitize($t['name']) ?></a><?php endforeach; ?></div><?php endif; ?>
+<div class="news-card-footer"><a href="<?= siteUrl('post.php?slug='.urlencode($r['slug'])) ?>" class="btn-read-more">ادامه مطلب <i class="bi bi-arrow-left"></i></a></div>
+</div>
+</article>
+</div>
+<?php endforeach; ?>
+</div>
+<?php endif; ?>
+</div>
+</section>
 
-<!-- ─── آخرین اخبار ──────────────────────────────────────────────────────── -->
-<?php if (!empty($latestNews)): ?>
-<section class="section-news py-5 bg-soft">
-    <div class="container">
-        <div class="section-header d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h2 class="section-title"><i class="bi bi-newspaper ms-2 text-gold"></i>آخرین اخبار</h2>
-                <div class="section-divider"></div>
-            </div>
-            <a href="<?= siteUrl('news.php') ?>" class="btn btn-outline-primary btn-sm">
-                همه اخبار <i class="bi bi-arrow-left ms-1"></i>
-            </a>
-        </div>
-        <div class="row g-4">
-            <?php foreach ($latestNews as $news):
-                $nid    = (int)$news['id'];
-                $nCount = $newsLikeMap[$nid] ?? 0;
-                $nLiked = in_array($nid, $likedInSession, true);
-                $nIcon  = $nLiked ? '<i class="bi bi-heart-fill like-icon text-danger"></i>' : '<i class="bi bi-heart like-icon"></i>';
-            ?>
-            <div class="col-md-6 col-lg-4">
-                <article class="news-card h-100">
-                    <div class="news-card-img-wrap position-relative">
-                        <?= renderCardMedia($news, 'card') ?>
-                        <div class="news-card-badge"><?= postTypeBadge($news['post_type']) ?></div>
-                    </div>
-                    <div class="news-card-body">
-                        <div class="news-card-meta">
-                            <span class="text-muted small"><i class="bi bi-calendar3 ms-1"></i><?= persianDate($news['published_at'] ?? $news['created_at']) ?></span>
-                        </div>
-                        <h3 class="news-card-title">
-                            <a href="<?= siteUrl('post.php?slug=' . urlencode($news['slug'])) ?>"><?= sanitize($news['title']) ?></a>
-                        </h3>
-                        <?php if (!empty($news['summary'])): ?>
-                        <p class="news-card-summary"><?= sanitize(excerpt($news['summary'], 120)) ?></p>
-                        <?php endif; ?>
-                        <div class="news-card-footer">
-                            <a href="<?= siteUrl('post.php?slug=' . urlencode($news['slug'])) ?>" class="btn-read-more">ادامه مطلب <i class="bi bi-arrow-left"></i></a>
-                            <button type="button" class="btn-like <?= $nLiked ? 'liked' : '' ?>"
-                                    data-post-id="<?= $nid ?>" data-url="<?= htmlspecialchars($likeUrl,ENT_QUOTES) ?>">
-                                <?= $nIcon ?><span class="like-count"><?= $nCount > 0 ? number_format($nCount) : '' ?></span>
-                            </button>
-                        </div>
-                    </div>
-                </article>
-            </div>
-            <?php endforeach; ?>
-        </div>
-    </div>
+<!-- 5. آخرین مقالات و پژوهش‌ها -->
+<section class="py-5 bg-soft">
+<div class="container">
+<div class="d-flex justify-content-between align-items-end mb-4">
+<div><h2 class="section-title mb-1"><i class="bi bi-journal-text ms-2 text-gold"></i> مقالات و پژوهش‌ها</h2><div class="section-divider"></div></div>
+<div class="d-flex gap-2"><a href="<?= siteUrl('articles.php') ?>" class="btn btn-outline-primary btn-sm">مقالات</a><a href="<?= siteUrl('research.php') ?>" class="btn btn-outline-secondary btn-sm">پژوهش‌ها</a></div>
+</div>
+<?php if(empty($latestArticles)): ?>
+<div class="text-center py-5 text-muted small">مقاله‌ای یافت نشد.</div>
+<?php else: ?>
+<div class="row g-4">
+<?php foreach($latestArticles as $a): ?>
+<div class="col-md-6 col-lg-4">
+<article class="article-card h-100">
+<?php if($a['featured_image']): ?><a href="<?= siteUrl('post.php?slug='.urlencode($a['slug'])) ?>"><img src="<?= imgUrl($a['featured_image']) ?>" alt="<?= sanitize($a['title']) ?>" class="article-card-img" loading="lazy"></a><?php else: ?><div class="article-card-img-placeholder"><i class="bi bi-file-text"></i></div><?php endif; ?>
+<div class="article-card-body">
+<div class="article-card-meta"><span class="article-date"><i class="bi bi-calendar3 ms-1"></i><?= persianDate($a['published_at'] ?? $a['created_at']) ?></span><?php if($a['cat_name']): ?><span class="article-cat"><?= sanitize($a['cat_name']) ?></span><?php endif; ?></div>
+<h3 class="article-card-title"><a href="<?= siteUrl('post.php?slug='.urlencode($a['slug'])) ?>"><?= sanitize($a['title']) ?></a></h3>
+<?php if($a['summary']): ?><p class="article-card-summary"><?= sanitize(excerpt($a['summary'],130)) ?></p><?php endif; ?>
+<div class="article-card-footer"><a href="<?= siteUrl('post.php?slug='.urlencode($a['slug'])) ?>" class="btn-read-more">مطالعه مقاله <i class="bi bi-arrow-left"></i></a></div>
+</div>
+</article>
+</div>
+<?php endforeach; ?>
+</div>
+<?php endif; ?>
+</div>
+</section>
+
+<!-- 6. درس‌های جدید -->
+<section class="py-5">
+<div class="container">
+<div class="d-flex justify-content-between align-items-end mb-4">
+<div><h2 class="section-title mb-1"><i class="bi bi-play-circle ms-2 text-gold"></i> آخرین درس‌ها</h2><div class="section-divider"></div><p class="text-muted small mb-0">مجموعه درس → جلد / بخش → درس — بدون ثبت‌نام، با URL مستقل هر درس</p></div>
+<a href="<?= siteUrl('lessons.php') ?>" class="btn btn-outline-secondary btn-sm">همه دروس <i class="bi bi-arrow-left ms-1"></i></a>
+</div>
+<?php if(empty($latestLessons)): ?>
+<div class="text-center py-5 text-muted small">درسی منتشر نشده است.</div>
+<?php else: ?>
+<div class="row g-4">
+<?php foreach($latestLessons as $ls): ?>
+<div class="col-md-6 col-lg-3">
+<div class="lesson-card h-100">
+<div class="lesson-card-img">
+<?php if($ls['featured_image']): ?><img src="<?= imgUrl($ls['featured_image']) ?>" alt="<?= sanitize($ls['title']) ?>" loading="lazy"><?php else: ?><div class="lesson-img-placeholder"><i class="bi bi-mortarboard"></i></div><?php endif; ?>
+<?php if($ls['audio_file'] || $ls['video_file']): ?><span class="lesson-audio-badge"><i class="bi bi-<?= $ls['video_file']?'camera-video':'headphones' ?>"></i> <?= $ls['video_file']?'ویدیو':'صوت' ?></span><?php endif; ?>
+<?php if($ls['is_featured']): ?><span class="lesson-level-badge badge bg-warning text-dark" style="top:8px;right:8px;left:auto">ویژه</span><?php endif; ?>
+</div>
+<div class="lesson-card-body">
+<?php if($ls['collection_title']): ?><span class="lesson-subject"><?= sanitize($ls['collection_title']) ?> <?php if($ls['volume_title']): ?>· <?= sanitize($ls['volume_title']) ?><?php endif; ?></span><?php elseif($ls['subject']): ?><span class="lesson-subject"><?= sanitize($ls['subject']) ?></span><?php endif; ?>
+<h4 class="lesson-card-title"><a href="<?= siteUrl('lesson.php?slug='.urlencode($ls['slug'])) ?>"><?= sanitize($ls['title']) ?></a></h4>
+<?php if($ls['teacher']): ?><p class="lesson-teacher"><i class="bi bi-person ms-1"></i> استاد: <?= sanitize($ls['teacher']) ?> <?php if(!empty($ls['lesson_number'])): ?>· درس <?= (int)$ls['lesson_number'] ?><?php endif; ?></p><?php elseif(!empty($ls['lesson_number'])): ?><p class="lesson-teacher">درس <?= (int)$ls['lesson_number'] ?></p><?php endif; ?>
+<a href="<?= siteUrl('lesson.php?slug='.urlencode($ls['slug'])) ?>" class="btn btn-sm btn-primary w-100 mt-auto">ورود به درس <i class="bi bi-arrow-left ms-1"></i></a>
+</div>
+</div>
+</div>
+<?php endforeach; ?>
+</div>
+<?php endif; ?>
+</div>
+</section>
+
+<!-- 7. کتابخانه -->
+<section class="py-5 bg-soft">
+<div class="container">
+<div class="d-flex justify-content-between align-items-end mb-4">
+<div><h2 class="section-title mb-1"><i class="bi bi-book ms-2 text-gold"></i> کتابخانه</h2><div class="section-divider"></div></div>
+<a href="<?= siteUrl('books.php') ?>" class="btn btn-outline-secondary btn-sm">همه کتاب‌ها <i class="bi bi-arrow-left ms-1"></i></a>
+</div>
+<?php if(empty($latestBooks)): ?>
+<div class="text-center py-5 text-muted small">کتابی موجود نیست.</div>
+<?php else: ?>
+<div class="row g-4">
+<?php foreach($latestBooks as $b): ?>
+<div class="col-6 col-md-3">
+<div class="book-card h-100">
+<div class="book-card-cover"><?php if($b['cover_image']): ?><img src="<?= imgUrl($b['cover_image']) ?>" alt="<?= sanitize($b['title']) ?>" class="book-cover-img" loading="lazy"><?php else: ?><div class="book-cover-placeholder"><i class="bi bi-book"></i></div><?php endif; ?></div>
+<div class="book-card-body">
+<h3 class="book-title"><a href="<?= siteUrl('book.php?id='.(int)$b['id']) ?>"><?= sanitize($b['title']) ?></a></h3>
+<?php if($b['author']): ?><small class="text-muted"><i class="bi bi-person ms-1"></i><?= sanitize($b['author']) ?></small><?php endif; ?>
+<div class="book-downloads mt-2">
+<a href="<?= siteUrl('book.php?id='.(int)$b['id']) ?>" class="btn btn-outline-primary btn-sm w-100">معرفی و دریافت <i class="bi bi-arrow-left ms-1"></i></a>
+</div>
+</div>
+</div>
+</div>
+<?php endforeach; ?>
+</div>
+<?php endif; ?>
+</div>
+</section>
+
+<!-- 8. ویدیو و صوت -->
+<section class="py-5">
+<div class="container">
+<div class="jhd-section-heading">
+<div><span class="jhd-eyebrow">رسانه</span><h2>ویدیو و صوت</h2><p>رسانه‌های مرتبط با درس‌ها، گزارش‌ها و مقالات — پخش ساده و سریع</p></div>
+<a class="jhd-text-link" href="<?= siteUrl('media-library.php?kind=video') ?>">همه رسانه‌ها <i class="bi bi-arrow-left"></i></a>
+</div>
+<div class="row g-4">
+<div class="col-lg-6">
+<h5 class="fw-bold mb-3"><i class="bi bi-camera-video ms-2 text-danger"></i> ویدیوها</h5>
+<?php if(empty($recentVideos)): ?><div class="text-muted small py-3">ویدیویی یافت نشد.</div><?php else: ?>
+<div class="row g-3">
+<?php foreach($recentVideos as $v): $vp=$v['file_path'] ?? $v['featured_video'] ?? ''; if(!$vp) continue; ?>
+<div class="col-6">
+<div class="news-card">
+<div class="news-card-img-wrap" style="height:140px"><div class="video-thumb h-100" data-video="<?= siteUrl($vp) ?>" data-poster=""><div class="video-thumb__placeholder"><i class="bi bi-camera-video"></i></div><div class="video-play-overlay"><div class="play-btn-circle play-btn-circle--sm"><i class="bi bi-play-fill"></i></div></div></div></div>
+<div class="p-2 small fw-bold"><a href="<?= siteUrl('post.php?slug='.urlencode($v['post_slug'] ?? '')) ?>"><?= sanitize($v['title'] ?? $v['post_title'] ?? 'ویدیو') ?></a></div>
+</div>
+</div>
+<?php endforeach; ?>
+</div>
+<?php endif; ?>
+</div>
+<div class="col-lg-6">
+<h5 class="fw-bold mb-3"><i class="bi bi-headphones ms-2 text-success"></i> صوت‌ها</h5>
+<?php if(empty($recentAudios)): ?><div class="text-muted small py-3">فایل صوتی یافت نشد.</div><?php else: ?>
+<div class="list-group">
+<?php foreach($recentAudios as $a): $ap=$a['file_path'] ?? $a['audio_file'] ?? ''; $title=$a['title'] ?? $a['lesson_title'] ?? 'صوت'; $slug=$a['lesson_slug'] ?? $a['slug'] ?? ''; ?>
+<a href="<?= $slug?siteUrl('lesson.php?slug='.urlencode($slug)):'#' ?>" class="list-group-item list-group-item-action d-flex align-items-center gap-3">
+<i class="bi bi-headphones text-success" style="font-size:1.2rem"></i><span class="flex-grow-1 fw-bold small"><?= sanitize($title) ?></span><?php if($ap): ?><span class="badge bg-light text-dark border"><i class="bi bi-play"></i> پخش</span><?php endif; ?>
+</a>
+<?php endforeach; ?>
+</div>
+<?php endif; ?>
+</div>
+</div>
+</div>
+</section>
+
+<!-- 9. موضوع منتخب -->
+<?php if($featuredTopic): ?>
+<section class="py-5" style="background:var(--jhd-surface);border-top:1px solid var(--jhd-border);border-bottom:1px solid var(--jhd-border)">
+<div class="container">
+<div class="d-flex justify-content-between align-items-end mb-4">
+<div><span class="jhd-eyebrow">موضوع منتخب</span><h2><?= sanitize($featuredTopic['name']) ?></h2><?php if($featuredTopic['intro']): ?><p class="text-muted small mb-0" style="max-width:60ch"><?= sanitize(excerpt($featuredTopic['intro'],160)) ?></p><?php endif; ?></div>
+<a href="<?= siteUrl('topic.php?slug='.urlencode($featuredTopic['slug'])) ?>" class="btn btn-primary">مشاهده همه مطالب موضوع <i class="bi bi-arrow-left ms-1"></i></a>
+</div>
+<?php $children=getTopicChildren((int)$featuredTopic['id']); if($children): ?>
+<div class="d-flex flex-wrap gap-2 mb-4"><?php foreach($children as $ch): ?><a href="<?= siteUrl('topic.php?slug='.urlencode($ch['slug'])) ?>" class="badge bg-light text-dark border" style="padding:8px 12px;font-size:.82rem"><?= sanitize($ch['name']) ?></a><?php endforeach; ?></div>
+<?php endif; ?>
+<div class="row g-4">
+<div class="col-lg-4">
+<h6 class="fw-bold"><i class="bi bi-file-text ms-1 text-primary"></i> مقالات</h6>
+<?php if(empty($featuredTopicPosts)): ?><div class="text-muted small py-2">مقاله‌ای مرتبط نیست.</div><?php else: foreach($featuredTopicPosts as $p): ?>
+<div class="list-post-item mb-2"><div style="width:56px;height:56px;flex-shrink:0;border-radius:8px;overflow:hidden;background:#e8f5ee;display:flex;align-items:center;justify-content:center"><?php if($p['featured_image']): ?><img src="<?= imgUrl($p['featured_image']) ?>" style="width:100%;height:100%;object-fit:cover" loading="lazy"><?php else: ?><i class="bi bi-file-text text-success"></i><?php endif; ?></div><div class="list-post-info"><a href="<?= siteUrl('post.php?slug='.urlencode($p['slug'])) ?>" class="list-post-title"><?= sanitize($p['title']) ?></a><span class="list-post-date"><?= persianDate($p['published_at']??$p['created_at']) ?></span></div></div>
+<?php endforeach; endif; ?>
+</div>
+<div class="col-lg-4">
+<h6 class="fw-bold"><i class="bi bi-book ms-1 text-primary"></i> کتاب‌ها</h6>
+<?php if(empty($featuredTopicBooks)): ?><div class="text-muted small py-2">کتابی مرتبط نیست.</div><?php else: foreach($featuredTopicBooks as $b): ?>
+<div class="list-post-item mb-2"><div style="width:56px;height:70px;flex-shrink:0;border-radius:6px;overflow:hidden;background:#fdf6e3;display:flex;align-items:center;justify-content:center"><?php if($b['cover_image']): ?><img src="<?= imgUrl($b['cover_image']) ?>" style="width:100%;height:100%;object-fit:cover" loading="lazy"><?php else: ?><i class="bi bi-book text-warning"></i><?php endif; ?></div><div class="list-post-info"><a href="<?= siteUrl('book.php?id='.(int)$b['id']) ?>" class="list-post-title"><?= sanitize($b['title']) ?></a><?php if($b['author']): ?><span class="list-post-date"><?= sanitize($b['author']) ?></span><?php endif; ?></div></div>
+<?php endforeach; endif; ?>
+</div>
+<div class="col-lg-4">
+<h6 class="fw-bold"><i class="bi bi-play-circle ms-1 text-primary"></i> درس‌های مرتبط</h6>
+<?php if(empty($featuredTopicLessons)): ?><div class="text-muted small py-2">درسی مرتبط نیست.</div><?php else: foreach($featuredTopicLessons as $ls): ?>
+<div class="list-post-item mb-2"><div style="width:56px;height:56px;flex-shrink:0;border-radius:8px;background:#eef2ff;display:flex;align-items:center;justify-content:center"><i class="bi bi-mortarboard text-primary"></i></div><div class="list-post-info"><a href="<?= siteUrl('lesson.php?slug='.urlencode($ls['slug'])) ?>" class="list-post-title"><?= sanitize($ls['title']) ?></a><span class="list-post-date"><?php if($ls['teacher']): ?>استاد: <?= sanitize($ls['teacher']) ?> <?php endif; ?></span></div></div>
+<?php endforeach; endif; ?>
+</div>
+</div>
+</div>
 </section>
 <?php endif; ?>
 
-
-<!-- ─── آخرین مقالات ──────────────────────────────────────────────────────── -->
-<?php if (!empty($latestArticles)): ?>
-<section class="section-articles py-5">
-    <div class="container">
-        <div class="section-header d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h2 class="section-title"><i class="bi bi-file-text ms-2 text-gold"></i>آخرین مقالات</h2>
-                <div class="section-divider"></div>
-            </div>
-            <a href="<?= siteUrl('articles.php') ?>" class="btn btn-outline-primary btn-sm">
-                همه مقالات <i class="bi bi-arrow-left ms-1"></i>
-            </a>
-        </div>
-        <div class="list-posts">
-            <?php foreach ($latestArticles as $art):
-                $aid    = (int)$art['id'];
-                $aCount = $artLikeMap[$aid] ?? 0;
-                $aLiked = in_array($aid, $likedInSession, true);
-                $aIcon  = $aLiked ? '<i class="bi bi-heart-fill like-icon text-danger"></i>' : '<i class="bi bi-heart like-icon"></i>';
-            ?>
-            <div class="list-post-item">
-                <div class="list-post-thumb-wrap" style="flex-shrink:0">
-                    <div class="list-post-thumb-placeholder"><i class="bi bi-file-text"></i></div>
-                </div>
-                <div class="list-post-info">
-                    <a href="<?= siteUrl('post.php?slug=' . urlencode($art['slug'])) ?>" class="list-post-title"><?= sanitize($art['title']) ?></a>
-                    <?php if (!empty($art['cat_name'])): ?>
-                    <span class="badge bg-primary-subtle text-primary small ms-2"><?= sanitize($art['cat_name']) ?></span>
-                    <?php endif; ?>
-                    <div class="d-flex align-items-center gap-2 flex-wrap mt-1">
-                        <span class="list-post-date"><i class="bi bi-calendar3 ms-1"></i><?= persianDate($art['published_at'] ?? $art['created_at']) ?></span>
-                        <button type="button" class="btn-like <?= $aLiked ? 'liked' : '' ?>"
-                                data-post-id="<?= $aid ?>" data-url="<?= htmlspecialchars($likeUrl,ENT_QUOTES) ?>">
-                            <?= $aIcon ?><span class="like-count"><?= $aCount > 0 ? number_format($aCount) : '' ?></span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <?php endforeach; ?>
-        </div>
-    </div>
-</section>
+<!-- 10. اطلاعیه‌ها و رویدادها -->
+<section class="py-5 bg-soft">
+<div class="container">
+<div class="d-flex justify-content-between align-items-end mb-4">
+<div><h2 class="section-title mb-1"><i class="bi bi-megaphone ms-2 text-gold"></i> اطلاعیه‌ها و رویدادها</h2><div class="section-divider"></div></div>
+<a href="<?= siteUrl('announcements.php') ?>" class="btn btn-outline-secondary btn-sm">همه اطلاعیه‌ها <i class="bi bi-arrow-left ms-1"></i></a>
+</div>
+<?php if(empty($announcements)): ?>
+<div class="text-center py-4 text-muted small">اطلاعیه‌ای موجود نیست.</div>
+<?php else: ?>
+<div class="row g-3">
+<?php foreach($announcements as $ann): ?>
+<div class="col-md-4">
+<div class="announcement-card h-100">
+<div class="d-flex gap-3">
+<div class="announcement-icon"><i class="bi bi-megaphone"></i></div>
+<div class="flex-grow-1">
+<h6 class="announcement-title mb-1"><a href="<?= siteUrl('post.php?slug='.urlencode($ann['slug'])) ?>"><?= sanitize($ann['title']) ?></a></h6>
+<p class="text-muted small mb-2"><?= sanitize(excerpt($ann['summary'] ?? '',100)) ?></p>
+<span class="text-muted" style="font-size:.78rem"><i class="bi bi-calendar3 ms-1"></i><?= persianDate($ann['published_at']??$ann['created_at']) ?></span>
+</div>
+</div>
+</div>
+</div>
+<?php endforeach; ?>
+</div>
 <?php endif; ?>
-
-
-<!-- ─── آخرین سخنرانی‌ها ──────────────────────────────────────────────────── -->
-<?php if (!empty($latestSpeeches)): ?>
-<section class="section-speeches py-5 bg-soft">
-    <div class="container">
-        <div class="section-header d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h2 class="section-title"><i class="bi bi-mic ms-2 text-gold"></i>آخرین سخنرانی‌ها</h2>
-                <div class="section-divider"></div>
-            </div>
-            <a href="<?= siteUrl('speeches.php') ?>" class="btn btn-outline-primary btn-sm">
-                همه سخنرانی‌ها <i class="bi bi-arrow-left ms-1"></i>
-            </a>
-        </div>
-        <div class="row g-4">
-            <?php foreach ($latestSpeeches as $speech):
-                $sid    = (int)$speech['id'];
-                $sCount = $speechLikeMap[$sid] ?? 0;
-                $sLiked = in_array($sid, $likedInSession, true);
-                $sIcon  = $sLiked ? '<i class="bi bi-heart-fill like-icon text-danger"></i>' : '<i class="bi bi-heart like-icon"></i>';
-            ?>
-            <div class="col-md-6 col-lg-4">
-                <article class="news-card h-100">
-                    <div class="news-card-img-wrap position-relative">
-                        <?= renderCardMedia($speech, 'card') ?>
-                        <div class="news-card-badge"><span class="badge bg-info text-white"><i class="bi bi-mic"></i> سخنرانی</span></div>
-                    </div>
-                    <div class="news-card-body">
-                        <h3 class="news-card-title">
-                            <a href="<?= siteUrl('speech.php?slug=' . urlencode($speech['slug'])) ?>"><?= sanitize($speech['title']) ?></a>
-                        </h3>
-                        <?php if (!empty($speech['speaker'])): ?>
-                        <p class="text-muted small mb-2"><i class="bi bi-person-fill ms-1"></i><?= sanitize($speech['speaker']) ?></p>
-                        <?php endif; ?>
-                        <div class="news-card-footer">
-                            <a href="<?= siteUrl('speech.php?slug=' . urlencode($speech['slug'])) ?>" class="btn-read-more">مشاهده <i class="bi bi-arrow-left"></i></a>
-                            <button type="button" class="btn-like <?= $sLiked ? 'liked' : '' ?>"
-                                    data-post-id="<?= $sid ?>" data-url="<?= htmlspecialchars($likeUrl,ENT_QUOTES) ?>">
-                                <?= $sIcon ?><span class="like-count"><?= $sCount > 0 ? number_format($sCount) : '' ?></span>
-                            </button>
-                        </div>
-                    </div>
-                </article>
-            </div>
-            <?php endforeach; ?>
-        </div>
-    </div>
+</div>
 </section>
-<?php endif; ?>
-
-
-<!-- ─── آخرین درس‌ها ─────────────────────────────────────────────────────── -->
-<?php if (!empty($latestLessons)): ?>
-<section class="section-lessons py-5">
-    <div class="container">
-        <div class="section-header d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h2 class="section-title"><i class="bi bi-play-circle-fill ms-2 text-gold"></i>آخرین درس‌ها</h2>
-                <div class="section-divider"></div>
-            </div>
-            <a href="<?= siteUrl('lessons.php') ?>" class="btn btn-outline-primary btn-sm">
-                همه درس‌ها <i class="bi bi-arrow-left ms-1"></i>
-            </a>
-        </div>
-        <div class="row g-4">
-            <?php foreach ($latestLessons as $lesson): ?>
-            <div class="col-md-6 col-lg-4">
-                <div class="lesson-card h-100">
-                    <div class="lesson-card-img">
-                        <?php if (!empty($lesson['featured_image'])): ?>
-                        <img src="<?= imgUrl($lesson['featured_image']) ?>" alt="<?= sanitize($lesson['title']) ?>" class="lesson-card-img-el" loading="lazy">
-                        <?php else: ?>
-                        <div class="lesson-img-placeholder d-flex align-items-center justify-content-center">
-                            <i class="bi bi-play-circle" style="font-size:3rem;color:rgba(255,255,255,.3)"></i>
-                        </div>
-                        <?php endif; ?>
-                        <?php if (!empty($lesson['audio_file'])): ?>
-                        <span class="lesson-audio-badge"><i class="bi bi-headphones"></i> صوتی</span>
-                        <?php endif; ?>
-                    </div>
-                    <div class="lesson-card-body">
-                        <?php if (!empty($lesson['subject'])): ?>
-                        <span class="lesson-subject"><?= sanitize($lesson['subject']) ?></span>
-                        <?php endif; ?>
-                        <h4 class="lesson-card-title">
-                            <a href="<?= siteUrl('lesson.php?slug=' . urlencode($lesson['slug'])) ?>"><?= sanitize($lesson['title']) ?></a>
-                        </h4>
-                        <?php if (!empty($lesson['teacher'])): ?>
-                        <p class="lesson-teacher"><i class="bi bi-person-fill ms-1"></i><?= sanitize($lesson['teacher']) ?></p>
-                        <?php endif; ?>
-                        <a href="<?= siteUrl('lesson.php?slug=' . urlencode($lesson['slug'])) ?>" class="btn btn-sm btn-primary w-100">مشاهده درس</a>
-                    </div>
-                </div>
-            </div>
-            <?php endforeach; ?>
-        </div>
-    </div>
-</section>
-<?php endif; ?>
-
-
-<!-- ─── آخرین کتاب‌ها ────────────────────────────────────────────────────── -->
-<?php if (!empty($latestBooks)): ?>
-<section class="section-books py-5 bg-soft">
-    <div class="container">
-        <div class="section-header d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h2 class="section-title"><i class="bi bi-book ms-2 text-gold"></i>آخرین کتاب‌ها</h2>
-                <div class="section-divider"></div>
-            </div>
-            <a href="<?= siteUrl('books.php') ?>" class="btn btn-outline-primary btn-sm">
-                همه کتاب‌ها <i class="bi bi-arrow-left ms-1"></i>
-            </a>
-        </div>
-        <div class="row g-4">
-            <?php foreach ($latestBooks as $book): ?>
-            <div class="col-6 col-md-4 col-lg-3 col-xl-2">
-                <div class="book-card h-100 text-center">
-                    <?php if (!empty($book['cover_image'])): ?>
-                    <a href="<?= siteUrl('book.php?id=' . (int)$book['id']) ?>">
-                        <img src="<?= imgUrl($book['cover_image']) ?>" alt="<?= sanitize($book['title']) ?>"
-                             class="book-card-cover" loading="lazy">
-                    </a>
-                    <?php else: ?>
-                    <div class="book-cover-placeholder"><i class="bi bi-book" style="font-size:2rem;opacity:.3"></i></div>
-                    <?php endif; ?>
-                    <div class="book-card-body p-2">
-                        <h5 class="book-card-title">
-                            <a href="<?= siteUrl('book.php?id=' . (int)$book['id']) ?>"><?= sanitize(mb_strimwidth($book['title'], 0, 50, '...')) ?></a>
-                        </h5>
-                        <?php if (!empty($book['pdf_file'])): ?>
-                        <a href="<?= siteUrl('book.php?id=' . (int)$book['id'] . '&download=pdf') ?>" class="btn btn-sm btn-outline-success w-100 mt-1">
-                            <i class="bi bi-download ms-1"></i>دانلود PDF
-                        </a>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-            <?php endforeach; ?>
-        </div>
-    </div>
-</section>
-<?php endif; ?>
-
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

@@ -197,17 +197,33 @@ body { font-family: 'Vazirmatn', sans-serif; background: var(--admin-bg); color:
       <i class="bi bi-plus-circle"></i>سخنرانی جدید
     </a>
 
-    <div class="sidebar-section">دسته‌بندی</div>
+    <div class="sidebar-section">موضوعات (ستون فقرات)</div>
+    <a href="<?= siteUrl('admin/topics/') ?>" class="sidebar-link <?= $currentAdminDir==='topics'?'active':'' ?>">
+      <i class="bi bi-diagram-3"></i>مدیریت موضوعات
+    </a>
+    <a href="<?= siteUrl('admin/topics/create.php') ?>" class="sidebar-link">
+      <i class="bi bi-plus-circle"></i>موضوع جدید
+    </a>
+
+    <div class="sidebar-section">دسته‌بندی (قدیمی)</div>
     <a href="<?= siteUrl('admin/categories/') ?>" class="sidebar-link <?= $currentAdminDir==='categories'?'active':'' ?>">
       <i class="bi bi-folder"></i>دسته‌بندی‌ها
     </a>
 
-    <div class="sidebar-section">درس‌ها</div>
+    <div class="sidebar-section">درس‌ها — مجموعه‌ها</div>
+    <a href="<?= siteUrl('admin/lesson-collections/') ?>" class="sidebar-link <?= $currentAdminDir==='lesson-collections'?'active':'' ?>">
+      <i class="bi bi-collection"></i>مجموعه‌های درسی
+    </a>
     <a href="<?= siteUrl('admin/lessons/') ?>" class="sidebar-link <?= $currentAdminDir==='lessons'?'active':'' ?>">
       <i class="bi bi-play-circle"></i>مدیریت درس‌ها
     </a>
     <a href="<?= siteUrl('admin/lessons/create.php') ?>" class="sidebar-link">
       <i class="bi bi-plus-square"></i>درس جدید
+    </a>
+
+    <div class="sidebar-section">بنر ویژه</div>
+    <a href="<?= siteUrl('admin/banners/') ?>" class="sidebar-link <?= $currentAdminDir==='banners'?'active':'' ?>">
+      <i class="bi bi-megaphone"></i>بنرها و اطلاعیه ویژه
     </a>
 
     <div class="sidebar-section">کتاب‌ها</div>

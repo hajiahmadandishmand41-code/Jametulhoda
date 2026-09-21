@@ -38,19 +38,20 @@ $siteEmail     = getSetting('email', SITE_EMAIL);
                     </div>
                 </div>
 
-                <!-- Quick Links -->
+                <!-- Quick Links — ساختار جدید مرجع -->
                 <div class="col-lg-2 col-md-6">
                     <div class="footer-widget">
                         <h5 class="footer-title">دسترسی سریع</h5>
                         <ul class="footer-links">
                             <li><a href="<?= siteUrl() ?>"><i class="bi bi-chevron-left"></i>صفحه اصلی</a></li>
-                            <li><a href="<?= siteUrl('about.php') ?>"><i class="bi bi-chevron-left"></i>درباره ما</a></li>
-                            <li><a href="<?= siteUrl('news.php') ?>"><i class="bi bi-chevron-left"></i>اخبار</a></li>
+                            <li><a href="<?= siteUrl('topics.php') ?>"><i class="bi bi-chevron-left"></i>موضوعات</a></li>
+                            <li><a href="<?= siteUrl('reports.php') ?>"><i class="bi bi-chevron-left"></i>گزارش‌ها</a></li>
+                            <li><a href="<?= siteUrl('articles.php') ?>"><i class="bi bi-chevron-left"></i>مقالات و پژوهش‌ها</a></li>
+                            <li><a href="<?= siteUrl('books.php') ?>"><i class="bi bi-chevron-left"></i>کتابخانه</a></li>
                             <li><a href="<?= siteUrl('lessons.php') ?>"><i class="bi bi-chevron-left"></i>درس‌ها</a></li>
-                            <li><a href="<?= siteUrl('religious-activities.php') ?>"><i class="bi bi-chevron-left"></i>فعالیت‌های مذهبی</a></li>
-                            <li><a href="<?= siteUrl('articles.php') ?>"><i class="bi bi-chevron-left"></i>مقالات</a></li>
-                            <li><a href="<?= siteUrl('speeches.php') ?>"><i class="bi bi-chevron-left"></i>سخنرانی‌ها</a></li>
-                            <li><a href="<?= siteUrl('books.php') ?>"><i class="bi bi-chevron-left"></i>کتاب‌ها</a></li>
+                            <li><a href="<?= siteUrl('videos.php') ?>"><i class="bi bi-chevron-left"></i>ویدیو</a> / <a href="<?= siteUrl('audios.php') ?>">صوت</a></li>
+                            <li><a href="<?= siteUrl('qa.php') ?>"><i class="bi bi-chevron-left"></i>پرسش و پاسخ</a></li>
+                            <li><a href="<?= siteUrl('about.php') ?>"><i class="bi bi-chevron-left"></i>درباره ما</a></li>
                             <li><a href="<?= siteUrl('contact.php') ?>"><i class="bi bi-chevron-left"></i>تماس با ما</a></li>
                         </ul>
                     </div>
@@ -117,10 +118,12 @@ $siteEmail     = getSetting('email', SITE_EMAIL);
                         سازنده: <strong>حاجی احمد صالحی</strong>
                         <span class="d-block" style="font-size:.72rem">فعالیت کننده</span>
                     </p>
-                    <p class="mb-0 mt-1">
-                        <a href="<?= siteUrl('admin/login.php') ?>" class="footer-admin-link" style="font-size:.75rem;opacity:.7;color:inherit;text-decoration:none">
-                            <i class="bi bi-shield-lock ms-1"></i>مدیریت
-                        </a>
+                    <p class="mb-0 mt-1 d-flex gap-2 justify-content-center justify-content-md-end" style="font-size:.75rem;opacity:.75">
+                        <a href="<?= siteUrl('sitemap.php') ?>" style="color:inherit;text-decoration:none">نقشه سایت</a>
+                        <span>·</span>
+                        <a href="<?= siteUrl('search.php') ?>" style="color:inherit;text-decoration:none">جستجو</a>
+                        <span>·</span>
+                        <a href="<?= siteUrl('admin/login.php') ?>" style="color:inherit;text-decoration:none"><i class="bi bi-shield-lock ms-1"></i>مدیریت</a>
                     </p>
                 </div>
             </div>

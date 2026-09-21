@@ -46,9 +46,10 @@ if (preg_match('~^/assets/[a-zA-Z0-9_./-]+\.(css|js|svg|png|jpe?g|webp|gif|woff2
 if (in_array($path, ['/audio','/video'], true)) $_GET['kind']=ltrim($path,'/');
 $routes = require __DIR__ . '/config/routes.php';
 if (preg_match('~^/book/(\d+)/?$~', $path, $bookMatch)) { $path='/book.php'; $_GET['id']=$bookMatch[1]; }
-if (preg_match('~^/(post|lesson|speech|category)/([^/]+)/?$~u', $path, $match)) {
+if (preg_match('~^/(post|lesson|speech|category|topic)/([^/]+)/?$~u', $path, $match)) {
     $path='/'.$match[1].'.php'; $_GET['slug']=$match[2];
 }
+if (preg_match('~^/lessons/([^/]+)/?$~u', $path, $lm)) { $path='/lessons.php'; $_GET['collection']=$lm[1]; }
 if (isset($routes[$path])) {
     $_SERVER['SCRIPT_NAME'] = BASE_PATH . '/' . $routes[$path];
     $_SERVER['PHP_SELF'] = $_SERVER['SCRIPT_NAME'];

@@ -1,11 +1,8 @@
 /**
- * main.js — اسکریپت‌های اصلی مدرسه جامعه‌الهدی
- * اصلاح‌شده v2: Bootstrap Icons لایک + Plyr برای پخش ویدیو حرفه‌ای
+ * main.js — Jametulhoda content-centered
+ * Like/View systems removed completely per spec 17. Only video/audio, UI, toast.
  */
-
 document.addEventListener('DOMContentLoaded', function () {
-
-    // ─── Scroll To Top ─────────────────────────────────────────────────────
     var scrollBtn = document.getElementById('scrollTop');
     if (scrollBtn) {
         window.addEventListener('scroll', function () {
@@ -15,8 +12,6 @@ document.addEventListener('DOMContentLoaded', function () {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         });
     }
-
-    // ─── Active Nav Link ───────────────────────────────────────────────────
     var currentPath = window.location.pathname;
     document.querySelectorAll('.navbar-nav .nav-link').forEach(function (link) {
         if (link.getAttribute('href') && link.getAttribute('href') !== '#') {
@@ -26,8 +21,6 @@ document.addEventListener('DOMContentLoaded', function () {
             } catch (e) {}
         }
     });
-
-    // ─── Navbar Mobile Collapse on Link Click ──────────────────────────────
     var navbarCollapse = document.querySelector('.navbar-collapse');
     if (navbarCollapse) {
         document.querySelectorAll('.navbar-nav .nav-link:not(.dropdown-toggle)').forEach(function (link) {
@@ -39,8 +32,6 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
     }
-
-    // ─── Copy Link Feedback ────────────────────────────────────────────────
     document.querySelectorAll('.btn-copy-link').forEach(function (btn) {
         btn.addEventListener('click', function () {
             var url = this.dataset.url || window.location.href;
@@ -51,8 +42,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     });
-
-    // ─── Lazy Load Images ──────────────────────────────────────────────────
     if ('IntersectionObserver' in window) {
         var lazyImages = document.querySelectorAll('img[loading="lazy"]');
         var imageObserver = new IntersectionObserver(function (entries) {
@@ -69,8 +58,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         lazyImages.forEach(function (img) { imageObserver.observe(img); });
     }
-
-    // ─── Toast Notification ────────────────────────────────────────────────
     window.showToast = function (message, type) {
         type = type || 'info';
         var colors = { success: '#198754', error: '#dc3545', info: '#0d6efd', warning: '#e6a817' };
@@ -89,8 +76,6 @@ document.addEventListener('DOMContentLoaded', function () {
             setTimeout(function () { if (toast.parentNode) toast.remove(); }, 350);
         }, 2600);
     };
-
-    // ─── Image Error Fallback ──────────────────────────────────────────────
     document.querySelectorAll('img').forEach(function (img) {
         img.addEventListener('error', function () {
             if (!this.dataset.errorHandled) {
@@ -99,8 +84,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     });
-
-    // ─── Confirm dialogs ───────────────────────────────────────────────────
     document.querySelectorAll('[data-confirm]').forEach(function (el) {
         el.addEventListener('click', function (e) {
             if (!confirm(this.dataset.confirm || 'آیا اطمینان دارید؟')) {
@@ -109,106 +92,18 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // ─── Like System (AJAX) ────────────────────────────────────────────────
-    function setLikeIcon(iconEl, liked) {
-        if (!iconEl) return;
-        if (iconEl.tagName === 'I') {
-            iconEl.className = liked
-                ? 'bi bi-heart-fill like-icon text-danger'
-                : 'bi bi-heart like-icon';
-        } else {
-            iconEl.innerHTML = liked
-                ? '<i class="bi bi-heart-fill text-danger"></i>'
-                : '<i class="bi bi-heart"></i>';
-        }
-    }
-
-    document.body.addEventListener('click', function (e) {
-        var btn = e.target.closest('.btn-like');
-        if (!btn) return;
-        e.preventDefault();
-        e.stopPropagation();
-
-        var postId = btn.getAttribute('data-post-id');
-        var url    = btn.getAttribute('data-url');
-        if (!postId || !url) return;
-        if (btn.classList.contains('like-loading')) return;
-
-        btn.classList.add('like-loading', 'like-animate');
-        btn.style.opacity = '0.7';
-        setTimeout(function () { btn.classList.remove('like-animate'); }, 300);
-
-        var formData = new FormData();
-        formData.append('post_id', postId);
-
-        fetch(url, {
-            method: 'POST',
-            body:   formData,
-            credentials: 'same-origin',
-            headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-Token': document.querySelector('meta[name=csrf-token]')?.content || '' }
-        })
-        .then(function (res) {
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            return res.json();
-        })
-        .then(function (data) {
-            if (!data.success) throw new Error(data.error || 'خطا');
-            document.querySelectorAll('.btn-like[data-post-id="' + postId + '"]').forEach(function (b) {
-                var iconEl  = b.querySelector('i.like-icon');
-                var countEl = b.querySelector('.like-count');
-                if (data.liked) {
-                    b.classList.add('liked');
-                    b.setAttribute('title', 'لایک را بردار');
-                    setLikeIcon(iconEl, true);
-                } else {
-                    b.classList.remove('liked');
-                    b.setAttribute('title', 'لایک کن');
-                    setLikeIcon(iconEl, false);
-                }
-                if (countEl) {
-                    countEl.textContent = data.count > 0
-                        ? data.count.toLocaleString('fa-IR') : '';
-                }
-            });
-        })
-        .catch(function () {
-            showToast('خطا در ثبت لایک. دوباره تلاش کنید.', 'error');
-        })
-        .finally(function () {
-            btn.classList.remove('like-loading');
-            btn.style.opacity = '';
-        });
-    });
-
-    // ══════════════════════════════════════════════════════════════════════
-    // ─── Video Player Modal با Plyr ────────────────────────────────────
-    // کلیک روی هر عنصر دارای [data-video] → باز کردن Modal با Plyr
-    // ══════════════════════════════════════════════════════════════════════
-
-    var activePlyr  = null;   // نمونه Plyr فعال
-    var activeModal = null;   // المان modal فعال
-
-    /**
-     * تعیین MIME type از پسوند فایل ویدیو
-     */
+    // ─── Video Player Modal با Plyr ─────────────────────────
+    var activePlyr  = null;
+    var activeModal = null;
     function getVideoMime(url) {
         var ext = (url.split('?')[0].split('.').pop() || '').toLowerCase();
-        var map = { mp4: 'video/mp4', webm: 'video/webm', ogv: 'video/ogg',
-                    ogg: 'video/ogg', mov: 'video/mp4', m4v: 'video/mp4' };
+        var map = { mp4: 'video/mp4', webm: 'video/webm', ogv: 'video/ogg', ogg: 'video/ogg', mov: 'video/mp4', m4v: 'video/mp4' };
         return map[ext] || 'video/mp4';
     }
-
-    /**
-     * بستن modal ویدیو و پاک‌سازی Plyr
-     */
     function closeVideoModal() {
-        if (activePlyr) {
-            try { activePlyr.destroy(); } catch (ex) {}
-            activePlyr = null;
-        }
+        if (activePlyr) { try { activePlyr.destroy(); } catch (ex) {} activePlyr = null; }
         if (activeModal) {
             activeModal.classList.remove('vmodal--open');
-            // توقف اجباری به‌عنوان fallback
             var vid = activeModal.querySelector('video');
             if (vid) { try { vid.pause(); vid.src = ''; } catch (ex) {} }
             setTimeout(function () {
@@ -218,268 +113,100 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         document.body.style.overflow = '';
         document.body.classList.remove('video-modal-open');
-
-        // از سر گرفتن carousel اگر ویدیو از Hero بود
         document.querySelectorAll('.carousel').forEach(function (c) {
-            try {
-                var bsC = bootstrap.Carousel.getInstance(c);
-                if (bsC) bsC.cycle();
-            } catch (ex) {}
+            try { var bsC = bootstrap.Carousel.getInstance(c); if (bsC) bsC.cycle(); } catch (ex) {}
         });
-
         document.removeEventListener('keydown', _escListener);
     }
-
-    /**
-     * listener برای Escape
-     */
-    function _escListener(e) {
-        if (e.key === 'Escape') closeVideoModal();
-    }
-
-    /**
-     * باز کردن modal ویدیو با Plyr
-     */
+    function _escListener(e) { if (e.key === 'Escape') closeVideoModal(); }
     function openVideoModal(videoUrl, posterUrl, carouselEl) {
-        // توقف carousel اگر داخل Hero است
-        if (carouselEl) {
-            try {
-                var bsC = bootstrap.Carousel.getInstance(carouselEl);
-                if (bsC) bsC.pause();
-            } catch (ex) {}
-        }
-
-        // بستن modal قبلی
+        if (carouselEl) { try { var bsC = bootstrap.Carousel.getInstance(carouselEl); if (bsC) bsC.pause(); } catch (ex) {} }
         closeVideoModal();
-
-        // ─── ساخت ساختار modal ─────────────────────────────────────
         var modal = document.createElement('div');
         modal.className = 'vmodal';
         modal.setAttribute('role', 'dialog');
         modal.setAttribute('aria-modal', 'true');
         modal.setAttribute('aria-label', 'پخش ویدیو');
-
-        var mime      = getVideoMime(videoUrl);
+        var mime = getVideoMime(videoUrl);
         var posterAttr = posterUrl ? ' poster="' + posterUrl.replace(/"/g, '&quot;') + '"' : '';
-
         modal.innerHTML = [
             '<div class="vmodal__backdrop"></div>',
             '<div class="vmodal__wrap">',
-            '  <button class="vmodal__close" type="button" aria-label="بستن">',
-            '    <i class="bi bi-x-lg"></i>',
-            '  </button>',
+            '  <button class="vmodal__close" type="button" aria-label="بستن"><i class="bi bi-x-lg"></i></button>',
             '  <div class="vmodal__player-wrap">',
             '    <video class="vmodal__video" controls playsinline' + posterAttr + '>',
-            '      <source src="' + videoUrl.replace(/"/g, '&quot;') + '" type="' + mime + '">',
-            '      مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.',
-            '    </video>',
-            '  </div>',
-            '</div>'
+            '      <source src="' + videoUrl.replace(/"/g, '&quot;') + '" type="' + mime + '">مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.</video>',
+            '  </div>','</div>'
         ].join('');
-
         document.body.appendChild(modal);
         document.body.style.overflow = 'hidden';
         document.body.classList.add('video-modal-open');
         activeModal = modal;
-
-        // انیمیشن ورود
-        requestAnimationFrame(function () {
-            requestAnimationFrame(function () {
-                modal.classList.add('vmodal--open');
-            });
-        });
-
-        // ─── راه‌اندازی Plyr ───────────────────────────────────────
+        requestAnimationFrame(function () { requestAnimationFrame(function () { modal.classList.add('vmodal--open'); }); });
         var videoEl = modal.querySelector('video');
-
         if (typeof Plyr !== 'undefined' && videoEl) {
             try {
                 activePlyr = new Plyr(videoEl, {
                     iconUrl: document.querySelector('meta[name=plyr-sprite]')?.content,
-                    controls: [
-                        'play-large', 'play', 'rewind', 'fast-forward',
-                        'progress', 'current-time', 'duration',
-                        'mute', 'volume', 'settings', 'fullscreen'
-                    ],
-                    settings: ['speed', 'quality'],
+                    controls: ['play-large','play','rewind','fast-forward','progress','current-time','duration','mute','volume','settings','fullscreen'],
+                    settings: ['speed','quality'],
                     speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 2] },
-                    i18n: {
-                        play:        'پخش',
-                        pause:       'توقف',
-                        mute:        'بی‌صدا',
-                        unmute:      'صدادار',
-                        volume:      'میزان صدا',
-                        fullscreen:  'تمام صفحه',
-                        exitFullscreen: 'خروج از تمام صفحه',
-                        settings:    'تنظیمات',
-                        speed:       'سرعت',
-                        normal:      'عادی',
-                        quality:     'کیفیت',
-                        loop:        'تکرار',
-                    },
-                    autoplay: true,
-                    ratio: '16:9',
+                    i18n: { play:'پخش', pause:'توقف', mute:'بی‌صدا', unmute:'صدادار', volume:'میزان صدا', fullscreen:'تمام صفحه', exitFullscreen:'خروج از تمام صفحه', settings:'تنظیمات', speed:'سرعت', normal:'عادی', quality:'کیفیت', loop:'تکرار' },
+                    autoplay: true, ratio: '16:9'
                 });
-
-                // پخش خودکار بعد از init
-                activePlyr.on('ready', function () {
-                    var playPromise = activePlyr.play();
-                    if (playPromise && typeof playPromise.catch === 'function') {
-                        playPromise.catch(function () {});
-                    }
-                });
-
-            } catch (plyrErr) {
-                // fallback: پخش مستقیم با HTML5 video
-                var fallbackPromise = videoEl.play();
-                if (fallbackPromise && typeof fallbackPromise.catch === 'function') {
-                    fallbackPromise.catch(function () {});
-                }
-            }
-        } else if (videoEl) {
-            // Plyr لود نشده — fallback به HTML5 video
-            var fallbackP = videoEl.play();
-            if (fallbackP && typeof fallbackP.catch === 'function') {
-                fallbackP.catch(function () {});
-            }
-        }
-
-        // ─── Event Listeners برای بستن modal ─────────────────────
+                activePlyr.on('ready', function () { var p=activePlyr.play(); if(p&&p.catch) p.catch(function(){}); });
+            } catch (plyrErr) { var fp=videoEl.play(); if(fp&&fp.catch) fp.catch(function(){}); }
+        } else if (videoEl) { var fp=videoEl.play(); if(fp&&fp.catch) fp.catch(function(){}); }
         modal.querySelector('.vmodal__close').addEventListener('click', closeVideoModal);
         modal.querySelector('.vmodal__backdrop').addEventListener('click', closeVideoModal);
         document.addEventListener('keydown', _escListener);
     }
-
-    // ─── Delegation: کلیک روی هر عنصر دارای [data-video] ──────────────
     document.body.addEventListener('click', function (e) {
-        // صرف‌نظر از کلیک روی دکمه لایک (جلوگیری از تداخل)
-        if (e.target.closest('.btn-like')) return;
-
         var trigger = e.target.closest('[data-video]');
         if (!trigger) return;
-
         var videoUrl = trigger.getAttribute('data-video');
         if (!videoUrl) return;
-
-        e.preventDefault();
-        e.stopPropagation();
-
-        var posterUrl  = trigger.getAttribute('data-poster') || '';
+        e.preventDefault(); e.stopPropagation();
+        var posterUrl = trigger.getAttribute('data-poster') || '';
         var carouselEl = trigger.closest('.carousel');
-
         openVideoModal(videoUrl, posterUrl, carouselEl);
     });
-
-    // ─── copyPostLink helper ────────────────────────────────────────────
     window.copyPostLink = function (url) {
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(url).then(function () {
-                showToast('لینک کپی شد!', 'success');
-            });
-        } else {
-            prompt('لینک پست:', url);
-        }
+        if (navigator.clipboard) { navigator.clipboard.writeText(url).then(function(){ showToast('لینک کپی شد!','success'); }); }
+        else { prompt('لینک پست:', url); }
     };
-
 });
-
-
-/* ══════════════════════════════════════════════════════════════
-   CSS برای Video Modal — inject inline (بدون نیاز به فایل جداگانه)
-   ══════════════════════════════════════════════════════════════ */
 (function injectVideoModalCSS() {
     var style = document.createElement('style');
     style.textContent = [
-        /* Backdrop */
         '.vmodal{position:fixed;inset:0;z-index:99900;display:flex;align-items:center;justify-content:center}',
-        '.vmodal__backdrop{position:absolute;inset:0;background:rgba(0,0,0,.88);backdrop-filter:blur(6px);',
-        '  opacity:0;transition:opacity .28s ease}',
+        '.vmodal__backdrop{position:absolute;inset:0;background:rgba(0,0,0,.88);backdrop-filter:blur(6px);opacity:0;transition:opacity .28s ease}',
         '.vmodal--open .vmodal__backdrop{opacity:1}',
-
-        /* Wrap */
-        '.vmodal__wrap{position:relative;z-index:1;width:94vw;max-width:960px;',
-        '  transform:scale(.92) translateY(20px);opacity:0;',
-        '  transition:transform .3s cubic-bezier(.25,.8,.25,1),opacity .3s ease}',
+        '.vmodal__wrap{position:relative;z-index:1;width:94vw;max-width:960px;transform:scale(.92) translateY(20px);opacity:0;transition:transform .3s cubic-bezier(.25,.8,.25,1),opacity .3s ease}',
         '.vmodal--open .vmodal__wrap{transform:scale(1) translateY(0);opacity:1}',
-
-        /* Close button */
-        '.vmodal__close{position:absolute;top:-44px;left:0;background:rgba(255,255,255,.12);',
-        '  color:#fff;border:none;border-radius:50%;width:38px;height:38px;',
-        '  display:flex;align-items:center;justify-content:center;font-size:1.1rem;',
-        '  cursor:pointer;transition:background .2s;z-index:10}',
+        '.vmodal__close{position:absolute;top:-44px;left:0;background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;cursor:pointer;transition:background .2s;z-index:10}',
         '.vmodal__close:hover{background:rgba(255,255,255,.28)}',
-
-        /* Player wrap */
-        '.vmodal__player-wrap{border-radius:12px;overflow:hidden;',
-        '  box-shadow:0 24px 80px rgba(0,0,0,.65);background:#000;',
-        '  aspect-ratio:16/9}',
-        '.vmodal__video,.vmodal__player-wrap .plyr{width:100%!important;height:100%!important;',
-        '  border-radius:12px}',
-
-        /* Plyr RTL fix */
-        '.plyr{direction:ltr}',
-        '.plyr__controls{direction:ltr}',
-
-        /* Body lock */
+        '.vmodal__player-wrap{border-radius:12px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.65);background:#000;aspect-ratio:16/9}',
+        '.vmodal__video,.vmodal__player-wrap .plyr{width:100%!important;height:100%!important;border-radius:12px}',
+        '.plyr{direction:ltr}', '.plyr__controls{direction:ltr}',
         'body.video-modal-open{overflow:hidden!important}',
-
-        /* ── Video thumbnail در کارت ────────────────────────────── */
-        /* Full-area clickable thumbnail with play overlay */
         '.video-thumb{position:relative;display:block;cursor:pointer;overflow:hidden}',
-        '.video-thumb__poster{width:100%;height:100%;object-fit:cover;display:block;',
-        '  transition:transform .35s ease}',
+        '.video-thumb__poster{width:100%;height:100%;object-fit:cover;display:block;transition:transform .35s ease}',
         '.video-thumb:hover .video-thumb__poster{transform:scale(1.04)}',
-
-        /* First-frame از <video> به‌عنوان thumbnail */
         '.video-thumb__native{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}',
-
-        /* Placeholder وقتی نه image نه poster */
-        '.video-thumb__placeholder{width:100%;height:100%;min-height:inherit;',
-        '  background:linear-gradient(135deg,#1a2a3a 0%,#0d1b2a 60%,#162232 100%);',
-        '  display:flex;align-items:center;justify-content:center}',
+        '.video-thumb__placeholder{width:100%;height:100%;min-height:inherit;background:linear-gradient(135deg,#1a2a3a 0%,#0d1b2a 60%,#162232 100%);display:flex;align-items:center;justify-content:center}',
         '.video-thumb__placeholder i{font-size:3.5rem;color:rgba(255,255,255,.18)}',
-
-        /* Overlay play button — ظاهر می‌شود روی هر نوع thumbnail */
-        '.video-play-overlay{position:absolute;inset:0;display:flex;align-items:center;',
-        '  justify-content:center;background:rgba(0,0,0,0);',
-        '  transition:background .25s}',
-        '.video-thumb:hover .video-play-overlay,',
-        '.hero-media-wrap:hover .video-play-overlay{background:rgba(0,0,0,.32)}',
-
-        '.play-btn-circle{width:64px;height:64px;border-radius:50%;',
-        '  background:rgba(229,57,53,.9);border:3px solid rgba(255,255,255,.8);',
-        '  display:flex;align-items:center;justify-content:center;',
-        '  color:#fff;font-size:1.8rem;padding-right:2px;',
-        '  box-shadow:0 4px 20px rgba(0,0,0,.45);',
-        '  transition:transform .25s,box-shadow .25s,background .25s}',
-        '.video-thumb:hover .play-btn-circle,',
-        '.hero-media-wrap:hover .play-btn-circle{transform:scale(1.12);',
-        '  box-shadow:0 8px 32px rgba(229,57,53,.55);background:rgba(229,57,53,1)}',
-
-        /* کوچک‌تر برای کارت‌های کوچک */
+        '.video-play-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0);transition:background .25s}',
+        '.video-thumb:hover .video-play-overlay,.hero-media-wrap:hover .video-play-overlay{background:rgba(0,0,0,.32)}',
+        '.play-btn-circle{width:64px;height:64px;border-radius:50%;background:rgba(229,57,53,.9);border:3px solid rgba(255,255,255,.8);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.8rem;padding-right:2px;box-shadow:0 4px 20px rgba(0,0,0,.45);transition:transform .25s,box-shadow .25s,background .25s}',
+        '.video-thumb:hover .play-btn-circle,.hero-media-wrap:hover .play-btn-circle{transform:scale(1.12);box-shadow:0 8px 32px rgba(229,57,53,.55);background:rgba(229,57,53,1)}',
         '.play-btn-circle--sm{width:46px;height:46px;font-size:1.25rem}',
-
-        /* Video badge روی کارت */
-        '.video-badge-card{position:absolute;top:10px;right:10px;z-index:3;',
-        '  background:rgba(229,57,53,.9);color:#fff;font-size:.72rem;',
-        '  padding:3px 9px;border-radius:20px;font-weight:600;',
-        '  display:flex;align-items:center;gap:4px;pointer-events:none}',
-
-        /* Hero media wrap */
-        '.hero-media-wrap{position:relative;display:block;cursor:pointer;width:100%;',
-        '  overflow:hidden}',
+        '.video-badge-card{position:absolute;top:10px;right:10px;z-index:3;background:rgba(229,57,53,.9);color:#fff;font-size:.72rem;padding:3px 9px;border-radius:20px;font-weight:600;display:flex;align-items:center;gap:4px;pointer-events:none}',
+        '.hero-media-wrap{position:relative;display:block;cursor:pointer;width:100%;overflow:hidden}',
         '.hero-media-wrap video.hero-img{object-fit:cover}',
-
-        /* نمایش play-btn-circle روی Hero با بنر بزرگ‌تر */
         '.hero-media-wrap .play-btn-circle{width:84px;height:84px;font-size:2.4rem}',
         '@media(max-width:576px){.hero-media-wrap .play-btn-circle{width:56px;height:56px;font-size:1.6rem}}',
-
-        /* Badge کوچک ویدیو در Hero Carousel (جایگزین overlay) */
-        '.hero-video-badge{position:absolute;top:16px;right:16px;z-index:5;',
-        '  background:rgba(229,57,53,.88);color:#fff;font-size:.78rem;',
-        '  padding:4px 12px;border-radius:20px;font-weight:700;',
-        '  display:flex;align-items:center;gap:6px;pointer-events:none;',
-        '  box-shadow:0 2px 8px rgba(0,0,0,.3)}',
+        '.hero-video-badge{position:absolute;top:16px;right:16px;z-index:5;background:rgba(229,57,53,.88);color:#fff;font-size:.78rem;padding:4px 12px;border-radius:20px;font-weight:700;display:flex;align-items:center;gap:6px;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.3)}',
     ].join('');
     document.head.appendChild(style);
 })();

@@ -29,6 +29,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!is_array($sections)) $sections = [$sections];
         $page_section = implode(',', array_filter(array_map('trim', $sections)));
         if (!$page_section) $page_section = 'home';
+        $collection_id = (int)($_POST['collection_id'] ?? 0) ?: null;
+        $volume_id     = (int)($_POST['volume_id'] ?? 0) ?: null;
+        $lesson_number = (int)($_POST['lesson_number'] ?? 0) ?: null;
+        $topicIds      = array_filter(array_map('intval', (array)($_POST['topic_ids'] ?? [])));
 
         if (!$title) {
             $error = 'عنوان درس الزامی است.';
@@ -104,16 +108,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (!$error) {
                     $slug = uniqueSlug('lessons', $title);
                     $stmt = $db->prepare(
-                        "INSERT INTO lessons (title, slug, subject, teacher, content, summary, featured_image, audio_file, video_file, pdf_file, status, page_section, level, created_at, updated_at)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) RETURNING id"
+                        "INSERT INTO lessons (title, slug, subject, teacher, content, summary, featured_image, audio_file, video_file, pdf_file, status, page_section, level, collection_id, volume_id, lesson_number, created_at, updated_at)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) RETURNING id"
                     );
                     $stmt->execute([
                         $title, $slug, $subject ?: null, $teacher ?: null,
                         $content, $summary ?: null, $featImg ?: null, $audioPath ?: null,
                         $videoPath ?: null, $pdfPath ?: null,
-                        $status, $page_section, $level
+                        $status, $page_section, $level, $collection_id, $volume_id, $lesson_number
                     ]);
                     $newId = (int)$stmt->fetchColumn();
+                    if($topicIds){ $ins=$db->prepare("INSERT INTO lesson_topics (lesson_id, topic_id) VALUES (?,?) ON CONFLICT DO NOTHING"); foreach($topicIds as $tid) $ins->execute([$newId,$tid]); }
 
                     $_SESSION['flash_msg']  = 'درس با موفقیت ذخیره شد.';
                     $_SESSION['flash_type'] = 'success';
@@ -174,7 +179,34 @@ $selectedSections = is_array($_POST['page_section'] ?? null)
                         <div class="col-md-6">
                             <label class="form-label fw-bold">موضوع / درس</label>
                             <input type="text" name="subject" class="form-control"
-                                   value="<?= sanitize($_POST['subject'] ?? '') ?>"
+                                   value="<?= sanitize($_POST['subject'] ?? '') ?>
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-4"><label class="form-label">مجموعه (Collection)</label>
+                            <select name="collection_id" class="form-select">
+                                <option value="">— بدون مجموعه —</option>
+                                <?php foreach(getLessonCollections(['active'=>null]) as $cc): ?>
+                                <option value="<?= $cc['id'] ?>" <?= (($_POST['collection_id']??'')==$cc['id'])?'selected':'' ?>><?= sanitize($cc['title']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4"><label class="form-label">جلد / بخش (Volume)</label>
+                            <select name="volume_id" class="form-select">
+                                <option value="">— بدون جلد —</option>
+                                <?php foreach(getLessonCollections(['active'=>null]) as $cc2): foreach(getLessonVolumes((int)$cc2['id']) as $vv): ?>
+                                <option value="<?= $vv['id'] ?>" <?= (($_POST['volume_id']??'')==$vv['id'])?'selected':'' ?>><?= sanitize($cc2['title'].' — '.$vv['title']) ?></option>
+                                <?php endforeach; endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4"><label class="form-label">شماره درس</label><input type="number" name="lesson_number" class="form-control" value="<?= sanitize($_POST['lesson_number'] ?? '') ?>" placeholder="مثلاً ۱۲"></div>
+                    </div>
+                    <?php $allTopics=getTopics(['limit'=>200]); ?>
+                    <div class="mt-3"><label class="form-label fw-bold"><i class="bi bi-diagram-3 ms-1"></i> موضوعات مرتبط</label>
+                    <div style="max-height:160px;overflow:auto;border:1px solid #e8e6dc;border-radius:10px;padding:10px;background:#fafaf7">
+                        <?php if(empty($allTopics)): ?><div class="text-muted small">موضوعی نیست.</div><?php else: foreach($allTopics as $tt): ?>
+                        <label class="form-check"><input type="checkbox" class="form-check-input" name="topic_ids[]" value="<?= $tt['id'] ?>"> <span class="form-check-label small"><?= sanitize($tt['name']) ?></span></label>
+                        <?php endforeach; endif; ?>
+                    </div></div>
+"
                                    placeholder="مثلاً: فقه، اصول، تفسیر...">
                         </div>
                         <div class="col-md-6">

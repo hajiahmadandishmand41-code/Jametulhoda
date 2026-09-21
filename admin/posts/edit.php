@@ -17,6 +17,7 @@ if (!$post) {
 $db         = getDB();
 $error      = '';
 $categories = getCategories();
+$allTopics  = getTopics(['limit'=>200]);
 $imgStmt    = $db->prepare("SELECT * FROM post_images WHERE post_id = ?");
 $imgStmt->execute([$id]);
 $postImages = $imgStmt->fetchAll();
@@ -29,8 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $title       = trim($_POST['title']       ?? '');
         $summary     = trim($_POST['summary']     ?? '');
         $content     = $_POST['content']          ?? '';
-        $post_type   = in_array($_POST['post_type'] ?? '', ['news','article','announcement','speech','program','religious'])
-                       ? $_POST['post_type'] : 'news';
+        $post_type   = in_array($_POST['post_type'] ?? '', ['report','article','research','qa','announcement','speech','news','program','religious'])
+                       ? $_POST['post_type'] : 'article';
         $category_id = (int)($_POST['category_id'] ?? 0);
         $status      = in_array($_POST['status'] ?? '', ['published','draft']) ? $_POST['status'] : 'draft';
         $is_featured = (int)!empty($_POST['is_featured']);
@@ -43,6 +44,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!is_array($sections)) $sections = explode(',', $sections);
         $page_section = implode(',', array_filter(array_map('trim', $sections)));
         if (!$page_section) $page_section = 'other';
+
+        $topicIds = $_POST['topic_ids'] ?? [];
+        if(!is_array($topicIds)) $topicIds=[$topicIds];
+        $topicIds=array_filter(array_map('intval',$topicIds));
 
         if (!$title) {
             $error = 'عنوان مطلب الزامی است.';
@@ -104,6 +109,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $category_id ?: null,
                     $status, $is_featured, $pub_date, $id
                 ]);
+
+                // همگام‌سازی موضوعات (ستون فقرات)
+                $db->prepare("DELETE FROM post_topics WHERE post_id=?")->execute([$id]);
+                if($topicIds){ $ins=$db->prepare("INSERT INTO post_topics (post_id, topic_id) VALUES (?,?) ON CONFLICT DO NOTHING"); foreach($topicIds as $tid) $ins->execute([$id,$tid]); }
 
                 // تصاویر اضافی
                 if (!empty($_FILES['images']['name'][0])) {
@@ -382,16 +391,27 @@ $existingVideo = getMediaFor('post', $id, 'video');
                     <div class="mb-3">
                         <label class="form-label">نوع مطلب</label>
                         <select name="post_type" class="form-select">
-                            <option value="news"         <?= $post['post_type']==='news'?'selected':'' ?>>📰 خبر</option>
+                            <option value="report"       <?= $post['post_type']==='report'?'selected':'' ?>>📋 گزارش</option>
                             <option value="article"      <?= $post['post_type']==='article'?'selected':'' ?>>📄 مقاله</option>
+                            <option value="research"     <?= $post['post_type']==='research'?'selected':'' ?>>🔬 پژوهش</option>
+                            <option value="qa"           <?= $post['post_type']==='qa'?'selected':'' ?>>❓ پرسش و پاسخ</option>
                             <option value="announcement" <?= $post['post_type']==='announcement'?'selected':'' ?>>📢 اطلاعیه</option>
+                            <option value="news"         <?= $post['post_type']==='news'?'selected':'' ?>>📰 خبر</option>
                             <option value="speech"       <?= $post['post_type']==='speech'?'selected':'' ?>>🎤 سخنرانی</option>
-                            <option value="program"      <?= $post['post_type']==='program'?'selected':'' ?>>📅 برنامه آموزشی</option>
-                            <option value="religious"    <?= $post['post_type']==='religious'?'selected':'' ?>>⭐ فعالیت مذهبی</option>
                         </select>
                     </div>
+                    <?php $curTopicIds = getTopicIdsForPost((int)$post['id']); ?>
+                    <div class="mb-3"><label class="form-label fw-bold"><i class="bi bi-diagram-3 ms-1"></i> موضوعات (ستون فقرات)</label>
+                    <div style="max-height:220px;overflow:auto;border:1px solid #e8e6dc;border-radius:10px;padding:10px;background:#fafaf7">
+                        <?php if(empty($allTopics)): ?><div class="text-muted small">موضوعی نیست.</div><?php else: foreach($allTopics as $t): ?>
+                        <label class="form-check" <?= $t['parent_id'] ? 'style="padding-inline-start:14px"' : '' ?>>
+                            <input type="checkbox" class="form-check-input" name="topic_ids[]" value="<?= $t['id'] ?>" <?= in_array($t['id'], $curTopicIds)?'checked':'' ?>>
+                            <span class="form-check-label small"><?= sanitize($t['name']) ?></span>
+                        </label>
+                        <?php endforeach; endif; ?>
+                    </div></div>
                     <div>
-                        <label class="form-label">دسته‌بندی</label>
+                        <label class="form-label">دسته‌بندی قدیمی (اختیاری)</label>
                         <select name="category_id" class="form-select">
                             <option value="">— بدون دسته —</option>
                             <?php foreach ($categories as $cat): ?>
@@ -434,7 +454,7 @@ $existingVideo = getMediaFor('post', $id, 'video');
             <div class="admin-card">
                 <div class="admin-card-header">آمار مطلب</div>
                 <div class="admin-card-body">
-                    <div class="d-flex justify-content-between small mb-2"><span>بازدید:</span><strong><?= number_format($post['views']) ?></strong></div>
+                    
                     <div class="d-flex justify-content-between small mb-2"><span>ایجاد:</span><strong><?= persianDate($post['created_at']) ?></strong></div>
                     <div class="d-flex justify-content-between small"><span>ویرایش:</span><strong><?= persianDate($post['updated_at']) ?></strong></div>
                     <?php if ($post['slug']): ?>

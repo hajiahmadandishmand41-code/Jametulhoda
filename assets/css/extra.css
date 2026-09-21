@@ -326,23 +326,6 @@ audio { accent-color: #1a7a4a; }
 .post-nav .btn { max-width: 48%; }
 @media (max-width: 575px) { .post-nav .btn { max-width: 100%; width: 100%; } }
 
-/* ─── Like Button ──────────────────────────────────────── */
-.btn-like {
-    display: inline-flex; align-items: center; gap: 5px;
-    background: #fff; border: 1.5px solid #e0e0e0;
-    border-radius: 20px; padding: 4px 12px;
-    cursor: pointer; font-size: .82rem;
-    color: #555; transition: all .2s;
-    line-height: 1.4;
-}
-.btn-like:hover { border-color: #e74c3c; color: #e74c3c; background: #fff5f5; }
-.btn-like.liked { border-color: #e74c3c; color: #e74c3c; background: #fff5f5; }
-.btn-like .like-icon { font-size: .95rem; transition: transform .2s; }
-.btn-like.like-animate .like-icon { transform: scale(1.4); }
-.btn-like.like-loading { pointer-events: none; opacity: .7; }
-.btn-like .like-count { font-weight: 600; }
-/* Hero لایک */
-.btn-like[style*="rgba(255,255,255"] { font-size: .85rem; }
 
 /* ─── Download badge ───────────────────────────────────── */
 .dl-badge {

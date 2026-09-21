@@ -120,7 +120,7 @@ $urlBase = '?type=' . urlencode($type) . '&status=' . urlencode($status) . '&q='
                                 <?= $p['status']==='published'?'منتشر':'پیش‌نویس' ?>
                             </span>
                         </td>
-                        <td class="text-muted small"><?= number_format($p['views']) ?></td>
+                        <td class="text-muted small"><?= 0 ?></td>
                         <td class="text-muted" style="font-size:.78rem;white-space:nowrap"><?= persianDate($p['created_at']) ?></td>
                         <td>
                             <div class="d-flex gap-1">

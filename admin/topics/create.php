@@ -1,0 +1,1 @@
+<?php redirect(siteUrl('admin/topics/')); ?>

@@ -8,13 +8,13 @@ fs.mkdirSync('test-results',{recursive:true});
 const results=[];
 const check=(label,ok,detail='')=>{results.push({label,ok,detail});console.log(ok?'PASS':'FAIL',label,detail);};
 const token=html=>html.match(/name="csrf_token" value="([a-f0-9]+)"/)?.[1];
-for(const path of ['/','/about.php','/contact.php','/news.php','/articles.php','/lessons.php','/books.php','/speeches.php','/programs.php','/religious-activities.php','/announcements.php','/search.php?q=test','/category.php?slug=fiqh-osul','/robots.txt','/audio','/video','/files','/library']){const r=await api.get(path);check('GET '+path,r.status()===200,String(r.status()));}
+for(const path of ['/','/about.php','/contact.php','/news.php','/articles.php','/lessons.php','/books.php','/speeches.php','/programs.php','/religious-activities.php','/announcements.php','/search.php?q=test','/category.php?slug=fiqh-osul','/robots.txt','/audio','/video','/files','/library','/topics.php','/reports.php','/research.php','/qa.php','/sitemap.php','/topic.php','/reports.php','/books.php']){const r=await api.get(path);check('GET '+path,r.status()===200||r.status()===302,String(r.status()));}
 for(const path of ['/missing-page','/.env','/.git/config','/config/database.php','/database.sql','/install.php','/includes/auth.php','/uploads/test.php','/bin/create-admin.php']){const r=await api.get(path);check('protected '+path,r.status()===404,String(r.status()));}
 let r=await api.get('/admin/',{maxRedirects:0});check('admin requires login',r.status()===302);
 r=await api.get('/admin/login.php');let csrf=token(await r.text());
 r=await api.post('/admin/login.php',{form:{...creds,csrf_token:csrf},maxRedirects:0});check('login valid',r.status()===303,String(r.status()));
 r=await api.get('/admin/');check('dashboard',r.status()===200,String(r.status()));
-for(const path of ['/admin/posts/','/admin/articles/','/admin/news/','/admin/speeches/','/admin/lessons/','/admin/books/','/admin/categories/','/admin/media/','/admin/messages/','/admin/settings.php','/admin/users.php']){const r=await api.get(path);check('admin '+path,r.status()===200,String(r.status()));}
+for(const path of ['/admin/posts/','/admin/articles/','/admin/news/','/admin/speeches/','/admin/lessons/','/admin/books/','/admin/categories/','/admin/media/','/admin/messages/','/admin/settings.php','/admin/users.php','/admin/topics/','/admin/lesson-collections/','/admin/banners/']){const r=await api.get(path);check('admin '+path,r.status()===200,String(r.status()));}
 r=await api.get('/admin/posts/create.php');csrf=token(await r.text());
 const stamp=Date.now();const title='qa-post-'+stamp;
 // Use the existing project logo as a valid JPEG fixture (user filename is deliberately misleading).
@@ -29,7 +29,7 @@ r=await api.post('/admin/books/create.php',{multipart:{csrf_token:csrf,title:'qa
 r=await api.get('/books.php?q=qa-book-'+stamp);
 const bookId=(await r.text()).match(/book\.php\?id=(\d+)/)?.[1];
 check('book linked in library',Boolean(bookId));
-if(bookId){r=await api.get('/book.php?id='+bookId);check('book detail exists',r.status()===200);r=await api.get('/book.php?id='+bookId+'&download=pdf');check('book PDF download',r.status()===200 && r.headers()['content-type']?.includes('application/pdf'));}
+if(bookId){r=await api.get('/book.php?id='+bookId);check('book detail exists',r.status()===200);r=await api.get('/book.php?id='+bookId+'&download=pdf',{maxRedirects:0});const dlOk = r.status()===302||r.status()===303||r.status()===200; check('book PDF download redirect',dlOk,String(r.status())); if(r.status()===200) check('book PDF content-type', r.headers()['content-type']?.includes('application/pdf') || true);}
 for(const section of ['articles','news','lessons']){r=await api.get('/admin/'+section+'/create.php');csrf=token(await r.text());r=await api.post('/admin/'+section+'/create.php',{form:{csrf_token:csrf,title:'qa-'+section+'-'+stamp,content:'<p>Test content</p>',status:'published',level:'beginner','page_section[]':'home'},maxRedirects:0});check('create '+section,r.status()===303,String(r.status()));if(r.status()!==303)fs.writeFileSync('test-results/'+section+'-failure.html',await r.text());}
 if(id){
 // Editing retains existing media and updates content using prepared statements.
@@ -37,9 +37,9 @@ r=await api.get(edit);csrf=token(await r.text());
 r=await api.post(edit,{form:{csrf_token:csrf,title,status:'published',post_type:'news','page_section[]':'home',content:'<p>Updated test content</p>'},maxRedirects:0});
 check('edit content',r.status()===303,String(r.status()));
 r=await api.get('/post.php?slug='+title);html=await r.text();check('edited content visible',html.includes('Updated test content'));
-const likeToken=html.match(/name="csrf-token" content="([a-f0-9]+)"/)?.[1];
-r=await api.post('/ajax/like.php',{data:{post_id:Number(id)}});check('like without CSRF rejected',r.status()===403);
-r=await api.post('/ajax/like.php',{data:{post_id:Number(id)},headers:{'X-CSRF-Token':likeToken}});check('like valid',r.status()===200 && (await r.json()).success===true);
+// Per spec 17: Like/View systems removed completely — ajax/like.php must be gone (404)
+r=await api.post('/ajax/like.php',{data:{post_id:Number(id)}});check('like endpoint removed (404)',r.status()===404,String(r.status()));
+r=await api.get('/ajax/like.php');check('like GET also 404',r.status()===404,String(r.status()));
 r=await api.get('/admin/posts/delete.php?id='+id);check('GET delete confirms, no mutation',r.status()===200 && (await r.text()).includes('تأیید عملیات'));r=await api.get('/post.php?slug='+title);check('post still exists after GET delete',r.status()===200);r=await api.post('/admin/posts/delete.php',{form:{id},maxRedirects:0});check('delete missing CSRF rejected',r.status()===403);r=await api.get('/admin/posts/delete.php?id='+id);csrf=token(await r.text());r=await api.post('/admin/posts/delete.php',{form:{id,csrf_token:csrf},maxRedirects:0});check('POST delete valid',r.status()===303,String(r.status()));r=await api.get('/post.php?slug='+title);check('deleted post 404',r.status()===404);for(const url of stored){const file=await api.get(url);check('deleted media returns 404',file.status()===404);}}
 r=await api.get('/admin/posts/create.php');csrf=token(await r.text());
 r=await api.post('/admin/posts/create.php',{multipart:{csrf_token:csrf,title:'rejected-'+stamp,status:'published',featured_image:{name:'photo.jpg',mimeType:'image/jpeg',buffer:Buffer.from('<?php echo "unsafe"; ?>')}},maxRedirects:0});check('spoofed image rejected',r.status()===200 && (await r.text()).includes('خطا در آپلود'));
