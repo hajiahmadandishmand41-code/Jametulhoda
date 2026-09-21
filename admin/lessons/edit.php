@@ -35,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $title   = trim($_POST['title']   ?? '');
         $subject = trim($_POST['subject'] ?? '');
         $teacher = trim($_POST['teacher'] ?? '');
+        $sources = trim($_POST['sources'] ?? '');
         $summary = trim($_POST['summary'] ?? '');
         $content = $_POST['content']      ?? '';
         $status  = in_array($_POST['status'] ?? '', ['published','draft']) ? $_POST['status'] : 'draft';
@@ -159,14 +160,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $slug = uniqueSlug('lessons', $title, $id);
                     $stmt = $db->prepare(
                         "UPDATE lessons SET
-                            title=?, slug=?, subject=?, teacher=?, content=?, summary=?,
+                            title=?, slug=?, subject=?, teacher=?, content=?, summary=?, sources=?,
                             featured_image=?, audio_file=?, video_file=?, pdf_file=?,
                             status=?, page_section=?, level=?, collection_id=?, volume_id=?, lesson_number=?, updated_at=NOW()
                          WHERE id=?"
                     );
                     $stmt->execute([
                         $title, $slug, $subject ?: null, $teacher ?: null,
-                        $content, $summary ?: null,
+                        $content, $summary ?: null, $sources ?: null,
                         $featImg    ?: null,
                         $audioPath  ?: null,
                         $videoPath  ?: null,
@@ -292,7 +293,7 @@ $currentSections = !empty($lesson['page_section'])
                     </div>
                     <div class="mt-3">
                         <label class="form-label fw-bold">توضیحات کامل</label>
-                        <textarea name="content" class="form-control" rows="8"><?= htmlspecialchars($lesson['content'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
+                        <textarea name="content" class="form-control" rows="8"><?= htmlspecialchars($lesson['content'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea><div class="mt-3"><label class="form-label">منابع درس</label><textarea name="sources" class="form-control" rows="3"><?= sanitize($lesson['sources'] ?? '') ?></textarea></div>
                     </div>
                 </div>
             </div>

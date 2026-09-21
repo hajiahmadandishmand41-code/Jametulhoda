@@ -116,6 +116,12 @@ require_once __DIR__.'/includes/header.php';
 <?php if($lesson['content']): ?>
 <div class="single-post-content mt-4" itemprop="description"><?= safeRichText($lesson['content']) ?></div>
 <?php endif; ?>
+<?php if(!empty($lesson['sources'])): ?>
+<div class="mt-4 p-3 rounded-4" style="background:#fafaf7;border:1px solid #e8e6dc">
+<h3 class="h6 fw-bold" style="color:var(--jhd-primary)"><i class="bi bi-journal-text ms-2"></i> منابع درس</h3>
+<div style="white-space:pre-wrap;line-height:1.9;color:#3a3a3a;font-size:.93rem"><?= sanitize($lesson['sources']) ?></div>
+</div>
+<?php endif; ?>
 
 <!-- ناوبری درس قبلی/بعدی -->
 <?php if($adjacent['prev'] || $adjacent['next']): ?>

@@ -30,6 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $title       = trim($_POST['title']       ?? '');
         $summary     = trim($_POST['summary']     ?? '');
         $content     = $_POST['content']          ?? '';
+        $sources     = trim($_POST['sources'] ?? '');
+        $author_name = trim($_POST['author_name'] ?? '');
         $post_type   = in_array($_POST['post_type'] ?? '', ['report','article','research','qa','announcement','speech','news','program','religious'])
                        ? $_POST['post_type'] : 'article';
         $category_id = (int)($_POST['category_id'] ?? 0);
@@ -100,11 +102,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$error) {
                 ensureFeaturedVideoColumn();
                 $stmt = $db->prepare(
-                    "UPDATE posts SET title=?, slug=?, summary=?, content=?, featured_image=?, featured_video=?, post_type=?, page_section=?,
+                    "UPDATE posts SET title=?, slug=?, summary=?, content=?, sources=?, author_name=?, featured_image=?, featured_video=?, post_type=?, page_section=?,
                      category_id=?, status=?, is_featured=?, published_at=?, updated_at=NOW() WHERE id=?"
                 );
                 $stmt->execute([
-                    $title, $slug, $summary, $content, $featImg, $featVid,
+                    $title, $slug, $summary, $content, $sources ?: null, $author_name ?: null, $featImg, $featVid,
                     $post_type, $page_section,
                     $category_id ?: null,
                     $status, $is_featured, $pub_date, $id
@@ -217,6 +219,15 @@ $existingVideo = getMediaFor('post', $id, 'video');
                     <div>
                         <label class="form-label fw-bold">متن کامل مطلب</label>
                         <textarea name="content" class="form-control" rows="12"><?= htmlspecialchars($post['content'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label">نویسنده (اختیاری — نمایش در صفحه مقاله)</label>
+                        <input type="text" name="author_name" class="form-control" value="<?= sanitize($post['author_name'] ?? $_POST['author_name'] ?? '') ?>" placeholder="نام نویسنده">
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label">منابع</label>
+                        <textarea name="sources" class="form-control" rows="3" placeholder="منابع و مآخذ..." ><?= sanitize($post['sources'] ?? $_POST['sources'] ?? '') ?></textarea>
+                        <div class="form-text">منابع به شکل لیست نمایش داده می‌شود.</div>
                     </div>
                 </div>
             </div>

@@ -140,6 +140,12 @@ require_once __DIR__.'/includes/header.php';
 <?php if($post['summary']): ?><div class="single-post-summary" itemprop="description"><p><?= sanitize($post['summary']) ?></p></div><?php endif; ?>
 
 <div class="single-post-content" itemprop="articleBody"><?= safeRichText($post['content']) ?: '<p class="text-muted">محتوایی ثبت نشده است.</p>' ?></div>
+<?php if(!empty($post['sources'])): ?>
+<div class="mt-4 p-3 rounded-4" style="background:#fafaf7;border:1px solid #e8e6dc">
+<h3 class="h6 fw-bold" style="color:var(--jhd-primary)"><i class="bi bi-journal-text ms-2"></i> منابع و مآخذ</h3>
+<div style="white-space:pre-wrap;line-height:1.9;color:#3a3a3a;font-size:.93rem"><?= sanitize($post['sources']) ?></div>
+</div>
+<?php endif; ?>
 
 <?php if(!empty($extraImages)): ?>
 <div class="post-gallery mt-4"><h2 class="h5 mb-3"><i class="bi bi-images ms-2"></i> گالری تصاویر</h2><div class="row g-2"><?php foreach($extraImages as $img): ?><div class="col-6 col-md-4 col-lg-3"><a href="<?= imgUrl($img['image_path']) ?>" target="_blank"><img src="<?= imgUrl($img['image_path']) ?>" alt="" class="img-thumbnail w-100" style="height:120px;object-fit:cover" loading="lazy"></a></div><?php endforeach; ?></div></div>

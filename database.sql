@@ -275,6 +275,27 @@ ALTER TABLE lessons ADD COLUMN IF NOT EXISTS collection_id INTEGER REFERENCES le
 ALTER TABLE lessons ADD COLUMN IF NOT EXISTS volume_id INTEGER REFERENCES lesson_volumes(id) ON DELETE SET NULL;
 ALTER TABLE lessons ADD COLUMN IF NOT EXISTS is_featured SMALLINT NOT NULL DEFAULT 0;
 
+
+-- Ensure book slug exists for SEO friendly URLs
+ALTER TABLE books ADD COLUMN IF NOT EXISTS slug VARCHAR(300);
+CREATE UNIQUE INDEX IF NOT EXISTS books_slug_unique ON books(slug) WHERE slug IS NOT NULL AND slug <> '';
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS sources TEXT;
+ALTER TABLE lessons ADD COLUMN IF NOT EXISTS sources TEXT;
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS author_name VARCHAR(250);
+-- Featured banners (dynamic special announcement)
+CREATE TABLE IF NOT EXISTS featured_banners (
+  id SERIAL PRIMARY KEY,
+  title VARCHAR(300) NOT NULL,
+  description TEXT,
+  image VARCHAR(500),
+  link_url VARCHAR(500),
+  button_text VARCHAR(100),
+  is_active SMALLINT NOT NULL DEFAULT 1,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 INSERT INTO settings (key, value) VALUES
 ('site_name',        'مدرسه علمیه جامعه‌الهدی'),
 ('site_slogan',      'علم، معرفت و تهذیب در پرتو قرآن و عترت'),

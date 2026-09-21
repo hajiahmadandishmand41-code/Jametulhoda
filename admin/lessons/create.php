@@ -20,6 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $title   = trim($_POST['title']   ?? '');
         $subject = trim($_POST['subject'] ?? '');
         $teacher = trim($_POST['teacher'] ?? '');
+        $sources = trim($_POST['sources'] ?? '');
         $summary = trim($_POST['summary'] ?? '');
         $content = $_POST['content']      ?? '';
         $status  = in_array($_POST['status'] ?? '', ['published','draft']) ? $_POST['status'] : 'draft';
@@ -108,12 +109,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (!$error) {
                     $slug = uniqueSlug('lessons', $title);
                     $stmt = $db->prepare(
-                        "INSERT INTO lessons (title, slug, subject, teacher, content, summary, featured_image, audio_file, video_file, pdf_file, status, page_section, level, collection_id, volume_id, lesson_number, created_at, updated_at)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) RETURNING id"
+                        "INSERT INTO lessons (title, slug, subject, teacher, content, summary, sources, featured_image, audio_file, video_file, pdf_file, status, page_section, level, collection_id, volume_id, lesson_number, created_at, updated_at)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) RETURNING id"
                     );
                     $stmt->execute([
                         $title, $slug, $subject ?: null, $teacher ?: null,
-                        $content, $summary ?: null, $featImg ?: null, $audioPath ?: null,
+                        $content, $summary ?: null, $sources ?: null, $featImg ?: null, $audioPath ?: null,
                         $videoPath ?: null, $pdfPath ?: null,
                         $status, $page_section, $level, $collection_id, $volume_id, $lesson_number
                     ]);
@@ -224,7 +225,7 @@ $selectedSections = is_array($_POST['page_section'] ?? null)
                     <div class="mt-3">
                         <label class="form-label fw-bold">توضیحات کامل (اختیاری)</label>
                         <textarea name="content" class="form-control" rows="8"
-                                  placeholder="متن کامل جلسه درس..."><?= htmlspecialchars($_POST['content'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
+                                  placeholder="متن کامل جلسه درس..."><?= htmlspecialchars($_POST['content'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea><div class="mt-3"><label class="form-label">منابع درس</label><textarea name="sources" class="form-control" rows="3" placeholder="منابع..."><?= sanitize($_POST['sources'] ?? '') ?></textarea></div>
                     </div>
                 </div>
             </div>

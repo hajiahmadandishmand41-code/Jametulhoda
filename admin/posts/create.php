@@ -17,6 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $title       = trim($_POST['title']       ?? '');
         $summary     = trim($_POST['summary']     ?? '');
         $content     = $_POST['content']          ?? '';
+        $sources     = trim($_POST['sources'] ?? '');
+        $author_name = trim($_POST['author_name'] ?? '');
         $allowedTypes=['report','article','research','qa','announcement','speech','news','program','religious'];
         $post_type   = in_array($_POST['post_type'] ?? '', $allowedTypes) ? $_POST['post_type'] : 'article';
         $category_id = (int)($_POST['category_id'] ?? 0);
@@ -60,11 +62,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $db   = getDB();
                 ensureFeaturedVideoColumn();
                 $stmt = $db->prepare(
-                    "INSERT INTO posts (title, slug, summary, content, featured_image, featured_video, post_type, page_section, category_id, author_id, status, is_featured, published_at, created_at, updated_at)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) RETURNING id"
+                    "INSERT INTO posts (title, slug, summary, content, sources, author_name, featured_image, featured_video, post_type, page_section, category_id, author_id, status, is_featured, published_at, created_at, updated_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) RETURNING id"
                 );
                 $stmt->execute([
-                    $title, $slug, $summary, $content, $featImg, $featVid,
+                    $title, $slug, $summary, $content, $sources ?: null, $author_name ?: null, $featImg, $featVid,
                     $post_type, $page_section,
                     $category_id ?: null,
                     $admin2['id'],
@@ -150,6 +152,14 @@ if(!is_array($selectedTopicIds)) $selectedTopicIds=[$selectedTopicIds];
                     <div>
                         <label class="form-label fw-bold">متن کامل مطلب</label>
                         <textarea name="content" class="form-control" rows="12" placeholder="متن کامل مطلب را بنویسید..."><?= htmlspecialchars($_POST['content'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label">نویسنده</label>
+                        <input type="text" name="author_name" class="form-control" value="<?= sanitize($_POST['author_name'] ?? '') ?>" placeholder="نام نویسنده">
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label">منابع</label>
+                        <textarea name="sources" class="form-control" rows="3" placeholder="منابع..."><?= sanitize($_POST['sources'] ?? '') ?></textarea>
                     </div>
                 </div>
             </div>
