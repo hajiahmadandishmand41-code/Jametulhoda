@@ -146,3 +146,13 @@ post.php ↔ topic.php ↔ book.php ↔ lesson.php  (بادج‌ها کلیک‌
 
 ---
 *Teams checklist: موضوعات backbone ✓, سئو indexable ✓, حذف like/view صفر ✓, مدیریت بدون کدنویسی ✓, RTL/mobile ✓ — آماده برای crawl/index.*
+
+---
+
+## تکمیل نهایی (ادامه)
+- افزودن `sources` و `author_name` به `posts`/`lessons` + فرم و نمایش فرانت (بلوک منابع)
+- افزودن `slug` برای `books` و به‌روزرسانی `sitemap.php` به استفاده از slug (fallback به id)
+- حذف `jhd-masthead` برای هدر بسیار ساده منطبق بر spec (تنها لوگو+نام+جستجو+همبرگر)
+- ساده‌سازی منوی همبرگر: حذف لینک تکراری پژوهش (بایگانی) — اکنون «مقالات و پژوهش‌ها» تنها یک ورودی است
+- تأیید مجدد zero-trace و سئو پس از polish؛ پوش‌های نهایی `2c11140`
+
