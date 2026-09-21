@@ -118,9 +118,6 @@ function speechPageUrl(int $p): string {
 
 // ─── دریافت لایک‌ها ───────────────────────────────────────────────
 $speechIds    = array_column($speeches, 'id');
-$speechLikes  = !empty($speechIds) ? getLikeCountsBulk($speechIds) : [];
-$likedSession = $_SESSION['liked_posts'] ?? [];
-$likeUrl      = siteUrl('ajax/like.php');
 ?>
 
 <!-- Breadcrumb -->
@@ -219,11 +216,7 @@ $likeUrl      = siteUrl('ajax/like.php');
                 <?php else: ?>
                 <div class="row g-4">
                     <?php foreach ($speeches as $sp):
-                        $spId    = (int)$sp['id'];
-                        $liked   = in_array($spId, $likedSession, true);
-                        $lCount  = $speechLikes[$spId] ?? 0;
-
-                        // نام سخنران: از ستون speaker (اولویت) یا استخراج از summary
+                        $spId    = (int)$sp['id'];                        // نام سخنران: از ستون speaker (اولویت) یا استخراج از summary
                         $spkName = $sp['speaker'] ?? '';
                         if (!$spkName && !empty($sp['summary'])) {
                             if (preg_match('/سخنران[:\s]+([^—\n]+)/u', $sp['summary'], $m)) {
@@ -310,18 +303,7 @@ $likeUrl      = siteUrl('ajax/like.php');
                                        class="btn-read-more">
                                         مشاهده <i class="bi bi-arrow-left"></i>
                                     </a>
-                                    <button type="button"
-                                        class="btn-like <?= $liked ? 'liked' : '' ?>"
-                                        data-post-id="<?= $spId ?>"
-                                        data-url="<?= htmlspecialchars($likeUrl, ENT_QUOTES) ?>"
-                                        title="<?= $liked ? 'لایک را بردار' : 'لایک کن' ?>">
-                                        <?php if ($liked): ?>
-                                        <i class="bi bi-heart-fill like-icon text-danger"></i>
-                                        <?php else: ?>
-                                        <i class="bi bi-heart like-icon"></i>
-                                        <?php endif; ?>
-                                        <span class="like-count"><?= $lCount > 0 ? number_format($lCount) : '' ?></span>
-                                    </button>
+                                    
                                 </div>
                             </div>
                         </article>

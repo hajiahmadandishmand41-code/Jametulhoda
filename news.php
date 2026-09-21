@@ -20,7 +20,6 @@ $pages = (int)ceil($total / $limit);
 
 // دریافت یک‌جای تعداد لایک و ویدیو برای همه پست‌ها (بدون N+1 query)
 $postIds  = array_column($posts, 'id');
-$likeMap  = getLikeCountsBulk($postIds);
 $videoMap = [];
 if (!empty($postIds)) {
     try {
@@ -31,8 +30,6 @@ if (!empty($postIds)) {
         foreach ($vstmt->fetchAll() as $r) $videoMap[(int)$r['ref_id']] = (int)$r['cnt'];
     } catch (PDOException $e) {}
 }
-$likedInSession = $_SESSION['liked_posts'] ?? [];
-$likeUrl = siteUrl('ajax/like.php');
 ?>
 
 <div class="breadcrumb-bar">
@@ -84,10 +81,7 @@ $likeUrl = siteUrl('ajax/like.php');
         <div class="row g-4">
             <?php foreach ($posts as $k => $news):
                 $nid      = (int)$news['id'];
-                $nCount   = $likeMap[$nid] ?? 0;
-                $nLiked   = in_array($nid, $likedInSession, true);
-                $hasMediaVideo = !empty($videoMap[$nid]);
-                $hasFeatVideo  = !empty($news['featured_video']);
+                                                $hasFeatVideo  = !empty($news['featured_video']);
                 $hasVideo      = $hasMediaVideo || $hasFeatVideo;
             ?>
             <div class="col-md-6 col-lg-4">
@@ -105,7 +99,7 @@ $likeUrl = siteUrl('ajax/like.php');
                     <div class="news-card-body">
                         <div class="news-card-meta">
                             <span class="text-muted small"><i class="bi bi-calendar3 ms-1"></i><?= persianDate($news['published_at'] ?? $news['created_at']) ?></span>
-                            <span class="text-muted small"><i class="bi bi-eye ms-1"></i><?= number_format($news['views']) ?></span>
+                            <span class="text-muted small"><i class="bi bi-eye ms-1"></i><?= 0 ?></span>
                         </div>
                         <h3 class="news-card-title">
                             <a href="<?= siteUrl('post.php?slug=' . urlencode($news['slug'])) ?>"><?= sanitize($news['title']) ?></a>
@@ -119,14 +113,7 @@ $likeUrl = siteUrl('ajax/like.php');
                             </a>
                             <div class="d-flex gap-2 align-items-center">
                                 <!-- دکمه لایک -->
-                                <button type="button"
-                                    class="btn-like <?= $nLiked ? 'liked' : '' ?>"
-                                    data-post-id="<?= $nid ?>"
-                                    data-url="<?= htmlspecialchars($likeUrl, ENT_QUOTES) ?>"
-                                    title="<?= $nLiked ? 'لایک را بردار' : 'لایک کن' ?>">
-                                    <span class="like-icon"><?= $nLiked ? '❤️' : '🤍' ?></span>
-                                    <span class="like-count"><?= $nCount > 0 ? number_format($nCount) : '' ?></span>
-                                </button>
+                                
                                 <!-- کپی لینک -->
                                 <button class="btn-copy-link" title="کپی لینک خبر"
                                     onclick="navigator.clipboard.writeText('<?= siteUrl('post.php?slug=' . urlencode($news['slug'])) ?>').then(function(){this.innerHTML='<i class=\'bi bi-check-circle text-success\'></i>';}.bind(this))">

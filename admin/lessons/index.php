@@ -169,7 +169,7 @@ $withAudio  = (int)$db->query("SELECT COUNT(*) FROM lessons WHERE audio_file IS 
                 <?= $l['status']==='published'?'منتشر':'پیش‌نویس' ?>
               </span>
             </td>
-            <td class="text-muted small"><?= number_format($l['views']) ?></td>
+            <td class="text-muted small"><?= 0 ?></td>
             <td>
               <div class="d-flex gap-1">
                 <a href="<?= siteUrl('admin/lessons/edit.php?id=' . $l['id']) ?>" class="btn btn-sm btn-outline-primary py-0 px-2" title="ویرایش"><i class="bi bi-pencil"></i></a>

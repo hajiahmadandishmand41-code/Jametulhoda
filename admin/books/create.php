@@ -16,6 +16,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $title       = trim($_POST['title'] ?? '');
         $description = trim($_POST['description'] ?? '');
+        $author      = trim($_POST['author'] ?? '');
+        $translator  = trim($_POST['translator'] ?? '');
+        $publisher   = trim($_POST['publisher'] ?? '');
+        $publish_year= trim($_POST['publish_year'] ?? '');
+        $pages       = (int)($_POST['pages'] ?? 0);
+        $toc         = trim($_POST['toc'] ?? '');
+        $is_featured = !empty($_POST['is_featured']) ? 1 : 0;
+        $topicIds    = array_filter(array_map('intval', (array)($_POST['topic_ids'] ?? [])));
 
         if (!$title) {
             $error = 'نام کتاب الزامی است.';
@@ -57,11 +65,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (!$error) {
                 try {
+                    $slug = uniqueSlug('books',$title);
                     $stmt = $db->prepare(
-                        "INSERT INTO books (title, description, cover_image, pdf_file, word_file, created_at, updated_at)
-                         VALUES (?, ?, ?, ?, ?, NOW(), NOW())"
+                        "INSERT INTO books (title, slug, description, author, translator, publisher, publish_year, pages, toc, cover_image, pdf_file, word_file, is_featured, status, sort_order, created_at, updated_at)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', 0, NOW(), NOW()) RETURNING id"
                     );
-                    $stmt->execute([$title, $description ?: null, $coverImg ?: null, $pdfFile ?: null, $wordFile ?: null]);
+                    $stmt->execute([$title, $slug, $description ?: null, $author ?: null, $translator ?: null, $publisher ?: null, $publish_year ?: null, $pages ?: null, $toc ?: null, $coverImg ?: null, $pdfFile ?: null, $wordFile ?: null, $is_featured]);
+                    $bookId = (int)$stmt->fetchColumn();
+                    if($topicIds){ $ins=$db->prepare("INSERT INTO book_topics (book_id, topic_id) VALUES (?,?) ON CONFLICT DO NOTHING"); foreach($topicIds as $tid) $ins->execute([$bookId,$tid]); }
 
                     $_SESSION['flash_msg']  = 'کتاب «' . $title . '» با موفقیت افزوده شد.';
                     $_SESSION['flash_type'] = 'success';
@@ -100,6 +111,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <label class="form-label fw-bold">توضیح کوتاه <span class="text-muted small">(اختیاری)</span></label>
                         <textarea name="description" class="form-control" rows="4"
                                   placeholder="توضیح مختصری درباره محتوای کتاب..."><?= sanitize($_POST['description'] ?? '') ?></textarea>
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6"><label class="form-label">نویسنده</label><input type="text" name="author" class="form-control" value="<?= sanitize($_POST['author'] ?? '') ?>" placeholder="نویسنده"></div>
+                        <div class="col-md-6"><label class="form-label">مترجم</label><input type="text" name="translator" class="form-control" value="<?= sanitize($_POST['translator'] ?? '') ?>" placeholder="مترجم (اختیاری)"></div>
+                        <div class="col-md-6"><label class="form-label">ناشر</label><input type="text" name="publisher" class="form-control" value="<?= sanitize($_POST['publisher'] ?? '') ?>"></div>
+                        <div class="col-md-3"><label class="form-label">سال نشر</label><input type="text" name="publish_year" class="form-control" value="<?= sanitize($_POST['publish_year'] ?? '') ?>" placeholder="۱۴۰۳"></div>
+                        <div class="col-md-3"><label class="form-label">تعداد صفحات</label><input type="number" name="pages" class="form-control" value="<?= sanitize($_POST['pages'] ?? '') ?>"></div>
+                    </div>
+                    <div class="mt-3"><label class="form-label fw-bold">فهرست مطالب (toc)</label><textarea name="toc" class="form-control" rows="3" placeholder="فهرست فصل‌ها..."><?= sanitize($_POST['toc'] ?? '') ?></textarea></div>
+                    <div class="form-check mt-3"><input type="checkbox" name="is_featured" value="1" class="form-check-input" id="bf" <?= !empty($_POST['is_featured'])?'checked':'' ?>><label for="bf" class="form-check-label">ویژه در صفحه اصلی</label></div>
+                    <?php $allTopics=getTopics(['limit'=>200]); ?>
+                    <div class="mt-3"><label class="form-label fw-bold"><i class="bi bi-diagram-3 ms-1"></i> موضوعات</label>
+                    <div style="max-height:180px;overflow:auto;border:1px solid #e8e6dc;border-radius:10px;padding:10px;background:#fafaf7">
+                        <?php if(empty($allTopics)): ?><div class="text-muted small">موضوعی نیست.</div><?php else: foreach($allTopics as $tt): ?>
+                        <label class="form-check"><input type="checkbox" class="form-check-input" name="topic_ids[]" value="<?= $tt['id'] ?>"> <span class="form-check-label small"><?= sanitize($tt['name']) ?></span></label>
+                        <?php endforeach; endif; ?>
+                    </div></div>
+
                     </div>
                 </div>
             </div>

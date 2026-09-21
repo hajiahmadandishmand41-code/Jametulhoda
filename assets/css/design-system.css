@@ -13,3 +13,45 @@ body{font-family:Vazirmatn,sans-serif;background:var(--jhd-paper);color:var(--jh
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
 .jhd-mobile-search{display:none}@media(max-width:991px){.jhd-mobile-search{display:grid}}
 @media(max-width:359px){.jhd-header-row{gap:8px}.jhd-brand{gap:8px}.jhd-brand img{width:36px;height:36px}.jhd-brand strong{font-size:18px}.jhd-brand small{display:none}.jhd-login{display:none}.jhd-header-actions{gap:6px}.jhd-icon-btn{width:32px;height:32px}}
+
+/* ─── Hamburger Drawer (spec 12) ────────────────────────────────────────── */
+.jhd-drawer-overlay{position:fixed;inset:0;background:rgba(16,30,36,.45);backdrop-filter:blur(2px);z-index:150;opacity:0;transition:opacity .25s}
+.jhd-drawer-overlay.show{opacity:1}
+.jhd-drawer{position:fixed;top:0;right:0;bottom:0;width:min(380px,86vw);background:var(--jhd-surface);border-left:1px solid var(--jhd-border);z-index:151;transform:translateX(100%);transition:transform .28s ease;overflow:auto;display:flex;flex-direction:column}
+.jhd-drawer.open{transform:translateX(0)}
+.jhd-drawer-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--jhd-border);font-weight:800}
+.jhd-drawer-search{padding:12px 16px;border-bottom:1px solid var(--jhd-border)}
+.jhd-drawer-search form{display:flex;align-items:center;gap:8px;background:var(--jhd-paper);border:1px solid var(--jhd-border);border-radius:8px;padding:6px 10px}
+.jhd-drawer-search input{flex:1;border:0;background:none;font-size:13px;color:var(--jhd-ink)}
+.jhd-drawer-search button{border:0;background:none;color:var(--jhd-green)}
+.jhd-drawer-body{padding:10px 0 24px}
+.drawer-section{font-size:10px;letter-spacing:.08em;color:var(--jhd-muted);padding:16px 18px 6px;font-weight:700;text-transform:uppercase}
+.drawer-link{display:flex;align-items:center;gap:10px;padding:10px 18px;color:var(--jhd-ink);font-size:13px;border-inline-start:3px solid transparent}
+.drawer-link:hover{background:var(--jhd-paper);color:var(--jhd-green)}
+.drawer-link.active{border-inline-start-color:var(--jhd-gold);background:var(--jhd-paper);font-weight:700}
+.drawer-link i{font-size:16px;color:var(--jhd-gold)}
+.drawer-topic.depth-1{padding-inline-start:34px;font-size:12.5px}
+.drawer-topic.depth-2{padding-inline-start:48px;font-size:12px;color:var(--jhd-muted)}
+.drawer-sub{background:var(--jhd-paper);border-inline-start:2px solid var(--jhd-border);margin:0 18px 6px 18px;border-radius:6px}
+.drawer-all{margin:6px 12px;border:1px dashed var(--jhd-border);border-radius:8px;justify-content:center;color:var(--jhd-green);font-weight:700}
+.drawer-subtle{font-size:11px;color:var(--jhd-muted);padding-top:2px}
+/* simple header tweak */
+.jhd-header-row{position:relative}
+
+/* Topic cards */
+.topic-card{border:1px solid var(--jhd-border);background:var(--jhd-surface);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:8px;transition:.2s}
+.topic-card:hover{border-color:var(--jhd-gold);transform:translateY(-2px)}
+.topic-card h3{font-size:15px;margin:0}
+.topic-card p{font-size:12px;color:var(--jhd-muted);margin:0;line-height:1.8}
+.topic-card .topic-meta{font-size:11px;color:var(--jhd-muted)}
+
+/* Reports / Articles listing enhancements */
+.content-card{border:1px solid var(--jhd-border);background:var(--jhd-surface);border-radius:10px;overflow:hidden}
+.content-card:hover{box-shadow:0 6px 18px rgba(0,0,0,.07)}
+
+/* breadcrumb improvements */
+.breadcrumb-bar{font-size:13px}
+
+/* hero short (spec 11) - keep compact, no slider */
+.jhd-hero--short{padding:42px 0}
+.jhd-hero--short h1{font-size:30px}

@@ -35,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $title   = trim($_POST['title']   ?? '');
         $subject = trim($_POST['subject'] ?? '');
         $teacher = trim($_POST['teacher'] ?? '');
+        $sources = trim($_POST['sources'] ?? '');
         $summary = trim($_POST['summary'] ?? '');
         $content = $_POST['content']      ?? '';
         $status  = in_array($_POST['status'] ?? '', ['published','draft']) ? $_POST['status'] : 'draft';
@@ -43,6 +44,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!is_array($sections)) $sections = explode(',', $sections);
         $page_section = implode(',', array_filter(array_map('trim', $sections)));
         if (!$page_section) $page_section = 'home';
+        $collection_id = (int)($_POST['collection_id'] ?? 0) ?: null;
+        $volume_id     = (int)($_POST['volume_id'] ?? 0) ?: null;
+        $lesson_number = (int)($_POST['lesson_number'] ?? 0) ?: null;
+        $topicIds      = array_filter(array_map('intval', (array)($_POST['topic_ids'] ?? [])));
 
         if (!$title) {
             $error = 'عنوان درس الزامی است.';
@@ -155,21 +160,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $slug = uniqueSlug('lessons', $title, $id);
                     $stmt = $db->prepare(
                         "UPDATE lessons SET
-                            title=?, slug=?, subject=?, teacher=?, content=?, summary=?,
+                            title=?, slug=?, subject=?, teacher=?, content=?, summary=?, sources=?,
                             featured_image=?, audio_file=?, video_file=?, pdf_file=?,
-                            status=?, page_section=?, level=?, updated_at=NOW()
+                            status=?, page_section=?, level=?, collection_id=?, volume_id=?, lesson_number=?, updated_at=NOW()
                          WHERE id=?"
                     );
                     $stmt->execute([
                         $title, $slug, $subject ?: null, $teacher ?: null,
-                        $content, $summary ?: null,
+                        $content, $summary ?: null, $sources ?: null,
                         $featImg    ?: null,
                         $audioPath  ?: null,
                         $videoPath  ?: null,
                         $pdfPath    ?: null,
-                        $status, $page_section, $level,
+                        $status, $page_section, $level, $collection_id, $volume_id, $lesson_number,
                         $id
                     ]);
+                    $db->prepare("DELETE FROM lesson_topics WHERE lesson_id=?")->execute([$id]);
+                    if($topicIds){ $insT=$db->prepare("INSERT INTO lesson_topics (lesson_id, topic_id) VALUES (?,?) ON CONFLICT DO NOTHING"); foreach($topicIds as $tid) $insT->execute([$id,$tid]); }
 
                     $stmt2 = $db->prepare("SELECT * FROM lessons WHERE id = ? LIMIT 1");
                     $stmt2->execute([$id]);
@@ -245,7 +252,34 @@ $currentSections = !empty($lesson['page_section'])
                         <div class="col-md-6">
                             <label class="form-label fw-bold">موضوع / درس</label>
                             <input type="text" name="subject" class="form-control"
-                                   value="<?= sanitize($lesson['subject'] ?? '') ?>">
+                                   value="<?= sanitize($lesson['subject'] ?? '') ?>
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-4"><label class="form-label">مجموعه</label>
+                            <select name="collection_id" class="form-select">
+                                <option value="">— بدون مجموعه —</option>
+                                <?php foreach(getLessonCollections(['active'=>null]) as $cc): ?>
+                                <option value="<?= $cc['id'] ?>" <?= (($lesson['collection_id']??'')==$cc['id'])?'selected':'' ?>><?= sanitize($cc['title']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4"><label class="form-label">جلد / بخش</label>
+                            <select name="volume_id" class="form-select">
+                                <option value="">— بدون جلد —</option>
+                                <?php foreach(getLessonCollections(['active'=>null]) as $cc2): foreach(getLessonVolumes((int)$cc2['id']) as $vv): ?>
+                                <option value="<?= $vv['id'] ?>" <?= (($lesson['volume_id']??'')==$vv['id'])?'selected':'' ?>><?= sanitize($cc2['title'].' — '.$vv['title']) ?></option>
+                                <?php endforeach; endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4"><label class="form-label">شماره درس</label><input type="number" name="lesson_number" class="form-control" value="<?= sanitize($lesson['lesson_number'] ?? '') ?>"></div>
+                    </div>
+                    <?php $allTopics=getTopics(['limit'=>200]); $curLessonTopicIds=getTopicIdsForLesson((int)$lesson['id']); ?>
+                    <div class="mt-3"><label class="form-label fw-bold"><i class="bi bi-diagram-3 ms-1"></i> موضوعات مرتبط</label>
+                    <div style="max-height:160px;overflow:auto;border:1px solid #e8e6dc;border-radius:10px;padding:10px;background:#fafaf7">
+                        <?php if(empty($allTopics)): ?><div class="text-muted small">موضوعی نیست.</div><?php else: foreach($allTopics as $tt): ?>
+                        <label class="form-check"><input type="checkbox" class="form-check-input" name="topic_ids[]" value="<?= $tt['id'] ?>" <?= in_array($tt['id'],$curLessonTopicIds)?'checked':'' ?>> <span class="form-check-label small"><?= sanitize($tt['name']) ?></span></label>
+                        <?php endforeach; endif; ?>
+                    </div></div>
+">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-bold">نام استاد</label>
@@ -259,7 +293,7 @@ $currentSections = !empty($lesson['page_section'])
                     </div>
                     <div class="mt-3">
                         <label class="form-label fw-bold">توضیحات کامل</label>
-                        <textarea name="content" class="form-control" rows="8"><?= htmlspecialchars($lesson['content'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
+                        <textarea name="content" class="form-control" rows="8"><?= htmlspecialchars($lesson['content'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea><div class="mt-3"><label class="form-label">منابع درس</label><textarea name="sources" class="form-control" rows="3"><?= sanitize($lesson['sources'] ?? '') ?></textarea></div>
                     </div>
                 </div>
             </div>
@@ -408,7 +442,7 @@ $currentSections = !empty($lesson['page_section'])
                 <div class="admin-card-body">
                     <div class="d-flex justify-content-between small mb-2">
                         <span>بازدید:</span>
-                        <strong><?= number_format($lesson['views'] ?? 0) ?></strong>
+                        <strong><?= 0 ?></strong>
                     </div>
                     <div class="d-flex justify-content-between small mb-2">
                         <span>ایجاد:</span>

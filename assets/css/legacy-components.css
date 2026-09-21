@@ -1,19 +1,5 @@
 
-    /* ─── Like Button ──────────────────────────────────── */
-    .btn-like {
-        display:inline-flex;align-items:center;gap:5px;
-        background:none;border:1.5px solid #e0e0e0;border-radius:30px;
-        padding:4px 12px;cursor:pointer;font-size:.85rem;
-        color:#888;transition:all .25s;line-height:1;
-        user-select:none;
-    }
-    .btn-like:hover { border-color:#e74c3c;color:#e74c3c;background:#fff5f5; }
-    .btn-like.liked  { border-color:#e74c3c;color:#e74c3c;background:#fff0f0; }
-    .btn-like .like-icon { font-size:1rem;transition:transform .2s; }
-    .btn-like:active .like-icon,
-    .btn-like.like-animate .like-icon { transform:scale(1.4); }
-    .btn-like .like-count { font-weight:600;min-width:1ch; }
-
+        
     /* ─── Video Player Wrapper ─────────────────────────── */
     .video-player-wrap { background:#000;border-radius:12px;overflow:hidden;margin:16px 0; }
     .video-player-wrap .plyr { border-radius:12px; }

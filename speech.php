@@ -22,7 +22,6 @@ if (!$post || $post['post_type'] !== 'speech') {
 }
 
 $db = getDB();
-$db->prepare("UPDATE posts SET views = views + 1 WHERE id = ?")->execute([$post['id']]);
 
 $audioList = getMediaFor('post', (int)$post['id'], 'audio');
 $videoList = getMediaFor('post', (int)$post['id'], 'video');
@@ -61,7 +60,7 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="single-post-meta">
                         <?php if ($post['author_name']): ?><span><i class="bi bi-person-fill ms-1"></i><?= sanitize($post['author_name']) ?></span><?php endif; ?>
                         <span><i class="bi bi-calendar3 ms-1"></i><?= persianDate($post['published_at'] ?? $post['created_at']) ?></span>
-                        <span><i class="bi bi-eye ms-1"></i><?= number_format($post['views']) ?> بازدید</span>
+                        <span><i class="bi bi-eye ms-1"></i><?= 0 ?> بازدید</span>
                     </div>
                 </header>
 
