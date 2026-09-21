@@ -77,16 +77,56 @@ if (PHP_SAPI !== 'cli') {
     header("Content-Security-Policy: object-src 'none'; base-uri 'self'" . (APP_ENV === 'production' ? "; frame-ancestors 'self'" : ''));
     if (APP_ENV === 'production') header('Strict-Transport-Security: max-age=31536000');
 }
+/**
+ * Actionable failure page. The technical detail stays in the server log; the
+ * visitor sees what is missing (installation or database) and what to do.
+ */
+function renderFailurePage(string $id, bool $installed, bool $databaseError): string {
+    $installUrl = htmlspecialchars(BASE_PATH . '/php/install', ENT_QUOTES, 'UTF-8');
+    $host = htmlspecialchars($_SERVER['HTTP_HOST'] ?? 'example.com', ENT_QUOTES, 'UTF-8');
+    if (!$installed) {
+        $title = 'سایت هنوز نصب نشده است';
+        $body = '<p>نصب این سایت کامل نشده است: فایل تنظیمات خصوصی <code>config/local.php</code> وجود ندارد.</p>'
+            . '<p>برای نصب، این آدرس را باز کنید و مشخصات دیتابیس MySQL و حساب مدیر را وارد کنید:</p>'
+            . '<p><a href="' . $installUrl . '">https://' . $host . $installUrl . '</a></p>'
+            . '<p class="muted">اگر فایل‌ها را تازه آپلود کرده‌اید، مطمئن شوید فایل مخفی <code>.htaccess</code> هم منتقل شده و پوشه config قابل نوشتن است.</p>';
+    } elseif ($databaseError) {
+        $title = 'اتصال به دیتابیس برقرار نشد';
+        $body = '<p>برنامه اجرا می‌شود ولی نمی‌تواند به دیتابیس وصل شود.</p><ol>'
+            . '<li>در کنترل‌پنل میزبان بررسی کنید دیتابیس فعال و رمز کاربر همان رمز ذخیره‌شده در <code>config/local.php</code> باشد.</li>'
+            . '<li>مقدار <code>DB_HOST</code> باید همان میزبان MySQLی باشد که میزبان دیتابیس اعلام کرده است (مثلاً <code>sql###.infinityfree.com</code>).</li>'
+            . '<li>دیتابیس‌های هاست‌های اشتراکی فقط از داخل همان هاست در دسترس‌اند؛ اجرای همین کد روی یک میزبان دیگر (مثل Vercel) نمی‌تواند به آن وصل شود.</li>'
+            . '<li>برای جزئیات فنی، Error Logs میزبان را با شناسه پیگیری زیر بررسی کنید.</li>'
+            . '</ol>';
+    } else {
+        $title = 'سرویس موقتاً در دسترس نیست';
+        $body = '<p>یک خطای موقت رخ داد. چند لحظه بعد دوباره تلاش کنید.</p>'
+            . '<p class="muted">اگر تکرار شد، Error Logs میزبان را با شناسه پیگیری زیر بررسی کنید.</p>';
+    }
+    return '<!doctype html><html lang="fa" dir="rtl"><meta charset="utf-8">'
+        . '<meta name="viewport" content="width=device-width">'
+        . '<title>' . $title . '</title>'
+        . '<style>body{font-family:Tahoma,system-ui,sans-serif;background:#f4f7fb;color:#162033;margin:0}'
+        . 'main{max-width:680px;margin:12vh auto;padding:24px;background:#fff;border:1px solid #e1e7ef;border-radius:16px;line-height:2}'
+        . 'h1{font-size:1.3rem;margin-top:0}code{background:#f1f5f9;padding:2px 6px;border-radius:6px;direction:ltr;display:inline-block}'
+        . '.muted{color:#64748b;font-size:.9rem}ol{padding-inline-start:1.2rem}a{color:#183b70}</style>'
+        . '<main><h1>' . $title . '</h1>' . $body
+        . '<p class="muted">شناسه پیگیری: <code>' . $id . '</code></p></main></html>';
+}
+
 set_exception_handler(function (Throwable $e): void {
     $id = bin2hex(random_bytes(6));
     // Do not log DSNs, submitted passwords, SQL values or storage credentials.
     error_log('Application failure ' . $id . ': ' . get_class($e) . ' at ' . basename($e->getFile()) . ':' . $e->getLine());
     if (PHP_SAPI === 'cli') { fwrite(STDERR, "Operation failed; reference: $id\n"); exit(1); }
     while (ob_get_level()) ob_end_clean();
+    $installed = is_file(__DIR__ . '/local.php');
+    $databaseError = $e instanceof PDOException
+        || (bool)preg_match('/SQLSTATE|MySQL|database|DATABASE_URL|DB_HOST|could not find driver/i', $e->getMessage());
     http_response_code(503);
     header('Content-Type: text/html; charset=utf-8');
     header('Cache-Control: no-store');
-    echo '<!doctype html><html lang="fa" dir="rtl"><meta charset="utf-8"><title>سرویس موقتاً در دسترس نیست</title><h1>لطفاً کمی بعد دوباره تلاش کنید.</h1><p>شناسه پیگیری: ' . $id . '</p></html>';
+    echo renderFailurePage($id, $installed, $databaseError);
 });
 
 /** Trust platform-owned forwarding headers only on Vercel, never arbitrary client headers. */

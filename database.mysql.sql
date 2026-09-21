@@ -1,5 +1,7 @@
 -- MySQL 8.0 / MariaDB 10.6+ (InfinityFree). Apply using php bin/migrate.php
 -- or the browser installer. Never from an anonymous web request.
+-- Indexed string keys stay <= 700 characters: InnoDB limits an index key to
+-- 3072 bytes, i.e. 768 characters with the utf8mb4 collation used below.
 -- Idempotent: CREATE TABLE IF NOT EXISTS plus INSERT IGNORE. Repeated CREATE
 -- INDEX statements fail with "Duplicate key name" and are skipped by the migrator.
 CREATE TABLE IF NOT EXISTS users (
@@ -334,18 +336,18 @@ CREATE TABLE IF NOT EXISTS login_limits (
  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE IF NOT EXISTS stored_files (
  id INT AUTO_INCREMENT PRIMARY KEY,
- file_key VARCHAR(500) NOT NULL UNIQUE, url VARCHAR(1000) NOT NULL UNIQUE, mime TEXT NOT NULL,
+ file_key VARCHAR(500) NOT NULL UNIQUE, url VARCHAR(700) NOT NULL UNIQUE, mime TEXT NOT NULL,
  size BIGINT NOT NULL, created_at DATETIME NOT NULL DEFAULT NOW()
  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE INDEX contact_rate_limit ON contact_messages(ip_address,created_at);
 CREATE TABLE IF NOT EXISTS storage_deletions (
- reference VARCHAR(1000) PRIMARY KEY,
+ reference VARCHAR(700) PRIMARY KEY,
  created_at DATETIME NOT NULL DEFAULT NOW(),
  not_before DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS pending_uploads (
- reference VARCHAR(1000) PRIMARY KEY,
+ reference VARCHAR(700) PRIMARY KEY,
  not_before DATETIME NOT NULL DEFAULT (CURRENT_TIMESTAMP + INTERVAL 24 HOUR),
  created_at DATETIME NOT NULL DEFAULT NOW()
  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
