@@ -338,7 +338,8 @@ CREATE TABLE IF NOT EXISTS stored_files (
 CREATE INDEX contact_rate_limit ON contact_messages(ip_address,created_at);
 CREATE TABLE IF NOT EXISTS storage_deletions (
  reference VARCHAR(1000) PRIMARY KEY,
- created_at DATETIME NOT NULL DEFAULT NOW()
+ created_at DATETIME NOT NULL DEFAULT NOW(),
+ not_before DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS pending_uploads (
