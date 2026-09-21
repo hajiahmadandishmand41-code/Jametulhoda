@@ -82,6 +82,7 @@ if (!empty($postIds)) {
             <?php foreach ($posts as $k => $news):
                 $nid      = (int)$news['id'];
                                                 $hasFeatVideo  = !empty($news['featured_video']);
+                $hasMediaVideo = !empty($videoMap[$nid]);
                 $hasVideo      = $hasMediaVideo || $hasFeatVideo;
             ?>
             <div class="col-md-6 col-lg-4">
@@ -99,7 +100,7 @@ if (!empty($postIds)) {
                     <div class="news-card-body">
                         <div class="news-card-meta">
                             <span class="text-muted small"><i class="bi bi-calendar3 ms-1"></i><?= persianDate($news['published_at'] ?? $news['created_at']) ?></span>
-                            <span class="text-muted small"><i class="bi bi-eye ms-1"></i><?= 0 ?></span>
+                            
                         </div>
                         <h3 class="news-card-title">
                             <a href="<?= siteUrl('post.php?slug=' . urlencode($news['slug'])) ?>"><?= sanitize($news['title']) ?></a>

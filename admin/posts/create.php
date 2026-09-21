@@ -63,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ensureFeaturedVideoColumn();
                 $stmt = $db->prepare(
                     "INSERT INTO posts (title, slug, summary, content, sources, author_name, featured_image, featured_video, post_type, page_section, category_id, author_id, status, is_featured, published_at, created_at, updated_at)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) RETURNING id"
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) RETURNING id"
                 );
                 $stmt->execute([
                     $title, $slug, $summary, $content, $sources ?: null, $author_name ?: null, $featImg, $featVid,
