@@ -85,6 +85,7 @@ $defaults = [
 
 $error = '';
 $success = '';
+$siteUrlInsecure = false;
 
 if (!$alreadyInstalled && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $host = trim((string)($_POST['db_host'] ?? $defaults['db_host']));
@@ -104,7 +105,17 @@ if (!$alreadyInstalled && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         if ($name === '' || !preg_match('/^[a-zA-Z0-9_]+$/', $name)) throw new RuntimeException('نام دیتابیس معتبر نیست.');
         if ($user === '' || !preg_match('/^[a-zA-Z0-9_]+$/', $user)) throw new RuntimeException('نام کاربری دیتابیس معتبر نیست.');
         if ($pass === '') throw new RuntimeException('رمز عبور MySQL را وارد کنید.');
+        if ($siteUrl === '') {
+            // Shared hosts answer on the real public domain: derive the HTTPS
+            // root from the request instead of storing an empty SITE_URL,
+            // which would disable robots/sitemap output.
+            $requestHost = (string)($_SERVER['HTTP_HOST'] ?? '');
+            if (preg_match('/^[a-zA-Z0-9.-]+(:[0-9]+)?$/', $requestHost)) {
+                $siteUrl = 'https://' . preg_replace('/:[0-9]+$/', '', $requestHost);
+            }
+        }
         if ($siteUrl !== '' && !filter_var($siteUrl, FILTER_VALIDATE_URL)) throw new RuntimeException('آدرس سایت معتبر نیست.');
+        $siteUrlInsecure = $siteUrl !== '' && !preg_match('~^https://~i', $siteUrl);
         if ($adminUsername === '' || !preg_match('/^[a-zA-Z0-9_.-]{3,80}$/', $adminUsername)) throw new RuntimeException('نام کاربری مدیر معتبر نیست.');
         if (strlen($adminPassword) < 8) throw new RuntimeException('رمز مدیر باید حداقل ۸ کاراکتر باشد.');
         if ($adminEmail !== '' && !filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) throw new RuntimeException('ایمیل مدیر معتبر نیست.');
@@ -171,6 +182,9 @@ if (!$alreadyInstalled && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
         $alreadyInstalled = true;
         $success = 'نصب با موفقیت انجام شد.';
+        if ($siteUrlInsecure) {
+            $success .= ' توجه: آدرس سایت با https ذخیره نشد؛ تا زمانی که SSL رایگان را فعال نکنید، robots.txt محدود می‌ماند و sitemap.xml خطا می‌دهد.';
+        }
     } catch (Throwable $e) {
         $error = $e->getMessage();
     }
