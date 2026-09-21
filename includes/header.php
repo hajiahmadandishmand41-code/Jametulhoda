@@ -69,6 +69,7 @@ $ogType = isset($post) || isset($book) || isset($lesson) ? 'article' : 'website'
 <div class="jhd-header-actions">
 <a class="jhd-icon-btn jhd-mobile-search d-md-none" href="<?= siteUrl('search.php') ?>" aria-label="جستجو"><i class="bi bi-search"></i></a>
 
+<button class="jhd-icon-btn" data-theme-toggle aria-label="تغییر پوسته روشن و تیره" aria-pressed="false"><i class="bi bi-moon"></i></button>
 <button id="menuToggle" class="jhd-icon-btn jhd-menu-toggle" aria-label="باز کردن منو" aria-expanded="false" aria-controls="siteDrawer"><i class="bi bi-list"></i></button>
 </div>
 </div>

@@ -146,4 +146,7 @@ return [
     '/topics.php' => 'topics.php',
     '/qa' => 'qa.php',
     '/qa.php' => 'qa.php',
+    '/sitemap.php' => 'sitemap.php',
+    '/videos.php' => 'media-library.php',
+    '/audios.php' => 'media-library.php',
 ];
