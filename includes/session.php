@@ -15,7 +15,10 @@ final class DatabaseSessionHandler implements SessionHandlerInterface, SessionUp
     }
     public function read(string $id): string|false {
         $db = $this->connection();
-        $db->beginTransaction();
+        // PHP may call read() more than once per request (e.g. after
+        // session_regenerate_id()); keep the existing row-lock transaction
+        // instead of failing with "already an active transaction".
+        if (!$db->inTransaction()) $db->beginTransaction();
         // ON CONFLICT DO NOTHING is normalized to INSERT IGNORE on MySQL.
         $db->prepare("INSERT INTO app_sessions (id,data,expires_at) VALUES (?, '', NOW()) ON CONFLICT DO NOTHING")->execute([$id]);
         $s = $db->prepare('SELECT data, expires_at>NOW() AS valid FROM app_sessions WHERE id=? FOR UPDATE');
