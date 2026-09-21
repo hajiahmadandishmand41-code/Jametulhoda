@@ -337,11 +337,13 @@ CREATE TABLE IF NOT EXISTS stored_files (
  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE INDEX contact_rate_limit ON contact_messages(ip_address,created_at);
 CREATE TABLE IF NOT EXISTS storage_deletions (
- reference VARCHAR(1000) PRIMARY KEY, created_at DATETIME NOT NULL DEFAULT NOW());
+ reference VARCHAR(1000) PRIMARY KEY,
+ created_at DATETIME NOT NULL DEFAULT NOW()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS pending_uploads (
  reference VARCHAR(1000) PRIMARY KEY,
- not_before DATETIME NOT NULL DEFAULT (NOW()+INTERVAL '24 hours'),
+ not_before DATETIME NOT NULL DEFAULT (CURRENT_TIMESTAMP + INTERVAL 24 HOUR),
  created_at DATETIME NOT NULL DEFAULT NOW()
  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE INDEX pending_uploads_due ON pending_uploads(not_before);
