@@ -88,6 +88,18 @@ jobs:
           echo "--- http-8081.log ---"; cat /tmp/http-8081.log; echo "--- end http ---"
           if grep -Ei "PHP (Warning|Fatal|Parse)|Application failure|Upload failed" container-server.log; then echo "Found warning in container"; cat container-server.log; exit 1; fi
           if grep -Ei "FAIL" /tmp/http-8081.log; then echo "http 8081 FAIL"; cat /tmp/http-8081.log; exit 1; fi
+      - name: Container logs diagnostics
+        if: failure()
+        run: |
+          echo "::group::container-server.log"
+          cat container-server.log || echo "no container log"
+          echo "::endgroup::"
+          if [ -f container-server.log ]; then
+            head -n 100 container-server.log | tr '\n' ' ' | sed 's/%/%25/g' | sed 's/\r/%0D/g' | xargs -I {} echo "::error title=Container log::{} "
+          fi
+          if [ -f /tmp/http-8081.log ]; then
+            head -n 50 /tmp/http-8081.log | tr '\n' ' ' | sed 's/%/%25/g' | xargs -I {} echo "::error title=HTTP 8081 log::{} "
+          fi
       - uses: actions/upload-artifact@v6
         if: always()
         with:
