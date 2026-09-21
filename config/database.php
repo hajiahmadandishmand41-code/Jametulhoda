@@ -8,7 +8,26 @@ require_once __DIR__ . '/config.php';
  * PostgreSQL-specific query fragments used by the existing application are
  * normalized transparently when the active driver is MySQL.
  */
-final class JametulhodaMySqlPDO extends PDO {
+final class JametulhodaMySqlStatement extends PDOStatement {
+    protected function __construct() {}
+    public function fetchColumn(int $column = 0): mixed {
+        if ($column === 0 && JametulhodaMySqlPDO::isReturningStatement($this)) {
+            return JametulhodaMySqlPDO::lastInsertIdFor($this);
+        }
+        return parent::fetchColumn($column);
+    }
+}
+
+class JametulhodaMySqlPDO extends PDO {
+    private static ?WeakMap $returningStatements = null;
+    private static ?self $lastConnection = null;
+
+    public function __construct($dsn, $username = null, $password = null, $options = []) {
+        $options[PDO::ATTR_STATEMENT_CLASS] = [JametulhodaMySqlStatement::class, []];
+        parent::__construct($dsn, $username, $password, $options);
+        self::$returningStatements ??= new WeakMap();
+        self::$lastConnection = $this;
+    }
     public static function normalizeSql(string $sql): string {
         // PostgreSQL ILIKE is equivalent for the site's UTF-8 case-insensitive MySQL collation.
         $sql = preg_replace('/\bILIKE\b/i', 'LIKE', $sql) ?? $sql;
@@ -29,11 +48,30 @@ final class JametulhodaMySqlPDO extends PDO {
         // PostgreSQL interval literal used by the upload journal.
         $sql = preg_replace("/INTERVAL\s+'(\d+)\s+hours?'?/i", 'INTERVAL $1 HOUR', $sql) ?? $sql;
 
+        // MySQL/MariaDB does not use PostgreSQL RETURNING for ordinary INSERTs.
+        // Keep the existing callers working by removing RETURNING id and
+        // serving PDO::lastInsertId() through the statement wrapper.
+        $sql = preg_replace('/\s+RETURNING\s+id\s*;?\s*$/i', '', $sql) ?? $sql;
+
         return $sql;
     }
 
     public function prepare(string $query, array $options = []) {
-        return parent::prepare(self::normalizeSql($query), $options);
+        $isReturning = (bool)preg_match('/\bRETURNING\s+id\b/i', $query);
+        $stmt = parent::prepare(self::normalizeSql($query), $options);
+        if ($stmt && $isReturning) {
+            self::$returningStatements ??= new WeakMap();
+            self::$returningStatements[$stmt] = true;
+        }
+        return $stmt;
+    }
+
+    public static function isReturningStatement(PDOStatement $statement): bool {
+        return self::$returningStatements !== null && isset(self::$returningStatements[$statement]);
+    }
+
+    public static function lastInsertIdFor(PDOStatement $statement): string {
+        return self::$lastConnection?->lastInsertId() ?? '0';
     }
 
     public function query(string $query, ?int $fetchMode = null, mixed ...$fetchModeArgs) {
