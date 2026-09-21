@@ -81,10 +81,13 @@ jobs:
           docker run -d --name jhd-container --network host -e PORT=8081 -e APP_ENV=development -e DATABASE_URL -e SESSION_DRIVER -e UPLOAD_STORAGE -e UPLOAD_LOCAL_PATH=/tmp/jhd-uploads -e SITE_URL jametulhoda:test
           trap 'docker logs jhd-container > container-server.log 2>&1; docker rm -f jhd-container' EXIT
           curl --retry 10 --retry-connrefused --retry-delay 1 --fail --silent http://127.0.0.1:8081/ > /dev/null
-          TEST_BASE_URL=http://127.0.0.1:8081/ npm run test:http
-          TEST_BASE_URL=http://127.0.0.1:8081/ npm run test:browser
+          TEST_BASE_URL=http://127.0.0.1:8081/ npm run test:http 2>&1 | tee /tmp/http-8081.log
+          TEST_BASE_URL=http://127.0.0.1:8081/ npm run test:browser 2>&1 | tee /tmp/browser-8081.log
           docker logs jhd-container > container-server.log 2>&1
-          if grep -Ei "PHP (Warning|Fatal|Parse)|Application failure|Upload failed" container-server.log; then exit 1; fi
+          echo "--- container-server.log start ---"; cat container-server.log; echo "--- end ---"
+          echo "--- http-8081.log ---"; cat /tmp/http-8081.log; echo "--- end http ---"
+          if grep -Ei "PHP (Warning|Fatal|Parse)|Application failure|Upload failed" container-server.log; then echo "Found warning in container"; cat container-server.log; exit 1; fi
+          if grep -Ei "FAIL" /tmp/http-8081.log; then echo "http 8081 FAIL"; cat /tmp/http-8081.log; exit 1; fi
       - uses: actions/upload-artifact@v6
         if: always()
         with:
