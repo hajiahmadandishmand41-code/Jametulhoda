@@ -13,3 +13,7 @@ node_modules/
 !/uploads/.htaccess
 !/uploads/.gitkeep
 /test-server.log
+
+# Private shared-hosting configuration
+config/local.php
+config/install.lock
