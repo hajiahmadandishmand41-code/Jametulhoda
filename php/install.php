@@ -35,6 +35,19 @@ function installerSplitSql(string $sql): array {
             continue;
         }
 
+        // Skip -- line comments so a semicolon inside a comment never splits
+        // a statement mid-comment.
+        if ($ch === '-' && $next === '-' && ($i + 2 >= $len || $sql[$i + 2] === ' ' || $sql[$i + 2] === "\t")) {
+            while ($i < $len && $sql[$i] !== "\n") $i++;
+            $buffer .= "\n";
+            continue;
+        }
+        if ($ch === '#') {
+            while ($i < $len && $sql[$i] !== "\n") $i++;
+            $buffer .= "\n";
+            continue;
+        }
+
         if ($ch === "'" || $ch === '"' || $ch === chr(96)) {
             $quote = $ch;
             $buffer .= $ch;
@@ -73,7 +86,7 @@ $defaults = [
 $error = '';
 $success = '';
 
-if (!$alreadyInstalled && $_SERVER['REQUEST_METHOD'] === 'POST') {
+if (!$alreadyInstalled && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $host = trim((string)($_POST['db_host'] ?? $defaults['db_host']));
     $port = (int)($_POST['db_port'] ?? $defaults['db_port']);
     $name = trim((string)($_POST['db_name'] ?? $defaults['db_name']));

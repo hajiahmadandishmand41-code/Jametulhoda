@@ -28,12 +28,25 @@ function processStorageDeletions(): int {
     $db=getDB();$deleted=0;
     // A separate staging journal prevents older deletion workers from seeing
     // in-flight uploads. Promote only expired/completed requests atomically.
-    $db->exec("WITH due AS (
-        SELECT reference FROM pending_uploads WHERE not_before<=NOW()
-        ORDER BY not_before LIMIT 100 FOR UPDATE SKIP LOCKED
-    ), claimed AS (
-        DELETE FROM pending_uploads p USING due WHERE p.reference=due.reference RETURNING p.reference
-    ) INSERT INTO storage_deletions (reference) SELECT reference FROM claimed ON CONFLICT DO NOTHING");
+    if (databaseDriver() === 'mysql') {
+        // MySQL/MariaDB has no data-modifying CTE: claim each due row by
+        // deleting it (rowCount proves the claim), then queue the deletion.
+        $due=$db->prepare('SELECT reference FROM pending_uploads WHERE not_before<=NOW() LIMIT 100');
+        $due->execute();
+        $claim=$db->prepare('DELETE FROM pending_uploads WHERE reference=? AND not_before<=NOW()');
+        $enqueue=$db->prepare('INSERT IGNORE INTO storage_deletions (reference) VALUES (?)');
+        foreach($due->fetchAll(PDO::FETCH_COLUMN) as $reference) {
+            $claim->execute([$reference]);
+            if($claim->rowCount()>0) $enqueue->execute([$reference]);
+        }
+    } else {
+        $db->exec("WITH due AS (
+            SELECT reference FROM pending_uploads WHERE not_before<=NOW()
+            ORDER BY not_before LIMIT 100 FOR UPDATE SKIP LOCKED
+        ), claimed AS (
+            DELETE FROM pending_uploads p USING due WHERE p.reference=due.reference RETURNING p.reference
+        ) INSERT INTO storage_deletions (reference) SELECT reference FROM claimed ON CONFLICT DO NOTHING");
+    }
     foreach($db->query('SELECT reference FROM storage_deletions WHERE not_before <= NOW() ORDER BY created_at LIMIT 100')->fetchAll() as $job) {
         try {
             if(storedFileIsReferenced($job['reference'])) {

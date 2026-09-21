@@ -1,7 +1,7 @@
--- PostgreSQL 15+ / Neon. Apply using php bin/migrate.php; never from a web request.
--- JametulHoda Content-Centered Architecture v2 — topics, lesson collections, enhanced books
-
-START TRANSACTION;
+-- MySQL 8.0 / MariaDB 10.6+ (InfinityFree). Apply using php bin/migrate.php
+-- or the browser installer. Never from an anonymous web request.
+-- Idempotent: CREATE TABLE IF NOT EXISTS plus INSERT IGNORE. Repeated CREATE
+-- INDEX statements fail with "Duplicate key name" and are skipped by the migrator.
 CREATE TABLE IF NOT EXISTS users (
   id         INT AUTO_INCREMENT,
   username   VARCHAR(80)      NOT NULL,
@@ -195,14 +195,15 @@ CREATE TABLE IF NOT EXISTS media_files (
 CREATE INDEX media_files_idx_ref ON media_files (ref_type, ref_id);
 CREATE INDEX media_files_idx_kind ON media_files (kind);
 
+-- setting_key: "key" is a reserved word in MySQL and cannot be a column name.
 CREATE TABLE IF NOT EXISTS settings (
   id         INT AUTO_INCREMENT,
-  key        VARCHAR(100) NOT NULL,
+  setting_key VARCHAR(100) NOT NULL,
   value      TEXT             NULL,
   created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE (key)
+  UNIQUE (setting_key)
  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS books (
@@ -280,7 +281,7 @@ CREATE TABLE IF NOT EXISTS featured_banners (
   updated_at DATETIME NOT NULL DEFAULT NOW()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT IGNORE INTO settings (key, value) VALUES
+INSERT IGNORE INTO settings (setting_key, value) VALUES
 ('site_name',        'مدرسه علمیه جامعه‌الهدی'),
 ('site_slogan',      'علم، معرفت و تهذیب در پرتو قرآن و عترت'),
 ('site_email',       'hajiahmads299@gmail.com'),
@@ -327,8 +328,9 @@ CREATE TABLE IF NOT EXISTS app_sessions (
  id VARCHAR(128) PRIMARY KEY, data TEXT NOT NULL, expires_at DATETIME NOT NULL
  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE INDEX app_sessions_expiry ON app_sessions(expires_at);
+-- limit_key: "key" is a reserved word in MySQL and cannot be a column name.
 CREATE TABLE IF NOT EXISTS login_limits (
- key VARCHAR(64) PRIMARY KEY, attempts INTEGER NOT NULL DEFAULT 0, expires_at DATETIME NOT NULL
+ limit_key VARCHAR(64) PRIMARY KEY, attempts INTEGER NOT NULL DEFAULT 0, expires_at DATETIME NOT NULL
  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE IF NOT EXISTS stored_files (
  id INT AUTO_INCREMENT PRIMARY KEY,
@@ -352,4 +354,3 @@ CREATE INDEX pending_uploads_due ON pending_uploads(not_before);
 CREATE INDEX posts_public_listing ON posts(status,post_type,published_at DESC);
 CREATE INDEX lessons_public_listing ON lessons(status,created_at DESC);
 CREATE INDEX media_ordered_reference ON media_files(ref_type,ref_id,kind,sort_order,id);
-COMMIT;

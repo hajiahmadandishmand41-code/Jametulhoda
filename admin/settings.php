@@ -4,7 +4,16 @@ require_once __DIR__ . '/includes/header.php';
 
 $db   = getDB();
 $rows = $db->query("SELECT * FROM settings")->fetchAll();
-$sets = array_column($rows, 'value', 'key');
+$sets = array_column($rows, 'value', 'setting_key');
+
+/** Portable settings upsert: the column is setting_key ("key" is reserved in MySQL). */
+function upsertSetting(PDO $db, string $key, string $value): void {
+    if (databaseDriver() === 'mysql') {
+        $db->prepare('INSERT INTO settings (setting_key,value) VALUES (?,?) ON DUPLICATE KEY UPDATE value=VALUES(value)')->execute([$key, $value]);
+        return;
+    }
+    $db->prepare('INSERT INTO settings (setting_key,value) VALUES (?,?) ON CONFLICT (setting_key) DO UPDATE SET value=EXCLUDED.value')->execute([$key, $value]);
+}
 
 $success = $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -14,22 +23,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $fields = ['site_name','site_slogan','about_short','address','phone','email','social_telegram','social_youtube','social_instagram'];
         foreach ($fields as $field) {
-            $val  = trim($_POST[$field] ?? '');
-            $stmt = $db->prepare("INSERT INTO settings (key,value) VALUES (?,?) ON CONFLICT (key) DO UPDATE SET value=?");
-            $stmt->execute([$field, $val, $val]);
+            upsertSetting($db, $field, trim($_POST[$field] ?? ''));
         }
 
         // Logo upload
         if (!empty($_FILES['logo']['name'])) {
             $logoPath = uploadImage($_FILES['logo'], 'site');
             if ($logoPath) {
-                $db->prepare('INSERT INTO settings (key,value) VALUES (?,?) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value')->execute(['site_logo', $logoPath]);
+                upsertSetting($db, 'site_logo', $logoPath);
             }
         }
 
         $success = 'تنظیمات با موفقیت ذخیره شد.';
         $rows    = $db->query("SELECT * FROM settings")->fetchAll();
-        $sets    = array_column($rows, 'value', 'key');
+        $sets    = array_column($rows, 'value', 'setting_key');
     }
 }
 ?>
