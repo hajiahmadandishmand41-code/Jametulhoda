@@ -14,6 +14,18 @@ function splitSqlStatements(string $sql): array {
             }
             continue;
         }
+        // Skip -- line comments (MySQL requires whitespace/end after them) so a
+        // semicolon inside a comment never splits a statement.
+        if ($ch === '-' && $next === '-' && ($i + 2 >= $len || $sql[$i + 2] === ' ' || $sql[$i + 2] === "\t")) {
+            while ($i < $len && $sql[$i] !== "\n") $i++;
+            $buffer .= "\n";
+            continue;
+        }
+        if ($ch === '#') {
+            while ($i < $len && $sql[$i] !== "\n") $i++;
+            $buffer .= "\n";
+            continue;
+        }
         if ($ch === "'" || $ch === '"' || $ch === '`') { $quote = $ch; $buffer .= $ch; continue; }
         if ($ch === ';') { $statement = trim($buffer); if ($statement !== '') $out[] = $statement; $buffer = ''; continue; }
         $buffer .= $ch;
@@ -30,7 +42,16 @@ function applyDatabaseSchema(PDO $db, string $schemaPath): int {
     $applied = 0;
     foreach ($statements as $statement) {
         if (trim($statement) === '') continue;
-        $db->exec($statement); $applied++;
+        try {
+            $db->exec($statement); $applied++;
+        } catch (PDOException $e) {
+            if (databaseDriver() !== 'mysql') throw $e;
+            // MySQL has no IF NOT EXISTS for indexes; re-running the migrator
+            // must not fail on objects that already exist (idempotent installs).
+            $message = $e->getMessage();
+            if (preg_match('/already exists|duplicate key name|duplicate entry/i', $message)) continue;
+            throw $e;
+        }
     }
     return $applied;
 }

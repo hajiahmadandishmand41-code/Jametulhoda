@@ -135,7 +135,9 @@ function storeValidatedFile(string $path, string $kind, string $folder): string 
                 storageClient()->deleteObject(['Bucket'=>env_value('S3_BUCKET'),'Key'=>$key]);
                 throw new RuntimeException('Public storage URL is not accessible.');
             }
-        } elseif (UPLOAD_STORAGE === 'local' && APP_ENV !== 'production' && !env_value('VERCEL')) {
+        } elseif (UPLOAD_STORAGE === 'local' && !env_value('VERCEL')) {
+            // Local disk is durable on classic/shared hosts (e.g. InfinityFree);
+            // only Vercel's ephemeral filesystem is refused here.
             $dir = UPLOAD_DIR . $folder;
             if (!is_dir($dir) && !mkdir($dir,0755,true)) return '';
             if (!copy($path, UPLOAD_DIR . $key)) return '';
@@ -164,7 +166,7 @@ function deleteStoredFile(string $reference): bool {
     if (!$key) return false;
     if (UPLOAD_STORAGE === 's3') {
         storageClient()->deleteObject(['Bucket'=>env_value('S3_BUCKET'),'Key'=>$key]);
-    } elseif (UPLOAD_STORAGE === 'local' && APP_ENV !== 'production' && !env_value('VERCEL')) {
+    } elseif (UPLOAD_STORAGE === 'local' && !env_value('VERCEL')) {
         $path = realpath(UPLOAD_DIR . $key);
         $base = realpath(UPLOAD_DIR);
         if ($path && (!$base || !str_starts_with($path, $base . '/') || !is_file($path))) return false;

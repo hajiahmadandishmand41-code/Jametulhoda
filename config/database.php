@@ -16,16 +16,42 @@ final class JametulhodaMySqlStatement extends PDOStatement {
         }
         return parent::fetchColumn($column);
     }
+
+    /**
+     * MySQL native prepared statements (mysqlnd) bind every execute() array
+     * value as MYSQL_TYPE_STRING. On MySQL 8.0.22+ that makes "LIMIT ?" fail
+     * with error 1210 ("Incorrect arguments to mysqld_stmt_execute"), because
+     * LIMIT/OFFSET require integer types. Track which positional placeholders
+     * belong to LIMIT/OFFSET (see JametulhodaMySqlPDO::prepare) and bind
+     * those as PDO::PARAM_INT, leaving every other parameter untouched.
+     */
+    public function execute(?array $params = null): bool {
+        $intPositions = JametulhodaMySqlPDO::intParamPositions($this);
+        if ($params !== null && $intPositions !== [] && array_is_list($params)) {
+            $values = array_values($params);
+            foreach ($values as $index => $value) {
+                if (isset($intPositions[$index]) && $value !== null && is_numeric($value)) {
+                    $this->bindValue($index + 1, (int)$value, PDO::PARAM_INT);
+                } else {
+                    $this->bindValue($index + 1, $value, PDO::PARAM_STR);
+                }
+            }
+            return parent::execute();
+        }
+        return parent::execute($params);
+    }
 }
 
 class JametulhodaMySqlPDO extends PDO {
     private static ?WeakMap $returningStatements = null;
+    private static ?WeakMap $limitParamPositions = null;
     private static ?self $lastConnection = null;
 
     public function __construct($dsn, $username = null, $password = null, $options = []) {
         $options[PDO::ATTR_STATEMENT_CLASS] = [JametulhodaMySqlStatement::class, []];
         parent::__construct($dsn, $username, $password, $options);
         self::$returningStatements ??= new WeakMap();
+        self::$limitParamPositions ??= new WeakMap();
         self::$lastConnection = $this;
     }
     public static function normalizeSql(string $sql): string {
@@ -45,8 +71,32 @@ class JametulhodaMySqlPDO extends PDO {
             $sql = preg_replace('/^\s*INSERT\s+INTO\b/i', 'INSERT IGNORE INTO', $sql) ?? $sql;
         }
 
-        // PostgreSQL interval literal used by the upload journal.
-        $sql = preg_replace("/INTERVAL\s+'(\d+)\s+hours?'?/i", 'INTERVAL $1 HOUR', $sql) ?? $sql;
+        // PostgreSQL interval literals ('N hours', 'N minutes', ...) used by the
+        // upload journal, sessions and rate limiting. MySQL requires the unit
+        // keyword after a bare number: INTERVAL N HOUR / MINUTE / DAY / WEEK.
+        $sql = preg_replace_callback(
+            "/\bINTERVAL\s+'(\d+)\s+(seconds?|minutes?|hours?|days?|weeks?)'?/i",
+            static function (array $m): string {
+                $units = ['second' => 'SECOND', 'minute' => 'MINUTE', 'hour' => 'HOUR', 'day' => 'DAY', 'week' => 'WEEK'];
+                $unit = $units[strtolower(rtrim($m[2], 's'))] ?? strtoupper(rtrim($m[2], 's'));
+                return 'INTERVAL ' . $m[1] . ' ' . $unit;
+            },
+            $sql
+        ) ?? $sql;
+
+        // MySQL/MariaDB has no NULLS FIRST / NULLS LAST ordering option.
+        // Emulate with a leading "IS NULL" sort key: IS NULL is 1 for NULL,
+        // so ASC puts NULLs last and DESC puts NULLs first.
+        $sql = preg_replace_callback(
+            '/\b([A-Za-z_][A-Za-z0-9_.]*)\s+(ASC|DESC)\s+NULLS\s+(FIRST|LAST)\b/i',
+            static function (array $m): string {
+                $col = $m[1]; $dir = strtoupper($m[2]); $mode = strtoupper($m[3]);
+                return $mode === 'FIRST'
+                    ? "$col IS NULL DESC, $col $dir"
+                    : "$col IS NULL, $col $dir";
+            },
+            $sql
+        ) ?? $sql;
 
         // MySQL/MariaDB does not use PostgreSQL RETURNING for ordinary INSERTs.
         // Keep the existing callers working by removing RETURNING id and
@@ -56,12 +106,50 @@ class JametulhodaMySqlPDO extends PDO {
         return $sql;
     }
 
-    public function prepare(string $query, array $options = []) {
+    /**
+     * Find 0-based placeholder positions that belong to a LIMIT or OFFSET
+     * clause so execute() can bind them as native integers. Quote-aware so a
+     * '?' inside a string literal is never counted.
+     */
+    public static function limitPlaceholderPositions(string $sql): array {
+        $positions = [];
+        $paramIndex = 0;
+        $quote = null;
+        $len = strlen($sql);
+        $limitOpen = false;
+        for ($i = 0; $i < $len; $i++) {
+            $ch = $sql[$i];
+            if ($quote !== null) {
+                if ($ch === $quote) $quote = null;
+                elseif ($ch === '\\') $i++;
+                continue;
+            }
+            if ($ch === "'" || $ch === '"' || $ch === '`') { $quote = $ch; continue; }
+            if ($ch === '?') {
+                if ($limitOpen) $positions[$paramIndex] = true;
+                $paramIndex++;
+                continue;
+            }
+            if (preg_match('/\G\b(LIMIT|OFFSET)\b/i', $sql, $m, 0, $i)) {
+                $limitOpen = true;
+                $i += strlen($m[1]) - 1;
+                continue;
+            }
+            if ($limitOpen && !preg_match('/[?\s,]/', $ch)) $limitOpen = false;
+        }
+        return $positions;
+    }
+
+    public function prepare(string $query, array $options = []): PDOStatement|false {
         $isReturning = (bool)preg_match('/\bRETURNING\s+id\b/i', $query);
-        $stmt = parent::prepare(self::normalizeSql($query), $options);
-        if ($stmt && $isReturning) {
+        $normalized = self::normalizeSql($query);
+        $stmt = parent::prepare($normalized, $options);
+        if ($stmt) {
             self::$returningStatements ??= new WeakMap();
-            self::$returningStatements[$stmt] = true;
+            self::$limitParamPositions ??= new WeakMap();
+            if ($isReturning) self::$returningStatements[$stmt] = true;
+            $positions = self::limitPlaceholderPositions($normalized);
+            if ($positions !== []) self::$limitParamPositions[$stmt] = $positions;
         }
         return $stmt;
     }
@@ -70,17 +158,22 @@ class JametulhodaMySqlPDO extends PDO {
         return self::$returningStatements !== null && isset(self::$returningStatements[$statement]);
     }
 
+    public static function intParamPositions(PDOStatement $statement): array {
+        if (self::$limitParamPositions === null || !isset(self::$limitParamPositions[$statement])) return [];
+        return self::$limitParamPositions[$statement];
+    }
+
     public static function lastInsertIdFor(PDOStatement $statement): string {
         return self::$lastConnection?->lastInsertId() ?? '0';
     }
 
-    public function query(string $query, ?int $fetchMode = null, mixed ...$fetchModeArgs) {
+    public function query(string $query, ?int $fetchMode = null, mixed ...$fetchModeArgs): PDOStatement|false {
         $query = self::normalizeSql($query);
         if ($fetchMode === null) return parent::query($query);
         return parent::query($query, $fetchMode, ...$fetchModeArgs);
     }
 
-    public function exec(string $statement) {
+    public function exec(string $statement): int|false {
         return parent::exec(self::normalizeSql($statement));
     }
 }
@@ -107,12 +200,21 @@ function newDatabaseConnection(): PDO {
         }
 
         $dsn = 'mysql:host=' . $host . ';port=' . $port . ';dbname=' . rawurlencode($name) . ';charset=utf8mb4';
-        return new JametulhodaMySqlPDO($dsn, $user, $pass, [
+        $options = [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false,
+            // Native prepares by default: required for the RETURNING-emulation
+            // and typed LIMIT/OFFSET binding in JametulhodaMySqlStatement.
+            // DB_EMULATE_PREPARES=1 is an escape hatch for MySQL-compatible
+            // servers with broken server-side prepares; integer LIMIT/OFFSET
+            // values stay unquoted because they are bound/typed as ints.
+            PDO::ATTR_EMULATE_PREPARES => env_value('DB_EMULATE_PREPARES') === '1',
             PDO::ATTR_PERSISTENT => false,
-        ]);
+        ];
+        // Do not hang the worker when the MySQL host is unreachable (e.g. a
+        // shared host that only allows connections from its own web servers).
+        if (defined('PDO::MYSQL_ATTR_CONNECT_TIMEOUT')) $options[PDO::MYSQL_ATTR_CONNECT_TIMEOUT] = 8;
+        return new JametulhodaMySqlPDO($dsn, $user, $pass, $options);
     }
 
     $url = parse_url(env_value('DATABASE_URL'));

@@ -4,7 +4,7 @@ WORKDIR /var/www/html
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev libonig-dev libzip-dev libpng-dev libjpeg62-turbo-dev libwebp-dev libxml2-dev ca-certificates unzip \
     && docker-php-ext-configure gd --with-jpeg --with-webp \
-    && docker-php-ext-install -j$(nproc) pdo_pgsql mbstring zip gd dom opcache \
+    && docker-php-ext-install -j$(nproc) pdo_pgsql pdo_mysql mbstring zip gd dom opcache \
     && a2enmod rewrite headers \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=composer /usr/bin/composer /usr/local/bin/composer

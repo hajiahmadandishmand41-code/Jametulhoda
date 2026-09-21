@@ -495,7 +495,8 @@ function getSetting(string $key, string $default = ''): string {
     static $cache = null;
     if ($cache === null) {
         $db = getDB();
-        try { $rows=$db->query("SELECT key, value FROM settings")->fetchAll(); $cache=array_column($rows,'value','key'); } catch (PDOException $e) { $cache=[]; }
+        // setting_key: "key" is a reserved word in MySQL.
+        try { $rows=$db->query("SELECT setting_key, value FROM settings")->fetchAll(); $cache=array_column($rows,'value','setting_key'); } catch (PDOException $e) { $cache=[]; }
     }
     return $cache[$key] ?? $default;
 }

@@ -177,3 +177,22 @@
 | `tests/http.mjs` | چهار بررسی جدید برای شکست فایل دوم، پاک‌سازی فایل اول و حفظ آپلود مستقل کتابخانه. |
 | `tests/storage-recovery.php` | ده بررسی DB/storage برای rollback، journal مستقل، مهلت پردازش و حفظ مرجع؛ opt-in صریح برای محیط آزمایشی. |
 | `.github/workflows/ci.yml` | اجرای تست بازیابی در PostgreSQL واقعی پیش از تست‌های HTTP و کانتینر. |
+
+---
+
+## مرحله سازگاری کامل با MySQL / InfinityFree (2026-09)
+
+رفع خطای سراسری «لطفاً کمی بعد دوباره تلاش کنید» (503) روی میزبان‌های MySQL. علت‌ها و اصلاح‌ها:
+
+| فایل | تغییر |
+|---|---|
+| `database.mysql.sql` | ستون‌های `key` به `setting_key`/`limit_key` تغییر نام یافتند (در MySQL کلمه کلیدی هستند و نصب را با خطای نحوی شکست می‌دادند). حذف `START TRANSACTION`/`COMMIT` دور DDL. |
+| `database.sql` | تغییر نام هم‌زمان ستون‌ها در طرحوارهٔ PostgreSQL + بلوک `DO` برای rename ستون‌های قدیمی، تا دیتابیس‌های موجود سالم بمانند. |
+| `config/database.php` | تبدیل `NULLS FIRST/LAST` و فاصله‌های زمانی (`INTERVAL '30 minutes'` و…) در `normalizeSql`؛ اتصال صحیح پارامترهای `LIMIT ?`/`OFFSET ?` با نوع صحیح؛ `DB_EMULATE_PREPARES` و connect timeout. |
+| `includes/auth.php` | upsert محدودکنندهٔ ورود بر پایهٔ درایور؛ پرچم Secure کوکی سشن تابع اسکیم واقعی درخواست شد (جلوگیری از حلقهٔ ریدایرکت ورود در HTTP ساده). |
+| `includes/session.php`، `includes/content-delete.php`، `admin/settings.php` | upsert/حذف سازگار با هر دو درایور. |
+| `includes/storage.php` | ذخیره/حذف فایل محلی در میزبان‌های سنتی (نه فقط توسعه) مجاز شد؛ آپلود در InfinityFree کار می‌کند. |
+| `includes/functions.php` | خواندن تنظیمات با `setting_key`. |
+| `bin/migrate.php`، `php/install.php` | مهاجرت/نصب تکرارپذیر روی MySQL (نادیده‌گرفتن «از قبل موجود» برای ایندکس‌ها) و ردشدن از `;` داخل کامنت. |
+| `admin/settings.php`، `admin/topics/create.php` | upsert تنظیمات با کلید جدید؛ رفع فراخوانی `redirect()` بدون بارگذاری توابع. |
+| `Dockerfile.vercel`، `vercel.json` | افزودن `pdo_mysql` به image و اصلاح ساختار `services` برای runtime کانتینری. |
