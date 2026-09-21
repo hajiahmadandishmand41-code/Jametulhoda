@@ -87,7 +87,16 @@ jobs:
           echo "--- container-server.log start ---"; cat container-server.log; echo "--- end ---"
           echo "--- http-8081.log ---"; cat /tmp/http-8081.log; echo "--- end http ---"
           if grep -Ei "PHP (Warning|Fatal|Parse)|Application failure|Upload failed" container-server.log; then echo "Found warning in container"; cat container-server.log; exit 1; fi
-          if grep -Ei "FAIL" /tmp/http-8081.log; then echo "http 8081 FAIL"; cat /tmp/http-8081.log; exit 1; fi
+          if grep -q "FAIL" /tmp/http-8081.log; then
+            echo "::error title=HTTP 8081 FAIL::$(grep FAIL /tmp/http-8081.log | head -n 20 | tr '\n' ' ' | cut -c1-800)"
+            cat /tmp/http-8081.log
+            exit 1
+          fi
+          if grep -q "FAIL" /tmp/browser-8081.log; then
+            echo "::error title=Browser 8081 FAIL::$(grep FAIL /tmp/browser-8081.log | head -n 20 | tr '\n' ' ' | cut -c1-800)"
+            cat /tmp/browser-8081.log
+            exit 1
+          fi
       - name: Container logs diagnostics
         if: failure()
         run: |
