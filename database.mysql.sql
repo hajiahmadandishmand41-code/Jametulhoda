@@ -1,8 +1,7 @@
--- MySQL 8+/MariaDB schema for InfinityFree. The PostgreSQL schema remains in database.sql.
+-- PostgreSQL 15+ / Neon. Apply using php bin/migrate.php; never from a web request.
 -- JametulHoda Content-Centered Architecture v2 — topics, lesson collections, enhanced books
 
-BEGIN;
-
+START TRANSACTION;
 CREATE TABLE IF NOT EXISTS users (
   id         INT AUTO_INCREMENT,
   username   VARCHAR(80)      NOT NULL,
@@ -12,11 +11,11 @@ CREATE TABLE IF NOT EXISTS users (
   role       VARCHAR(30) NOT NULL DEFAULT 'admin' CHECK (role IN ('superadmin','admin','editor')),
   is_active  SMALLINT       NOT NULL DEFAULT 1,
   last_login DATETIME             NULL,
-  created_at DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  auth_version INT NOT NULL DEFAULT 1,
   PRIMARY KEY (id),
   UNIQUE (username)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS categories (
   id          INT AUTO_INCREMENT,
@@ -29,8 +28,7 @@ CREATE TABLE IF NOT EXISTS categories (
   updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE (slug)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── Topics: hierarchical, dynamic, core of site ──
 CREATE TABLE IF NOT EXISTS topics (
@@ -48,11 +46,10 @@ CREATE TABLE IF NOT EXISTS topics (
   updated_at  DATETIME NOT NULL DEFAULT NOW(),
   PRIMARY KEY (id),
   UNIQUE (slug)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE INDEX topics_parent_idx ON topics(parent_id);
 CREATE INDEX topics_active_sort ON topics(is_active, sort_order, id);
-CREATE INDEX topics_featured ON topics(is_featured) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE INDEX topics_featured ON topics(is_featured);
 
 CREATE TABLE IF NOT EXISTS posts (
   id              INT AUTO_INCREMENT,
@@ -63,10 +60,10 @@ CREATE TABLE IF NOT EXISTS posts (
   featured_image  VARCHAR(350)         NULL,
   featured_video  VARCHAR(500)         NULL,
   post_type       VARCHAR(30) NOT NULL DEFAULT 'news' CHECK (post_type IN ('news','article','research','report','announcement','speech','program','religious','qa','book_note')),
-  page_section       VARCHAR(300) NOT NULL DEFAULT 'home,news',
-  speaker           VARCHAR(200) NULL,
-  sources           TEXT NULL,
-  author_name       VARCHAR(250) NULL,
+  page_section   VARCHAR(300) NOT NULL DEFAULT 'home,news',
+  speaker        VARCHAR(200) NULL,
+  sources        TEXT NULL,
+  author_name    VARCHAR(250) NULL,
   category_id     INTEGER REFERENCES categories(id) ON DELETE SET NULL,
   author_id       INTEGER REFERENCES users(id) ON DELETE SET NULL,
   status          VARCHAR(30) NOT NULL DEFAULT 'draft' CHECK (status IN ('published','draft')),
@@ -76,11 +73,10 @@ CREATE TABLE IF NOT EXISTS posts (
   updated_at      DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE (slug)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE INDEX posts_idx_status_type ON posts (status, post_type);
 CREATE INDEX posts_idx_category ON posts (category_id);
-CREATE INDEX posts_idx_published ON posts (published_at) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE INDEX posts_idx_published ON posts (published_at);
 
 CREATE TABLE IF NOT EXISTS post_images (
   id         INT AUTO_INCREMENT,
@@ -89,18 +85,16 @@ CREATE TABLE IF NOT EXISTS post_images (
   alt_text   VARCHAR(200)     NULL,
   created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE INDEX post_images_idx_post ON post_images (post_id) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE INDEX post_images_idx_post ON post_images (post_id);
 
 -- Junction: posts <-> topics (many-to-many)
 CREATE TABLE IF NOT EXISTS post_topics (
   post_id  INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
   topic_id INTEGER NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
   PRIMARY KEY (post_id, topic_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE INDEX post_topics_topic_idx ON post_topics(topic_id) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE INDEX post_topics_topic_idx ON post_topics(topic_id);
 
 -- Lesson collections & volumes (content-centered)
 CREATE TABLE IF NOT EXISTS lesson_collections (
@@ -116,9 +110,8 @@ CREATE TABLE IF NOT EXISTS lesson_collections (
   updated_at  DATETIME NOT NULL DEFAULT NOW(),
   PRIMARY KEY (id),
   UNIQUE (slug)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE INDEX lesson_collections_active_sort ON lesson_collections(is_active, sort_order) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE INDEX lesson_collections_active_sort ON lesson_collections(is_active, sort_order);
 
 CREATE TABLE IF NOT EXISTS lesson_volumes (
   id            INT AUTO_INCREMENT,
@@ -131,9 +124,8 @@ CREATE TABLE IF NOT EXISTS lesson_volumes (
   updated_at    DATETIME NOT NULL DEFAULT NOW(),
   PRIMARY KEY (id),
   UNIQUE (collection_id, slug)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE INDEX lesson_volumes_collection_sort ON lesson_volumes(collection_id, sort_order) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE INDEX lesson_volumes_collection_sort ON lesson_volumes(collection_id, sort_order);
 
 CREATE TABLE IF NOT EXISTS lessons (
   id             INT AUTO_INCREMENT,
@@ -143,7 +135,7 @@ CREATE TABLE IF NOT EXISTS lessons (
   teacher        VARCHAR(150)     NULL,
   content        TEXT         NULL,
   summary        TEXT             NULL,
-  audio_file     VARCHAR(350)     NULL,
+  audio_file     VARCHAR(350) NULL,
   video_file     TEXT,
   pdf_file       TEXT,
   sources        TEXT,
@@ -161,20 +153,18 @@ CREATE TABLE IF NOT EXISTS lessons (
   updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE (slug)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE INDEX lessons_idx_status ON lessons (status);
 CREATE INDEX lessons_idx_collection ON lessons(collection_id, volume_id, lesson_number);
-CREATE INDEX lessons_featured ON lessons(is_featured) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE INDEX lessons_featured ON lessons(is_featured);
 
 -- Junction: lessons <-> topics
 CREATE TABLE IF NOT EXISTS lesson_topics (
   lesson_id INTEGER NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
   topic_id  INTEGER NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
   PRIMARY KEY (lesson_id, topic_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE INDEX lesson_topics_topic_idx ON lesson_topics(topic_id) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE INDEX lesson_topics_topic_idx ON lesson_topics(topic_id);
 
 CREATE TABLE IF NOT EXISTS contact_messages (
   id         INT AUTO_INCREMENT,
@@ -187,10 +177,9 @@ CREATE TABLE IF NOT EXISTS contact_messages (
   is_read    SMALLINT   NOT NULL DEFAULT 0,
   created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE INDEX contact_messages_idx_is_read ON contact_messages (is_read);
-CREATE INDEX contact_messages_idx_created ON contact_messages (created_at) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE INDEX contact_messages_idx_created ON contact_messages (created_at);
 
 CREATE TABLE IF NOT EXISTS media_files (
   id         INT AUTO_INCREMENT,
@@ -198,13 +187,13 @@ CREATE TABLE IF NOT EXISTS media_files (
   ref_id     INTEGER NOT NULL,
   kind       VARCHAR(30) NOT NULL DEFAULT 'image',
   file_path  VARCHAR(500) NOT NULL,
-  title      VARCHAR(300)     NULL,
+  title      VARCHAR(300) NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
   created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE INDEX media_files_idx_ref ON media_files (ref_type, ref_id);
-CREATE INDEX media_files_idx_kind ON media_files (kind) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE INDEX media_files_idx_kind ON media_files (kind);
 
 CREATE TABLE IF NOT EXISTS settings (
   id         INT AUTO_INCREMENT,
@@ -214,8 +203,7 @@ CREATE TABLE IF NOT EXISTS settings (
   updated_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE (key)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS books (
   id          INT AUTO_INCREMENT,
@@ -238,19 +226,17 @@ CREATE TABLE IF NOT EXISTS books (
   created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE INDEX books_idx_created ON books (created_at);
-CREATE INDEX books_idx_featured ON books(is_featured) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE INDEX books_idx_featured ON books(is_featured);
 
 -- Junction: books <-> topics
 CREATE TABLE IF NOT EXISTS book_topics (
   book_id  INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
   topic_id INTEGER NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
   PRIMARY KEY (book_id, topic_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE INDEX book_topics_topic_idx ON book_topics(topic_id) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE INDEX book_topics_topic_idx ON book_topics(topic_id);
 
 -- Site banners / special announcements (dynamic hero banner)
 CREATE TABLE IF NOT EXISTS site_banners (
@@ -267,16 +253,19 @@ CREATE TABLE IF NOT EXISTS site_banners (
   created_at DATETIME NOT NULL DEFAULT NOW(),
   updated_at DATETIME NOT NULL DEFAULT NOW(),
   PRIMARY KEY (id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE INDEX site_banners_active ON site_banners(is_active, sort_order) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-
--- MySQL fresh-install schema: legacy cleanup/backfill is folded into the definitions below.
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE INDEX site_banners_active ON site_banners(is_active, sort_order);
 
 
--- Ensure book slug exists for SEO friendly URLs
+
+
+
+-- MySQL fresh-install schema: legacy cleanup/backfill is folded into CREATE TABLE definitions.
+
 CREATE UNIQUE INDEX books_slug_unique ON books(slug);
+
+
+
 -- Featured banners (dynamic special announcement)
 CREATE TABLE IF NOT EXISTS featured_banners (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -291,7 +280,6 @@ CREATE TABLE IF NOT EXISTS featured_banners (
   updated_at DATETIME NOT NULL DEFAULT NOW()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-
 INSERT IGNORE INTO settings (key, value) VALUES
 ('site_name',        'مدرسه علمیه جامعه‌الهدی'),
 ('site_slogan',      'علم، معرفت و تهذیب در پرتو قرآن و عترت'),
@@ -301,7 +289,7 @@ INSERT IGNORE INTO settings (key, value) VALUES
 ('email',            'hajiahmads299@gmail.com'),
 ('social_telegram',  ''),
 ('social_youtube',   ''),
-('social_instagram', '') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+('social_instagram', '');
 
 INSERT IGNORE INTO categories (name, slug, description, post_type, sort_order) VALUES
 ('فقه و اصول',         'fiqh-osul',         'مباحث فقه و اصول فقه',              'all',      1),
@@ -311,7 +299,7 @@ INSERT IGNORE INTO categories (name, slug, description, post_type, sort_order) V
 ('اخبار مدرسه',        'akhbar-madrasa',     'اخبار و رویدادهای مدرسه',           'news',     5),
 ('مقالات علمی',        'maqalat-elmi',       'مقالات علمی و پژوهشی',              'article',  6),
 ('برنامه‌های تابستانه','baraname-tabestane', 'دوره‌های تابستانه',                 'program',  7),
-('فعالیت‌های مذهبی',   'faaliyet-mazhabie',  'مراسم، محافل و فعالیت‌های مذهبی',  'religious',8) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+('فعالیت‌های مذهبی',   'faaliyet-mazhabie',  'مراسم، محافل و فعالیت‌های مذهبی',  'religious',8);
 
 -- Seed core topics as content backbone (migrated / canonical)
 INSERT IGNORE INTO topics (name, slug, description, intro, sort_order, is_featured) VALUES
@@ -320,8 +308,7 @@ INSERT IGNORE INTO topics (name, slug, description, intro, sort_order, is_featur
 ('قرآن و حدیث', 'quran-hadith', 'علوم قرآن، تفسیر، حدیث و نهج‌البلاغه', 'آشنایی با معارف قرآنی و روایی اهل بیت', 3, 1),
 ('فقه و اصول', 'fiqh-osool', 'احکام، فقه استدلالی و اصول فقه', 'مبانی اجتهاد و استنباط احکام شرعی', 4, 0),
 ('اخلاق و تربیت', 'akhlaq-tarbiat', 'اخلاق اسلامی و سیر و سلوک', 'تهذیب نفس و پرورش معنوی بر اساس قرآن و عترت', 5, 0),
-('تاریخ اسلام', 'tarikh-islam', 'سیره معصومین و تاریخ تشیع', 'بررسی تاریخی اسلام و نقش اهل بیت', 6, 0)
-ON CONFLICT (slug) DO NOTHING;
+('تاریخ اسلام', 'tarikh-islam', 'سیره معصومین و تاریخ تشیع', 'بررسی تاریخی اسلام و نقش اهل بیت', 6, 0);
 
 -- Subtopics examples
 INSERT IGNORE INTO topics (parent_id, name, slug, description, sort_order) VALUES
@@ -334,34 +321,31 @@ INSERT IGNORE INTO topics (parent_id, name, slug, description, sort_order) VALUE
 ((SELECT id FROM topics WHERE slug='imam-hussein' LIMIT 1), 'پیام‌های عاشورا', 'payam-ashura', 'درس‌ها و عبرت‌های عاشورا', 3),
 ((SELECT id FROM topics WHERE slug='quran-hadith' LIMIT 1), 'علوم قرآن', 'oloum-quran', 'مبانی علوم قرآنی', 1),
 ((SELECT id FROM topics WHERE slug='quran-hadith' LIMIT 1), 'تفسیر', 'tafsir', 'تفسیر آیات قرآن', 2),
-((SELECT id FROM topics WHERE slug='quran-hadith' LIMIT 1), 'نهج‌البلاغه', 'nahjolbalaghe', 'شرح نهج‌البلاغه', 3)
-ON CONFLICT (slug) DO NOTHING;
+((SELECT id FROM topics WHERE slug='quran-hadith' LIMIT 1), 'نهج‌البلاغه', 'nahjolbalaghe', 'شرح نهج‌البلاغه', 3);
 
 CREATE TABLE IF NOT EXISTS app_sessions (
  id VARCHAR(128) PRIMARY KEY, data TEXT NOT NULL, expires_at DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE INDEX app_sessions_expiry ON app_sessions(expires_at);
 CREATE TABLE IF NOT EXISTS login_limits (
  key VARCHAR(64) PRIMARY KEY, attempts INTEGER NOT NULL DEFAULT 0, expires_at DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE IF NOT EXISTS stored_files (
  id INT AUTO_INCREMENT PRIMARY KEY,
- file_key TEXT NOT NULL UNIQUE, url TEXT NOT NULL UNIQUE, mime TEXT NOT NULL,
+ file_key VARCHAR(500) NOT NULL UNIQUE, url VARCHAR(1000) NOT NULL UNIQUE, mime TEXT NOT NULL,
  size BIGINT NOT NULL, created_at DATETIME NOT NULL DEFAULT NOW()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE INDEX contact_rate_limit ON contact_messages(ip_address,created_at);
-CREATE TABLE IF NOT EXISTS storage_deletions (reference TEXT PRIMARY KEY, created_at DATETIME NOT NULL DEFAULT NOW());
-ALTER TABLE storage_deletions ADD COLUMN IF NOT EXISTS not_before DATETIME NOT NULL DEFAULT NOW();
+CREATE TABLE IF NOT EXISTS storage_deletions (
+ reference VARCHAR(1000) PRIMARY KEY, created_at DATETIME NOT NULL DEFAULT NOW());
+
 CREATE TABLE IF NOT EXISTS pending_uploads (
- reference TEXT PRIMARY KEY,
+ reference VARCHAR(1000) PRIMARY KEY,
  not_before DATETIME NOT NULL DEFAULT (NOW()+INTERVAL '24 hours'),
  created_at DATETIME NOT NULL DEFAULT NOW()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE INDEX pending_uploads_due ON pending_uploads(not_before);
+
 CREATE INDEX posts_public_listing ON posts(status,post_type,published_at DESC);
 CREATE INDEX lessons_public_listing ON lessons(status,created_at DESC);
 CREATE INDEX media_ordered_reference ON media_files(ref_type,ref_id,kind,sort_order,id);
