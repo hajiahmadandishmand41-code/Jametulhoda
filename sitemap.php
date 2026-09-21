@@ -46,10 +46,11 @@ try{
         $paths['coll:'.$row['slug']] = 'lessons.php?collection='.rawurlencode($row['slug']);
     }
 }catch(Exception $e){}
-// Books
+// Books (prefer slug, fallback to id)
 try{
-    foreach($db->query("SELECT id, updated_at FROM books WHERE status='published' ORDER BY id LIMIT 10000") as $row){
-        $paths['book:'.$row['id']] = 'book.php?id='.(int)$row['id'];
+    foreach($db->query("SELECT id, slug, updated_at FROM books WHERE status='published' ORDER BY id LIMIT 10000") as $row){
+        $slug=trim($row['slug']??'');
+        $paths['book:'.$row['id']] = $slug ? 'book.php?slug='.rawurlencode($slug) : 'book.php?id='.(int)$row['id'];
     }
 }catch(Exception $e){}
 // Categories (legacy)

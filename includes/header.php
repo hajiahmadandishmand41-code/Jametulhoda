@@ -61,7 +61,7 @@ $ogType = isset($post) || isset($book) || isset($lesson) ? 'article' : 'website'
 </head>
 <body>
 <a class="skip-link" href="#main-content">رفتن به محتوای اصلی</a>
-<div class="jhd-masthead"><div class="container"><span>بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِیمِ</span><span>آموزش، پژوهش و پرورش در پرتو معارف اسلامی</span><a href="<?= siteUrl('contact.php') ?>">همراه شما در مسیر دانایی <i class="bi bi-arrow-up-left"></i></a></div></div>
+</div>
 <header class="jhd-header">
 <div class="container jhd-header-row">
 <a class="jhd-brand" href="<?= siteUrl() ?>" aria-label="جامعه‌الهدی، صفحه اصلی"><img src="<?= imgUrl(getSetting('site_logo','assets/images/logo.jpg')) ?>" width="56" height="56" alt="نشان مدرسه"><span><strong>جامعه‌الهدی</strong><small>مدرسه علمیه · کابل، افغانستان</small></span></a>
@@ -115,7 +115,6 @@ echo renderDrawerTopics(null,$byParent);
 <div class="drawer-section">محتوا</div>
 <a href="<?= siteUrl('reports.php') ?>" class="drawer-link"><i class="bi bi-newspaper"></i> گزارش‌ها</a>
 <a href="<?= siteUrl('articles.php') ?>" class="drawer-link"><i class="bi bi-file-text"></i> مقالات و پژوهش‌ها</a>
-<a href="<?= siteUrl('research.php') ?>" class="drawer-link drawer-subtle"><i class="bi bi-journal-richtext"></i> پژوهش‌ها (بایگانی)</a>
 <a href="<?= siteUrl('books.php') ?>" class="drawer-link"><i class="bi bi-book"></i> کتابخانه</a>
 
 <div class="drawer-section">دروس حوزه</div>
