@@ -13,9 +13,11 @@
 hardening). مسیردهی در یک مرجع واحد (`config/routes.php`) یکپارچه شد و `.htaccess` و
 `router.php` فقط از همان جدول استفاده می‌کنند.
 
-**نتیجه آزمون: ۲۹۴ بررسی خودکار، همه سبز** (۲۴۱ مسیر/پنل/CRUD + ۱۲ آپلود + ۳۱ امنیتی +
-۱۰ بازیابی ذخیره‌سازی + lint سینتکس ۹۱ فایل + اجرای دوم migration)، بدون هیچ
-PHP Warning/Fatal در لاگ سرور.
+**نتیجه آزمون: ۲۹۶ بررسی خودکار، همه سبز** (۲۴۱ مسیر/پنل/CRUD + ۱۴ آپلود و ذخیره‌سازی +
+۳۱ امنیتی + ۱۰ بازیابی ذخیره‌سازی + lint سینتکس ۹۱ فایل + اجرای دوم migration)، بدون هیچ
+PHP Warning/Fatal در لاگ سرور. جریان «سایت هنوز نصب نشده» هم آزمون شد: با نبودِ
+`config/local.php` صفحهٔ راهنما با لینک `/php/install` نمایش داده می‌شود و خودِ
+`/php/install` فرم نصب را با ۲۰۰ برمی‌گرداند.
 
 ## ۲. فایل‌های منتقل‌شده
 
@@ -109,8 +111,9 @@ PHP Warning/Fatal در لاگ سرور.
    sandbox (تجزیهٔ `multipart/form-data` در `$_POST`)، نه مشکل برنامه. در عوض کل زنجیرهٔ
    ذخیره‌سازی مستقیماً آزمون شد: `storeValidatedFile()` برای image/audio/video/pdf، قرارگیری
    صحیح در `uploads/{posts,images,book-covers,audios,videos,books,documents}`، سرو HTTP هر
-   هفت فایل (۲۰۰ + content-type درست + Range/206 + attachment برای PDF) و
-   `tests/storage-recovery.php` (۱۰ بررسی: journal، rollback، grace period، حذف با محتوا).
+   هفت فایل (۲۰۰ + content-type درست + Range/206 + attachment برای PDF)، مسدودبودن
+   `/uploads/.htaccess` و `/uploads/*/.htaccess`، و اجرای `tests/storage-recovery.php`
+   (۱۰ بررسی: journal، rollback، grace period، حذف فایل همراه با محتوا).
    تست‌های multipart واقعی در CI (`tests/http.mjs` با Playwright) اجرا می‌شوند.
 3. **`tests/browser.mjs` اجرا نشد** (نیاز به دانلود Chromium؛ در این محیط مسدود). در CI اجرا می‌شود.
 4. **رفتار واقعی `.htaccess` روی Apache آزمون نشد** (سرور Apache در دسترس نبود). همهٔ
