@@ -493,6 +493,16 @@ function getLesson(int $id): ?array {
     return $row ?: null;
 }
 
+/** Published lesson with its collection/volume titles (detail-page resolver). */
+function getLessonBySlug(string $slug): ?array {
+    if($slug==='') return null;
+    try{
+        $stmt=getDB()->prepare("SELECT l.*, lc.title AS collection_title, lc.slug AS collection_slug, lv.title AS volume_title, lv.slug AS volume_slug FROM lessons l LEFT JOIN lesson_collections lc ON lc.id=l.collection_id LEFT JOIN lesson_volumes lv ON lv.id=l.volume_id WHERE l.slug=? AND l.status='published' LIMIT 1");
+        $stmt->execute([$slug]);
+        $row=$stmt->fetch(); return $row ?: null;
+    }catch(PDOException $e){ return null; }
+}
+
 function getLessonCollections(array $opts=[]): array {
     try{
         $db=getDB();
@@ -675,6 +685,10 @@ function countBooks(array $opts = []): int {
 }
 function getBookById(int $id): ?array {
     try{ $stmt=getDB()->prepare("SELECT * FROM books WHERE id=? LIMIT 1"); $stmt->execute([$id]); $row=$stmt->fetch(); return $row?:null; }catch(PDOException $e){ return null; }
+}
+function getBookBySlug(string $slug): ?array {
+    if($slug==='') return null;
+    try{ $stmt=getDB()->prepare("SELECT * FROM books WHERE slug=? LIMIT 1"); $stmt->execute([$slug]); $row=$stmt->fetch(); return $row?:null; }catch(PDOException $e){ return null; }
 }
 function uploadBookFile(array $file, string $type = 'pdf'): string {
     return uploadFile($file, $type === 'pdf' ? 'pdf' : 'word', UPLOAD_DOCUMENTS);

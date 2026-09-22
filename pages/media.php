@@ -8,20 +8,17 @@
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/media.php';
 require_once __DIR__ . '/../includes/auth.php';
 startSecureSession();
 
 $kind = $_GET['kind'] ?? '';
+if (!is_string($kind)) $kind = '';
 $id = (int)($_GET['id'] ?? 0);
 
 $db = getDB();
-$media = null;
-if (($kind === 'video' || $kind === 'audio') && $id > 0) {
-    $stmt = $db->prepare('SELECT * FROM media_files WHERE id=? LIMIT 1');
-    $stmt->execute([$id]);
-    $media = $stmt->fetch();
-}
-if (!$media || ($media['kind'] ?? '') !== $kind) {
+$media = getMediaById($id, $kind);
+if (!$media) {
     http_response_code(404);
     $pageTitle = 'رسانه یافت نشد';
     $pageDesc = 'رسانه مورد نظر یافت نشد';

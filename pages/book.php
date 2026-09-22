@@ -4,11 +4,12 @@
  */
 require_once __DIR__.'/../includes/functions.php';
 
-$slug = trim($_GET['slug'] ?? '');
+$slug = $_GET['slug'] ?? '';
+$slug = is_string($slug) ? trim($slug) : '';
 $id   = (int)($_GET['id'] ?? 0);
 $book = null;
 if($slug){
-    try{ $stmt=getDB()->prepare("SELECT * FROM books WHERE slug=? LIMIT 1"); $stmt->execute([$slug]); $book=$stmt->fetch(); }catch(PDOException $e){}
+    $book=getBookBySlug($slug);
 }
 if(!$book && $id){
     $book=getBookById($id);

@@ -8,12 +8,11 @@ require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/auth.php';
 startSecureSession();
 
-$slug = trim($_GET['slug'] ?? '');
+$slug = $_GET['slug'] ?? '';
+$slug = is_string($slug) ? trim($slug) : '';
 if (!$slug) redirect(siteUrl('lessons'));
 
-$stmt=getDB()->prepare("SELECT l.*, lc.title AS collection_title, lc.slug AS collection_slug, lv.title AS volume_title, lv.slug AS volume_slug FROM lessons l LEFT JOIN lesson_collections lc ON lc.id=l.collection_id LEFT JOIN lesson_volumes lv ON lv.id=l.volume_id WHERE l.slug=? AND l.status='published' LIMIT 1");
-$stmt->execute([$slug]);
-$lesson=$stmt->fetch();
+$lesson=getLessonBySlug($slug);
 if(!$lesson){
     http_response_code(404);
     $pageTitle='درس یافت نشد';
