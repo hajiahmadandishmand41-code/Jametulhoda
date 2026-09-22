@@ -4,7 +4,15 @@
 .vercel
 node_modules
 vendor
-uploads
+# Uploaded content is not part of the image, but the folder scaffolding
+# (uploads/.htaccess and each sub-folder's .htaccess) must be, otherwise Apache
+# inside the container loses the "no script execution in uploads" guard.
+uploads/*
+!uploads/.htaccess
+!uploads/*/
+uploads/*/*
+!uploads/*/.htaccess
+!uploads/*/.gitkeep
 tests
 *.log
 test-results

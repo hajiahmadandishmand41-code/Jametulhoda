@@ -40,7 +40,12 @@ function storageKey(string $value): string {
     elseif (str_starts_with($value, BASE_PATH . '/uploads/')) $value = substr($value, strlen(BASE_PATH . '/uploads/'));
     elseif (str_starts_with($value, '/uploads/')) $value = substr($value, 9);
     elseif (str_starts_with($value, 'uploads/')) $value = substr($value, 8);
-    if (!in_array(explode('/', $value)[0], ['posts','lessons','books','book-covers','site','media',UPLOAD_IMAGES,UPLOAD_AUDIO,UPLOAD_VIDEO,UPLOAD_DOCUMENTS], true)) return '';
+    // Legacy folder names (audio/video) stay valid: files uploaded before the
+    // rename to audios/videos must keep resolving.
+    $folders = ['posts','lessons','books','book-covers','site','media','images','documents',
+                'audio','video','audios','videos',
+                UPLOAD_IMAGES,UPLOAD_AUDIO,UPLOAD_VIDEO,UPLOAD_DOCUMENTS];
+    if (!in_array(explode('/', $value)[0], $folders, true)) return '';
     if (!preg_match('~^(?:[a-zA-Z0-9_-]+/)+[a-zA-Z0-9_.-]+\.(?:jpg|jpeg|png|gif|webp|mp3|ogg|wav|m4a|mp4|webm|mov|mkv|pdf|doc|docx)$~D', $value) || str_contains($value, '..')) return '';
     return $value;
 }

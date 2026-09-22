@@ -163,7 +163,7 @@ $cats = $db->query(
                                 <td>
                                     <div class="d-flex gap-1">
                                         <a href="<?= siteUrl('admin/categories/?edit=' . $cat['id']) ?>" class="btn btn-sm btn-outline-primary py-0 px-2" title="ویرایش"><i class="bi bi-pencil"></i></a>
-                                        <a href="<?= siteUrl('category.php?slug=' . urlencode($cat['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2" title="مشاهده"><i class="bi bi-eye"></i></a>
+                                        <a href="<?= siteUrl('category?slug=' . urlencode($cat['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2" title="مشاهده"><i class="bi bi-eye"></i></a>
                                         <?php if ($cat['post_count'] == 0): ?>
                                         <a href="?delete=<?= $cat['id'] ?>" class="btn btn-sm btn-outline-danger py-0 px-2" title="حذف" data-confirm="حذف دسته‌بندی «<?= sanitize($cat['name']) ?>»؟"><i class="bi bi-trash"></i></a>
                                         <?php else: ?>

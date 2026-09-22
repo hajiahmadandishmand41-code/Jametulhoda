@@ -113,7 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     $_SESSION['flash_msg']  = 'سخنرانی با موفقیت بروزرسانی شد.';
                     $_SESSION['flash_type'] = 'success';
-                    redirect(siteUrl('admin/speeches/edit.php?id=' . $id));
+                    redirect(siteUrl('admin/speeches/edit?id=' . $id));
                 } catch (PDOException $e) {
                     $error = 'خطا: ';
                 }
@@ -125,7 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h5 class="mb-0"><i class="bi bi-pencil-square ms-2"></i>ویرایش: <?= sanitize(mb_strimwidth($post['title'],0,45,'...')) ?></h5>
     <div class="d-flex gap-2">
-        <a href="<?= siteUrl('speech.php?slug=' . urlencode($post['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-success"><i class="bi bi-eye ms-1"></i>مشاهده</a>
+        <a href="<?= siteUrl('speech?slug=' . urlencode($post['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-success"><i class="bi bi-eye ms-1"></i>مشاهده</a>
         <a href="<?= siteUrl('admin/speeches/') ?>" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-right ms-1"></i>بازگشت</a>
     </div>
 </div>

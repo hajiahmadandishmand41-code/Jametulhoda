@@ -1,5 +1,5 @@
 <?php if (($currentPage ?? '') === 'index.php'): ?>
-<div class="container"><section class="jhd-invitation"><div><h2>آغاز یک مسیر روشن</h2><p>برای آشنایی با برنامه‌های آموزشی و شرایط پذیرش، با ما در ارتباط باشید.</p></div><a class="jhd-button" href="<?= siteUrl('contact.php') ?>">گفت‌وگو با مدرسه <i class="bi bi-arrow-left"></i></a></section></div>
+<div class="container"><section class="jhd-invitation"><div><h2>آغاز یک مسیر روشن</h2><p>برای آشنایی با برنامه‌های آموزشی و شرایط پذیرش، با ما در ارتباط باشید.</p></div><a class="jhd-button" href="<?= siteUrl('contact') ?>">گفت‌وگو با مدرسه <i class="bi bi-arrow-left"></i></a></section></div>
 <?php endif; ?>
 </main>
 <?php
@@ -21,7 +21,7 @@ $siteEmail     = getSetting('email', SITE_EMAIL);
                 <div class="col-lg-4 col-md-6">
                     <div class="footer-widget">
                         <div class="d-flex align-items-center mb-3 gap-3">
-                            <img src="<?= imgUrl(getSetting('site_logo', 'assets/images/logo.jpg')) ?>" alt="لوگو" class="footer-logo" onerror="this.src='<?= siteUrl('assets/images/placeholder.svg') ?>'">
+                            <img src="<?= imgUrl(getSetting('site_logo', 'assets/img/logo.jpg')) ?>" alt="لوگو" class="footer-logo" onerror="this.src='<?= siteUrl('assets/img/placeholder.svg') ?>'">
                             <h5 class="footer-title mb-0"><?= sanitize($siteName) ?></h5>
                         </div>
                         <p class="footer-text"><?= sanitize(getSetting('site_slogan', SITE_SLOGAN)) ?></p>
@@ -44,15 +44,15 @@ $siteEmail     = getSetting('email', SITE_EMAIL);
                         <h5 class="footer-title">دسترسی سریع</h5>
                         <ul class="footer-links">
                             <li><a href="<?= siteUrl() ?>"><i class="bi bi-chevron-left"></i>صفحه اصلی</a></li>
-                            <li><a href="<?= siteUrl('topics.php') ?>"><i class="bi bi-chevron-left"></i>موضوعات</a></li>
-                            <li><a href="<?= siteUrl('reports.php') ?>"><i class="bi bi-chevron-left"></i>گزارش‌ها</a></li>
-                            <li><a href="<?= siteUrl('articles.php') ?>"><i class="bi bi-chevron-left"></i>مقالات و پژوهش‌ها</a></li>
-                            <li><a href="<?= siteUrl('books.php') ?>"><i class="bi bi-chevron-left"></i>کتابخانه</a></li>
-                            <li><a href="<?= siteUrl('lessons.php') ?>"><i class="bi bi-chevron-left"></i>درس‌ها</a></li>
-                            <li><a href="<?= siteUrl('videos.php') ?>"><i class="bi bi-chevron-left"></i>ویدیو</a> / <a href="<?= siteUrl('audios.php') ?>">صوت</a></li>
-                            <li><a href="<?= siteUrl('qa.php') ?>"><i class="bi bi-chevron-left"></i>پرسش و پاسخ</a></li>
-                            <li><a href="<?= siteUrl('about.php') ?>"><i class="bi bi-chevron-left"></i>درباره ما</a></li>
-                            <li><a href="<?= siteUrl('contact.php') ?>"><i class="bi bi-chevron-left"></i>تماس با ما</a></li>
+                            <li><a href="<?= siteUrl('topics') ?>"><i class="bi bi-chevron-left"></i>موضوعات</a></li>
+                            <li><a href="<?= siteUrl('reports') ?>"><i class="bi bi-chevron-left"></i>گزارش‌ها</a></li>
+                            <li><a href="<?= siteUrl('articles') ?>"><i class="bi bi-chevron-left"></i>مقالات و پژوهش‌ها</a></li>
+                            <li><a href="<?= siteUrl('books') ?>"><i class="bi bi-chevron-left"></i>کتابخانه</a></li>
+                            <li><a href="<?= siteUrl('lessons') ?>"><i class="bi bi-chevron-left"></i>درس‌ها</a></li>
+                            <li><a href="<?= siteUrl('videos') ?>"><i class="bi bi-chevron-left"></i>ویدیو</a> / <a href="<?= siteUrl('audios') ?>">صوت</a></li>
+                            <li><a href="<?= siteUrl('qa') ?>"><i class="bi bi-chevron-left"></i>پرسش و پاسخ</a></li>
+                            <li><a href="<?= siteUrl('about') ?>"><i class="bi bi-chevron-left"></i>درباره ما</a></li>
+                            <li><a href="<?= siteUrl('contact') ?>"><i class="bi bi-chevron-left"></i>تماس با ما</a></li>
                         </ul>
                     </div>
                 </div>
@@ -64,7 +64,7 @@ $siteEmail     = getSetting('email', SITE_EMAIL);
                         <ul class="footer-posts">
                             <?php foreach ($recentPosts as $rp): ?>
                             <li>
-                                <a href="<?= siteUrl('post.php?slug=' . urlencode($rp['slug'])) ?>">
+                                <a href="<?= siteUrl('post?slug=' . urlencode($rp['slug'])) ?>">
                                     <span class="footer-post-title"><?= sanitize($rp['title']) ?></span>
                                     <span class="footer-post-date"><i class="bi bi-calendar3 ms-1"></i><?= persianDate($rp['published_at'] ?? $rp['created_at']) ?></span>
                                 </a>
@@ -119,11 +119,11 @@ $siteEmail     = getSetting('email', SITE_EMAIL);
                         <span class="d-block" style="font-size:.72rem">فعالیت کننده</span>
                     </p>
                     <p class="mb-0 mt-1 d-flex gap-2 justify-content-center justify-content-md-end" style="font-size:.75rem;opacity:.75">
-                        <a href="<?= siteUrl('sitemap.php') ?>" style="color:inherit;text-decoration:none">نقشه سایت</a>
+                        <a href="<?= siteUrl('sitemap.xml') ?>" style="color:inherit;text-decoration:none">نقشه سایت</a>
                         <span>·</span>
-                        <a href="<?= siteUrl('search.php') ?>" style="color:inherit;text-decoration:none">جستجو</a>
+                        <a href="<?= siteUrl('search') ?>" style="color:inherit;text-decoration:none">جستجو</a>
                         <span>·</span>
-                        <a href="<?= siteUrl('admin/login.php') ?>" style="color:inherit;text-decoration:none"><i class="bi bi-shield-lock ms-1"></i>مدیریت</a>
+                        <a href="<?= siteUrl('admin/login') ?>" style="color:inherit;text-decoration:none"><i class="bi bi-shield-lock ms-1"></i>مدیریت</a>
                     </p>
                 </div>
             </div>

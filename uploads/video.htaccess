@@ -1,8 +1,0 @@
-Options -Indexes
-<FilesMatch "\.(php|phtml|php3|php4|php5|pl|py|jsp|asp|shtml|sh|cgi|htaccess)$">
-    Require all denied
-</FilesMatch>
-<IfModule mod_headers.c>
-    Header set X-Content-Type-Options "nosniff"
-    Header set Accept-Ranges "bytes"
-</IfModule>

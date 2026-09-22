@@ -79,7 +79,7 @@ $defaults = [
     'db_name' => env_value('DB_NAME', 'if0_42959770_jametulhoda'),
     'db_user' => env_value('DB_USER', 'if0_42959770'),
     'site_url' => env_value('SITE_URL', ''),
-    'admin_username' => env_value('ADMIN_USERNAME', 'admin'),
+    'admin_username' => env_value('ADMIN_USERNAME', DEFAULT_ADMIN_USERNAME),
     'admin_email' => env_value('ADMIN_EMAIL', env_value('SITE_EMAIL', 'hajiahmads299@gmail.com')),
 ];
 
@@ -96,6 +96,11 @@ if (!$alreadyInstalled && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $siteUrl = rtrim(trim((string)($_POST['site_url'] ?? '')), '/');
     $adminUsername = trim((string)($_POST['admin_username'] ?? $defaults['admin_username']));
     $adminPassword = (string)($_POST['admin_password'] ?? '');
+    // An empty password field installs the documented default administrator
+    // password (DEFAULT_ADMIN_PASSWORD). Like every other password it is stored
+    // only as a password_hash() digest.
+    $usedDefaultPassword = $adminPassword === '';
+    if ($usedDefaultPassword) $adminPassword = DEFAULT_ADMIN_PASSWORD;
     $adminName = trim((string)($_POST['admin_name'] ?? 'مدیر سایت'));
     $adminEmail = trim((string)($_POST['admin_email'] ?? $defaults['admin_email']));
 
@@ -117,7 +122,7 @@ if (!$alreadyInstalled && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         if ($siteUrl !== '' && !filter_var($siteUrl, FILTER_VALIDATE_URL)) throw new RuntimeException('آدرس سایت معتبر نیست.');
         $siteUrlInsecure = $siteUrl !== '' && !preg_match('~^https://~i', $siteUrl);
         if ($adminUsername === '' || !preg_match('/^[a-zA-Z0-9_.-]{3,80}$/', $adminUsername)) throw new RuntimeException('نام کاربری مدیر معتبر نیست.');
-        if (strlen($adminPassword) < 8) throw new RuntimeException('رمز مدیر باید حداقل ۸ کاراکتر باشد.');
+        if (!$usedDefaultPassword && strlen($adminPassword) < 8) throw new RuntimeException('رمز مدیر باید حداقل ۸ کاراکتر باشد.');
         if ($adminEmail !== '' && !filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) throw new RuntimeException('ایمیل مدیر معتبر نیست.');
 
         $dsn = 'mysql:host=' . $host . ';port=' . $port . ';dbname=' . rawurlencode($name) . ';charset=utf8mb4';
@@ -128,7 +133,7 @@ if (!$alreadyInstalled && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         ]);
         $pdo->exec("SET NAMES utf8mb4");
 
-        $schemaPath = __DIR__ . '/../database.mysql.sql';
+        $schemaPath = __DIR__ . '/../database/database.mysql.sql';
         $schema = file_get_contents($schemaPath);
         if ($schema === false) throw new RuntimeException('فایل schema پیدا نشد.');
 
@@ -147,12 +152,22 @@ if (!$alreadyInstalled && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
         $check = $pdo->prepare('SELECT id FROM users WHERE username = ? LIMIT 1');
         $check->execute([$adminUsername]);
-        $existingAdmin = $check->fetchColumn();
+        $existingAdmin = (int)$check->fetchColumn();
 
+        // The password is never stored in plain text: only the password_hash()
+        // digest reaches the database.
+        $hash = password_hash($adminPassword, PASSWORD_DEFAULT);
         if (!$existingAdmin) {
-            $hash = password_hash($adminPassword, PASSWORD_DEFAULT);
             $stmt = $pdo->prepare('INSERT INTO users (username, email, password, full_name, role, is_active, auth_version) VALUES (?, ?, ?, ?, ?, 1, 1)');
             $stmt->execute([$adminUsername, $adminEmail, $hash, $adminName, 'superadmin']);
+            $adminNote = 'حساب مدیر «' . $adminUsername . '» ساخته شد.';
+        } else {
+            // The account already exists (e.g. the files were uploaded again on a
+            // host with an existing database): reset its password securely and
+            // invalidate every active session by bumping auth_version.
+            $stmt = $pdo->prepare('UPDATE users SET password = ?, email = ?, full_name = ?, role = ?, is_active = 1, auth_version = COALESCE(auth_version, 1) + 1 WHERE id = ?');
+            $stmt->execute([$hash, $adminEmail, $adminName, 'superadmin', $existingAdmin]);
+            $adminNote = 'حساب مدیر «' . $adminUsername . '» از قبل وجود داشت؛ رمز آن بازنشانی شد و نشست‌های فعال باطل شدند.';
         }
 
         $localConfig = [
@@ -181,7 +196,10 @@ if (!$alreadyInstalled && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         }
 
         $alreadyInstalled = true;
-        $success = 'نصب با موفقیت انجام شد.';
+        $success = 'نصب با موفقیت انجام شد. ' . $adminNote;
+        if ($usedDefaultPassword) {
+            $success .= ' رمز پیش‌فرض مدیر استفاده شد؛ لطفاً پس از اولین ورود از بخش «تغییر رمز عبور» آن را عوض کنید.';
+        }
         if ($siteUrlInsecure) {
             $success .= ' توجه: آدرس سایت با https ذخیره نشد؛ تا زمانی که SSL رایگان را فعال نکنید، robots.txt محدود می‌ماند و sitemap.xml خطا می‌دهد.';
         }
@@ -212,8 +230,8 @@ h1{margin-top:0}.muted{color:#64748b}.grid{display:grid;grid-template-columns:1f
 
 <?php if ($alreadyInstalled): ?>
 <p>این نصب قبلاً انجام شده و مسیر نصب قفل شده است.</p>
-<a class="btn" href="../admin/login">ورود مدیر</a>
-<a class="btn" href="../">صفحه اصلی</a>
+<a class="btn" href="<?= installerEscape(BASE_PATH . '/admin/login') ?>">ورود مدیر</a>
+<a class="btn" href="<?= installerEscape(BASE_PATH . '/') ?>">صفحه اصلی</a>
 <?php else: ?>
 <form method="post" autocomplete="off">
 <div class="grid">
@@ -230,7 +248,8 @@ h1{margin-top:0}.muted{color:#64748b}.grid{display:grid;grid-template-columns:1f
 <div><label>Username</label><input name="admin_username" value="<?= installerEscape($defaults['admin_username']) ?>" required></div>
 <div><label>Email</label><input name="admin_email" type="email" value="<?= installerEscape($defaults['admin_email']) ?>"></div>
 <div><label>نام مدیر</label><input name="admin_name" value="مدیر سایت"></div>
-<div><label>رمز مدیر</label><input name="admin_password" type="password" minlength="8" required></div>
+<div><label>رمز مدیر</label><input name="admin_password" type="password" minlength="8" placeholder="خالی = رمز پیش‌فرض نصب">
+<p class="muted" style="margin:6px 0 0">اگر خالی بگذارید، رمز پیش‌فرض مستند (<code>DEFAULT_ADMIN_PASSWORD</code> در <code>config/config.php</code>) به‌صورت هش‌شده ذخیره می‌شود. اگر این حساب از قبل در دیتابیس وجود داشته باشد، رمز آن بازنشانی و نشست‌های فعال باطل می‌شوند.</p></div>
 </div></div>
 
 <div class="section"><button type="submit">شروع نصب</button></div>

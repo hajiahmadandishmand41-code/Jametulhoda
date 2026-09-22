@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     $_SESSION['flash_msg']  = 'سخنرانی با موفقیت ذخیره شد.';
                     $_SESSION['flash_type'] = 'success';
-                    redirect(siteUrl('admin/speeches/edit.php?id=' . $newId));
+                    redirect(siteUrl('admin/speeches/edit?id=' . $newId));
                 } catch (PDOException $e) {
                     $error = 'خطا در ذخیره: ';
                 }

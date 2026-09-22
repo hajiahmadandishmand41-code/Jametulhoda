@@ -123,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     $_SESSION['flash_msg']  = 'درس با موفقیت ذخیره شد.';
                     $_SESSION['flash_type'] = 'success';
-                    redirect(siteUrl('admin/lessons/edit.php?id=' . $newId));
+                    redirect(siteUrl('admin/lessons/edit?id=' . $newId));
 
                     } // end if(!$error) for video/pdf
                 } catch (PDOException $e) {

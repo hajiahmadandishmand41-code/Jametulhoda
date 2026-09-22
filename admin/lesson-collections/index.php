@@ -136,7 +136,7 @@ $collections=getLessonCollections(['active'=>null]); // all
 <span><i class="bi bi-collection ms-2"></i><?= sanitize($col['title']) ?> <small class="text-muted">(<?= $lessonCount ?> درس · <?= count($vols) ?> جلد)</small></span>
 <div class="d-flex gap-1">
 <a href="<?= siteUrl('admin/lesson-collections/?edit='.$col['id']) ?>" class="btn btn-sm btn-outline-primary py-0 px-2"><i class="bi bi-pencil"></i></a>
-<a href="<?= siteUrl('lessons.php?collection='.urlencode($col['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2"><i class="bi bi-eye"></i></a>
+<a href="<?= siteUrl('lessons?collection='.urlencode($col['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2"><i class="bi bi-eye"></i></a>
 <form method="post" style="display:inline" onsubmit="return confirm('حذف مجموعه؟')"><?= csrfField() ?><input type="hidden" name="delete_collection" value="<?= $col['id'] ?>"><button class="btn btn-sm btn-outline-danger py-0 px-2"><i class="bi bi-trash"></i></button></form>
 </div>
 </div>
@@ -151,7 +151,7 @@ $collections=getLessonCollections(['active'=>null]); // all
 <tr>
 <td><strong><?= sanitize($v['title']) ?></strong><br><code style="font-size:.70rem"><?= sanitize($v['slug']) ?></code></td>
 <td><?= $v['sort_order'] ?></td>
-<td><span class="badge bg-light text-dark border"><?= $cnt ?></span> <a href="<?= siteUrl('lessons.php?collection='.urlencode($col['slug']).'&volume='.urlencode($v['slug'])) ?>" target="_blank" class="small">مشاهده</a></td>
+<td><span class="badge bg-light text-dark border"><?= $cnt ?></span> <a href="<?= siteUrl('lessons?collection='.urlencode($col['slug']).'&volume='.urlencode($v['slug'])) ?>" target="_blank" class="small">مشاهده</a></td>
 <td><div class="d-flex gap-1"><a href="<?= siteUrl('admin/lesson-collections/?edit_volume='.$v['id']) ?>" class="btn btn-sm btn-outline-primary py-0 px-2"><i class="bi bi-pencil"></i></a><form method="post" style="display:inline" onsubmit="return confirm('حذف جلد؟')"><?= csrfField() ?><input type="hidden" name="delete_volume" value="<?= $v['id'] ?>"><button class="btn btn-sm btn-outline-danger py-0 px-2"><i class="bi bi-trash"></i></button></form></div></td>
 </tr>
 <?php endforeach; ?>

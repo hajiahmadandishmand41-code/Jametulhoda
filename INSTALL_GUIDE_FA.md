@@ -19,10 +19,16 @@
    - **Site URL** را با `https://` و دامنه نهایی وارد کنید. اگر خالی بگذارید، نصب‌کننده
      `https://` + دامنه‌ای که در مرورگر باز است را ذخیره می‌کند. مقدار `http://` باعث
      می‌شود `sitemap.xml` خطا بدهد و `robots.txt` روی `Disallow: /` بماند.
-   - رمز مدیر حداقل ۸ کاراکتر (پیشنهاد: ۱۴+).
+   - رمز مدیر حداقل ۸ کاراکتر (پیشنهاد: ۱۴+). اگر فیلد رمز را **خالی** بگذارید، رمز
+     پیش‌فرض مستند (`JH@2026#Admin` برای نام کاربری `admin`) استفاده می‌شود و سپس بهتر
+     است آن را از `/admin/change-password` تغییر دهید.
+   - اگر حساب مدیر از قبل در دیتابیس وجود داشته باشد، نصب‌کننده رمز آن را **بازنشانی**
+     می‌کند (با `password_hash()`) و با افزایش `auth_version` همه نشست‌های فعال را
+     باطل می‌کند؛ دسترسی آن حساب `superadmin` و فعال می‌شود.
 6. نصب‌کننده `config/local.php` و `config/install.lock` را می‌سازد و طرحواره
-   `database.mysql.sql` را اعمال می‌کند (۲۲ جدول + داده‌های اولیه موضوع‌ها/دسته‌ها/تنظیمات).
-7. از `/admin` وارد پنل شوید و رمز را از `/admin/change-password.php` تغییر دهید.
+   `database/database.mysql.sql` را اعمال می‌کند (۲۲ جدول + داده‌های اولیه موضوع‌ها/دسته‌ها/تنظیمات).
+   هر دو فایل با `.htaccess` و allowlist مسیرها از دسترسی وب مسدودند (۴۰۴).
+7. از `/admin` وارد پنل شوید و رمز را از `/admin/change-password` تغییر دهید.
 
 بازبینی پس از نصب:
 
@@ -49,7 +55,7 @@
 
 | نشانه | علت / راه‌حل |
 |---|---|
-| `SQLSTATE[42000] 1071 Specified key was too long` | طرحواره قدیمی؛ از نسخه اصلاح‌شده `database.mysql.sql` استفاده کنید (کلیدهای ایندکس‌دار ≤ ۷۰۰ کاراکتر) |
+| `SQLSTATE[42000] 1071 Specified key was too long` | طرحواره قدیمی؛ از نسخه اصلاح‌شده `database/database.mysql.sql` استفاده کنید (کلیدهای ایندکس‌دار ≤ ۷۰۰ کاراکتر) |
 | صفحهٔ «سایت هنوز نصب نشده است» | یعنی `config/local.php` ساخته نشده؛ آدرس `/php/install` را باز کنید و نصب را کامل کنید |
 | صفحهٔ «اتصال به دیتابیس برقرار نشد» | مشخصات MySQL در `config/local.php` یا وضعیت دیتابیس در کنترل‌پنل را بررسی کنید |
 | «نصب قبلاً انجام شده و مسیر نصب قفل شده است» | برای نصب مجدد، `config/install.lock` را حذف کنید (داده‌ها حفظ می‌شوند؛ نصب idempotent است) |
@@ -64,4 +70,25 @@
 - تنظیم Neon، Vercel و S3: [راهنمای Deployment](docs/DEPLOYMENT_FA.md)
 - مشکلات قبلی، تست‌های واقعی و کارهای باقی‌مانده: [Audit](docs/AUDIT_FA.md)
 
-از دستورهای نصب قدیمی یا رمزهای نمونه استفاده نکنید. فایل‌های `install.php` و `migrate-sections.php` در ریشه فقط wrapper ابزار CLI هستند و از وب اجرا نمی‌شوند؛ نصب وب واقعی همان `/php/install` است. اعتبارنامه‌های موجود در تاریخچه باید rotate شوند؛ حذف از نسخه فعلی تاریخچهٔ Git را پاک نمی‌کند.
+از دستورهای نصب قدیمی یا رمزهای نمونه استفاده نکنید. اسکریپت‌های `bin/install-cli.php`، `bin/migrate-sections.php` و `bin/db-test.php` فقط wrapper ابزار CLI هستند (در ریشه وب نیستند و از وب ۴۰۴ می‌دهند)؛ نصب وب واقعی همان `/php/install` است. اعتبارنامه‌های موجود در تاریخچه باید rotate شوند؛ حذف از نسخه فعلی تاریخچهٔ Git را پاک نمی‌کند.
+
+### ساختار پوشه‌ها پس از بازسازی
+
+```
+index.php  router.php  robots.php  sitemap.php  .htaccess   ← تنها فایل‌های ریشه وب
+config/     config.php  database.php  routes.php  local.php  local.example.php  production.ini
+includes/   auth.php  functions.php  header.php  footer.php  session.php  storage.php  media.php …
+admin/      index.php  login.php  logout.php  change-password.php  settings.php
+            users/ articles/ books/ lessons/ media/ categories/ topics/ news/ posts/ speeches/
+            banners/ messages/ lesson-collections/
+pages/      about  articles  books  book  lessons  lesson  topics  topic  search  contact …
+content/    home-intro.php (قطعه‌های نمایشی)
+assets/     css/  js/  img/  fonts/  vendor/
+uploads/    images/  books/  videos/  audios/  documents/  (+ audio/ video/ posts/ … قدیمی)
+database/   database.mysql.sql  database.postgres.sql  migrations/
+php/        install.php (نصاب مرورگری)
+bin/        migrate.php  create-admin.php  storage-gc.php  db-test.php …
+storage/    logs/  cache/
+```
+
+نگاشت کامل «فایل → مسیر URL» در [docs/FILE_ROUTE_MAP.md](docs/FILE_ROUTE_MAP.md) آمده است.

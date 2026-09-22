@@ -1,0 +1,11 @@
+# admin/ — PHP controllers are reached through router.php only.
+Options -Indexes
+<FilesMatch "(?i)\.(sql|lock|log|ini|md|json|bak|htaccess)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>

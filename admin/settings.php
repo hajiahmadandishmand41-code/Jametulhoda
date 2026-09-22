@@ -80,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="admin-card mb-4">
                 <div class="admin-card-header">لوگوی سایت</div>
                 <div class="admin-card-body">
-                    <img src="<?= siteUrl('assets/images/logo.jpg') ?>?<?= time() ?>" alt="لوگو" style="max-width:120px;border-radius:8px;margin-bottom:12px">
+                    <img src="<?= siteUrl('assets/img/logo.jpg') ?>?<?= time() ?>" alt="لوگو" style="max-width:120px;border-radius:8px;margin-bottom:12px">
                     <input type="file" name="logo" class="form-control" accept="image/*">
                     <div class="form-text">تصویر جدید جایگزین لوگوی فعلی می‌شود.</div>
                 </div>

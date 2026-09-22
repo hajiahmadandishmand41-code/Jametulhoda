@@ -8,13 +8,24 @@ fs.mkdirSync('test-results',{recursive:true});
 const results=[];
 const check=(label,ok,detail='')=>{results.push({label,ok,detail});console.log(ok?'PASS':'FAIL',label,detail);};
 const token=html=>html.match(/name="csrf_token" value="([a-f0-9]+)"/)?.[1];
-for(const path of ['/','/about.php','/contact.php','/news.php','/articles.php','/lessons.php','/books.php','/speeches.php','/programs.php','/religious-activities.php','/announcements.php','/search.php?q=test','/category.php?slug=fiqh-osul','/robots.txt','/audio','/video','/files','/library','/topics.php','/reports.php','/research.php','/qa.php','/sitemap.php','/topic.php','/reports.php','/books.php']){const r=await api.get(path);check('GET '+path,r.status()===200||r.status()===302,String(r.status()));}
-for(const path of ['/missing-page','/.env','/.git/config','/config/database.php','/database.sql','/install.php','/includes/auth.php','/uploads/test.php','/bin/create-admin.php']){const r=await api.get(path);check('protected '+path,r.status()===404,String(r.status()));}
+// Clean URLs and their legacy .php spellings must both answer (config/routes.php expands them).
+const publicPaths=['/','/index.php',
+ '/about','/about.php','/contact','/contact.php','/news','/news.php','/articles','/articles.php',
+ '/lessons','/lessons.php','/books','/books.php','/speeches','/speeches.php','/programs','/programs.php',
+ '/religious-activities','/religious-activities.php','/announcements','/announcements.php',
+ '/search','/search?q=test','/search.php?q=test','/category?slug=fiqh-osul','/category.php?slug=fiqh-osul',
+ '/topics','/topics.php','/topic','/reports','/reports.php','/research','/research.php','/qa','/qa.php',
+ '/media-library','/media-library.php','/audio','/audios','/video','/videos','/files','/library',
+ '/post','/lesson','/speech','/book','/sitemap.xml','/sitemap.php','/robots.txt','/robots.php',
+ '/assets/css/style.css','/assets/img/logo.jpg','/assets/images/logo.jpg','/assets/img/placeholder.svg',
+ '/php/install','/php/install.php','/php/install/'];
+for(const path of publicPaths){const r=await api.get(path);check('GET '+path,r.status()===200||r.status()===302,String(r.status()));}
+for(const path of ['/missing-page','/.env','/.git/config','/config/database.php','/config/local.php','/config/install.lock','/config/local.example.php','/database.sql','/database/database.mysql.sql','/database/database.postgres.sql','/install.php','/includes/auth.php','/includes/functions.php','/pages/about.php','/content/home-intro.php','/admin/includes/header.php','/storage/logs/.gitkeep','/bin/migrate.php','/uploads/test.php','/uploads/images/test.php']){const r=await api.get(path);check('protected '+path,r.status()===404,String(r.status()));}
 let r=await api.get('/admin/',{maxRedirects:0});check('admin requires login',r.status()===302);
 r=await api.get('/admin/login.php');let csrf=token(await r.text());
 r=await api.post('/admin/login.php',{form:{...creds,csrf_token:csrf},maxRedirects:0});check('login valid',r.status()===303,String(r.status()));
 r=await api.get('/admin/');check('dashboard',r.status()===200,String(r.status()));
-for(const path of ['/admin/posts/','/admin/articles/','/admin/news/','/admin/speeches/','/admin/lessons/','/admin/books/','/admin/categories/','/admin/media/','/admin/messages/','/admin/settings.php','/admin/users.php','/admin/topics/','/admin/lesson-collections/','/admin/banners/']){const r=await api.get(path);check('admin '+path,r.status()===200,String(r.status()));}
+for(const path of ['/admin','/admin/','/admin/index.php','/admin/posts','/admin/posts/','/admin/articles','/admin/articles/','/admin/news/','/admin/speeches/','/admin/lessons','/admin/lessons/','/admin/books','/admin/books/','/admin/categories','/admin/categories/','/admin/media','/admin/media/','/admin/messages','/admin/messages/','/admin/messages.php','/admin/settings','/admin/settings.php','/admin/users','/admin/users/','/admin/users.php','/admin/users/index.php','/admin/topics','/admin/topics/','/admin/lesson-collections/','/admin/banners/','/admin/change-password','/admin/change-password.php']){const r=await api.get(path);check('admin '+path,r.status()===200,String(r.status()));}
 r=await api.get('/admin/posts/create.php');csrf=token(await r.text());
 const stamp=Date.now();const title='qa-post-'+stamp;
 // Use the existing project logo as a valid JPEG fixture (user filename is deliberately misleading).
@@ -28,10 +39,11 @@ r=await api.get('/admin/books/create.php');csrf=token(await r.text());
 r=await api.post('/admin/books/create.php',{multipart:{csrf_token:csrf,title:'qa-book-'+stamp,description:'کتاب آزمون',pdf_file:{name:'document.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF')}},maxRedirects:0});check('upload PDF + create book',r.status()===303,String(r.status()));
 r=await api.get('/books.php?q=qa-book-'+stamp);
 const bookHtml=await r.text();
-const bookMatch=bookHtml.match(/book\.php\?(?:id=(\d+)|slug=([^"&]+))/);
-const bookId=bookMatch?.[1]; const bookSlug=bookMatch?.[2] ? decodeURIComponent(bookMatch[2]) : null;
+const bookMatch=bookHtml.match(/\/book(?:\.php)?\?(?:id=(\d+)|slug=([^"&]+))/) || bookHtml.match(/\/book\/(\d+)/) || bookHtml.match(/href="[^"]*\/book\/([^"?&]+)/);
+const bookId=bookMatch?.[1] && /^\d+$/.test(bookMatch[1]) ? bookMatch[1] : null;
+const bookSlug=!bookId && (bookMatch?.[2] || bookMatch?.[1]) ? decodeURIComponent(bookMatch[2] || bookMatch[1]) : null;
 check('book linked in library',Boolean(bookId || bookSlug));
-if(bookId || bookSlug){ const bookUrl = bookId ? '/book.php?id='+bookId : '/book.php?slug='+bookSlug; r=await api.get(bookUrl);check('book detail exists',r.status()===200); const dlUrl = bookUrl + (bookUrl.includes('?') ? '&' : '?') + 'download=pdf'; r=await api.get(dlUrl,{maxRedirects:0});const dlOk = r.status()===302||r.status()===303||r.status()===200; check('book PDF download redirect',dlOk,String(r.status())); }
+if(bookId || bookSlug){ const bookUrl = bookId ? '/book/'+bookId : '/book/'+encodeURIComponent(bookSlug); r=await api.get(bookUrl);check('book detail exists',r.status()===200); const dlUrl = bookUrl + (bookUrl.includes('?') ? '&' : '?') + 'download=pdf'; r=await api.get(dlUrl,{maxRedirects:0});const dlOk = r.status()===302||r.status()===303||r.status()===200; check('book PDF download redirect',dlOk,String(r.status())); }
 for(const section of ['articles','news','lessons']){r=await api.get('/admin/'+section+'/create.php');csrf=token(await r.text());r=await api.post('/admin/'+section+'/create.php',{form:{csrf_token:csrf,title:'qa-'+section+'-'+stamp,content:'<p>Test content</p>',status:'published',level:'beginner','page_section[]':'home'},maxRedirects:0});check('create '+section,r.status()===303,String(r.status()));if(r.status()!==303)fs.writeFileSync('test-results/'+section+'-failure.html',await r.text());}
 if(id){
 // Editing retains existing media and updates content using prepared statements.

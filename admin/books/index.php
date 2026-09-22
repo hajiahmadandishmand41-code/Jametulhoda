@@ -65,7 +65,7 @@ $urlBase = siteUrl('admin/books/') . '?q=' . urlencode($search) . '&page=';
 <div class="admin-card">
   <div class="admin-card-header">
     <span><i class="bi bi-book ms-2"></i>کتاب‌ها (<?= number_format($total) ?>)</span>
-    <a href="<?= siteUrl('admin/books/create.php') ?>" class="btn btn-success btn-sm">
+    <a href="<?= siteUrl('admin/books/create') ?>" class="btn btn-success btn-sm">
       <i class="bi bi-plus ms-1"></i>کتاب جدید
     </a>
   </div>
@@ -91,7 +91,7 @@ $urlBase = siteUrl('admin/books/') . '?q=' . urlencode($search) . '&page=';
     <div class="text-center py-5 text-muted">
       <i class="bi bi-book display-3 opacity-25 d-block mb-3"></i>
       <p>هیچ کتابی یافت نشد.</p>
-      <a href="<?= siteUrl('admin/books/create.php') ?>" class="btn btn-success">
+      <a href="<?= siteUrl('admin/books/create') ?>" class="btn btn-success">
         <i class="bi bi-plus ms-1"></i>افزودن اولین کتاب
       </a>
     </div>
@@ -148,11 +148,11 @@ $urlBase = siteUrl('admin/books/') . '?q=' . urlencode($search) . '&page=';
             <td class="text-muted small"><?= persianDate($b['created_at']) ?></td>
             <td>
               <div class="d-flex gap-1">
-                <a href="<?= siteUrl('admin/books/edit.php?id=' . $b['id']) ?>"
+                <a href="<?= siteUrl('admin/books/edit?id=' . $b['id']) ?>"
                    class="btn btn-sm btn-outline-primary py-0 px-2" title="ویرایش">
                   <i class="bi bi-pencil"></i>
                 </a>
-                <a href="<?= siteUrl('admin/books/delete.php?id=' . $b['id']) ?>"
+                <a href="<?= siteUrl('admin/books/delete?id=' . $b['id']) ?>"
                    class="btn btn-sm btn-outline-danger py-0 px-2"
                    title="حذف"
                    data-confirm="آیا از حذف کتاب «<?= sanitize($b['title']) ?>» اطمینان دارید؟">

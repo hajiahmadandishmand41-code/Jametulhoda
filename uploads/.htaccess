@@ -1,5 +1,17 @@
+# uploads/ — only media/document downloads are served from here.
+# Script execution and directory listing are disabled as a second layer of
+# defence; router.php additionally serves only allowlisted extensions.
 Options -Indexes -ExecCGI
-<FilesMatch "(?i)\.(php[0-9]?|phtml|phar|cgi|pl|sh|html?|svg|js)$">
-Require all denied
+<FilesMatch "(?i)\.(php[0-9]?|phtml|phar|cgi|pl|py|rb|sh|asp|aspx|cfm|jsp|shtml|html?|svg|js|htaccess)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
 </FilesMatch>
-Header always set X-Content-Type-Options nosniff
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Accept-Ranges "bytes"
+</IfModule>

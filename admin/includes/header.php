@@ -159,7 +159,7 @@ body { font-family: 'Vazirmatn', sans-serif; background: var(--admin-bg); color:
 <!-- Sidebar -->
 <div class="admin-sidebar" id="adminSidebar" role="navigation" aria-label="منوی مدیریت">
   <div class="sidebar-brand d-flex align-items-center">
-    <img src="<?= imgUrl(getSetting('site_logo', 'assets/images/logo.jpg')) ?>" alt="لوگو" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕌</text></svg>'">
+    <img src="<?= imgUrl(getSetting('site_logo', 'assets/img/logo.jpg')) ?>" alt="لوگو" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕌</text></svg>'">
     <div>
       <span class="name">جامعه‌الهدی</span>
       <span class="sub">پنل مدیریت</span>
@@ -167,7 +167,7 @@ body { font-family: 'Vazirmatn', sans-serif; background: var(--admin-bg); color:
   </div>
 
   <nav class="sidebar-nav">
-<?php if ($admin['role'] === 'superadmin'): ?><a href="<?= siteUrl('admin/users.php') ?>" class="sidebar-link"><i class="bi bi-people"></i>مدیریت کاربران</a><?php endif; ?>
+<?php if ($admin['role'] === 'superadmin'): ?><a href="<?= siteUrl('admin/users') ?>" class="sidebar-link"><i class="bi bi-people"></i>مدیریت کاربران</a><?php endif; ?>
     <div class="sidebar-section">داشبورد</div>
     <a href="<?= siteUrl('admin/') ?>" class="sidebar-link <?= $currentAdminPage==='index.php' && $currentAdminDir==='admin'?'active':'' ?>">
       <i class="bi bi-speedometer2"></i>داشبورد
@@ -177,7 +177,7 @@ body { font-family: 'Vazirmatn', sans-serif; background: var(--admin-bg); color:
     <a href="<?= siteUrl('admin/news/') ?>" class="sidebar-link <?= $currentAdminDir==='news'?'active':'' ?>">
       <i class="bi bi-newspaper"></i>مدیریت اخبار
     </a>
-    <a href="<?= siteUrl('admin/news/create.php') ?>" class="sidebar-link">
+    <a href="<?= siteUrl('admin/news/create') ?>" class="sidebar-link">
       <i class="bi bi-plus-circle"></i>خبر جدید
     </a>
 
@@ -185,7 +185,7 @@ body { font-family: 'Vazirmatn', sans-serif; background: var(--admin-bg); color:
     <a href="<?= siteUrl('admin/articles/') ?>" class="sidebar-link <?= $currentAdminDir==='articles'?'active':'' ?>">
       <i class="bi bi-file-text"></i>مدیریت مقالات
     </a>
-    <a href="<?= siteUrl('admin/articles/create.php') ?>" class="sidebar-link">
+    <a href="<?= siteUrl('admin/articles/create') ?>" class="sidebar-link">
       <i class="bi bi-plus-circle"></i>مقاله جدید
     </a>
 
@@ -193,7 +193,7 @@ body { font-family: 'Vazirmatn', sans-serif; background: var(--admin-bg); color:
     <a href="<?= siteUrl('admin/speeches/') ?>" class="sidebar-link <?= $currentAdminDir==='speeches'?'active':'' ?>">
       <i class="bi bi-mic"></i>مدیریت سخنرانی‌ها
     </a>
-    <a href="<?= siteUrl('admin/speeches/create.php') ?>" class="sidebar-link">
+    <a href="<?= siteUrl('admin/speeches/create') ?>" class="sidebar-link">
       <i class="bi bi-plus-circle"></i>سخنرانی جدید
     </a>
 
@@ -201,7 +201,7 @@ body { font-family: 'Vazirmatn', sans-serif; background: var(--admin-bg); color:
     <a href="<?= siteUrl('admin/topics/') ?>" class="sidebar-link <?= $currentAdminDir==='topics'?'active':'' ?>">
       <i class="bi bi-diagram-3"></i>مدیریت موضوعات
     </a>
-    <a href="<?= siteUrl('admin/topics/create.php') ?>" class="sidebar-link">
+    <a href="<?= siteUrl('admin/topics/create') ?>" class="sidebar-link">
       <i class="bi bi-plus-circle"></i>موضوع جدید
     </a>
 
@@ -217,7 +217,7 @@ body { font-family: 'Vazirmatn', sans-serif; background: var(--admin-bg); color:
     <a href="<?= siteUrl('admin/lessons/') ?>" class="sidebar-link <?= $currentAdminDir==='lessons'?'active':'' ?>">
       <i class="bi bi-play-circle"></i>مدیریت درس‌ها
     </a>
-    <a href="<?= siteUrl('admin/lessons/create.php') ?>" class="sidebar-link">
+    <a href="<?= siteUrl('admin/lessons/create') ?>" class="sidebar-link">
       <i class="bi bi-plus-square"></i>درس جدید
     </a>
 
@@ -230,7 +230,7 @@ body { font-family: 'Vazirmatn', sans-serif; background: var(--admin-bg); color:
     <a href="<?= siteUrl('admin/books/') ?>" class="sidebar-link <?= $currentAdminDir==='books'?'active':'' ?>">
       <i class="bi bi-book"></i>مدیریت کتاب‌ها
     </a>
-    <a href="<?= siteUrl('admin/books/create.php') ?>" class="sidebar-link">
+    <a href="<?= siteUrl('admin/books/create') ?>" class="sidebar-link">
       <i class="bi bi-plus-square"></i>کتاب جدید
     </a>
 
@@ -249,10 +249,10 @@ body { font-family: 'Vazirmatn', sans-serif; background: var(--admin-bg); color:
     </a>
 
     <div class="sidebar-section">تنظیمات</div>
-    <a href="<?= siteUrl('admin/settings.php') ?>" class="sidebar-link <?= $currentAdminPage==='settings.php'?'active':'' ?>">
+    <a href="<?= siteUrl('admin/settings') ?>" class="sidebar-link <?= $currentAdminPage==='settings.php'?'active':'' ?>">
       <i class="bi bi-gear"></i>تنظیمات سایت
     </a>
-    <a href="<?= siteUrl('admin/change-password.php') ?>" class="sidebar-link <?= $currentAdminPage==='change-password.php'?'active':'' ?>">
+    <a href="<?= siteUrl('admin/change-password') ?>" class="sidebar-link <?= $currentAdminPage==='change-password.php'?'active':'' ?>">
       <i class="bi bi-key"></i>تغییر رمز عبور
     </a>
   </nav>
@@ -260,7 +260,7 @@ body { font-family: 'Vazirmatn', sans-serif; background: var(--admin-bg); color:
   <div class="sidebar-footer">
     <div class="d-flex justify-content-between align-items-center">
       <a href="<?= siteUrl() ?>" target="_blank"><i class="bi bi-box-arrow-up-right ms-1"></i>مشاهده سایت</a>
-      <a href="<?= siteUrl('admin/logout.php') ?>" class="text-danger"><i class="bi bi-box-arrow-right ms-1"></i>خروج</a>
+      <a href="<?= siteUrl('admin/logout') ?>" class="text-danger"><i class="bi bi-box-arrow-right ms-1"></i>خروج</a>
     </div>
   </div>
 </div>
@@ -280,7 +280,7 @@ body { font-family: 'Vazirmatn', sans-serif; background: var(--admin-bg); color:
         <div class="fw-bold small"><?= sanitize($admin['name'] ?: $admin['user']) ?></div>
         <div class="text-muted" style="font-size:.73rem">مدیر سیستم</div>
       </div>
-      <a href="<?= siteUrl('admin/logout.php') ?>" class="btn btn-sm btn-outline-danger" title="خروج"><i class="bi bi-box-arrow-right"></i></a>
+      <a href="<?= siteUrl('admin/logout') ?>" class="btn btn-sm btn-outline-danger" title="خروج"><i class="bi bi-box-arrow-right"></i></a>
     </div>
   </div>
   <div class="admin-content">

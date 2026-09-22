@@ -1,6 +1,0 @@
-# فقط دانلود مستقیم مجاز است (PDF, Word, تصویر)
-Options -Indexes
-<FilesMatch "\.(php|phtml|php3|php4|php5|php7|phar|shtml|cgi|pl|py|rb|sh|asp|aspx|cfm|js|jsx|ts|tsx|html|htm|htaccess)$">
-    Order allow,deny
-    Deny from all
-</FilesMatch>

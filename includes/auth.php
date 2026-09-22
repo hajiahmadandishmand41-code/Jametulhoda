@@ -56,7 +56,7 @@ function isLoggedIn(): bool {
 
 function requireLogin(): void {
     if (!isLoggedIn()) {
-        header('Location: ' . siteUrl('admin/login.php'));
+        header('Location: ' . siteUrl('admin/login'));
         exit;
     }
 }
@@ -113,7 +113,7 @@ function logoutAdmin(): void {
     $_SESSION = [];
     setcookie(SESSION_NAME, '', ['expires'=>time()-3600, 'path'=>BASE_PATH.'/', 'secure'=>sessionCookieSecure(), 'httponly'=>true, 'samesite'=>'Strict']);
     session_destroy();
-    header('Location: ' . siteUrl('admin/login.php'));
+    header('Location: ' . siteUrl('admin/login'));
     exit;
 }
 

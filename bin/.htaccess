@@ -1,0 +1,10 @@
+# Internal directory — no direct web access.
+# These files are included by PHP (router.php / controllers) only.
+Options -Indexes
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>
