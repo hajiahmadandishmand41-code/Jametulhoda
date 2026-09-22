@@ -11,12 +11,15 @@ startSecureSession();
 
 $slug = trim($_GET['slug'] ?? '');
 if (!$slug) { header('Location: '.siteUrl('articles')); exit; }
+// Typed URLs (/article/X, /news/X, /research/X) resolve here; a slug that
+// belongs to another post type is genuinely "not found" under this prefix.
+$expectedType = trim($_GET['expected_type'] ?? '');
 
 $db=getDB();
 $stmt=$db->prepare("SELECT p.*, c.name AS cat_name, c.slug AS cat_slug, u.full_name AS author_name FROM posts p LEFT JOIN categories c ON c.id=p.category_id LEFT JOIN users u ON u.id=p.author_id WHERE p.slug=? AND p.status='published' LIMIT 1");
 $stmt->execute([$slug]);
 $post=$stmt->fetch();
-if(!$post){
+if(!$post || ($expectedType !== '' && ($post['post_type'] ?? '') !== $expectedType)){
     http_response_code(404);
     $pageTitle='مطلب یافت نشد';
     $pageDesc='مطلب مورد نظر یافت نشد';
@@ -24,7 +27,7 @@ if(!$post){
     echo '<div class="container py-5 text-center"><h1>مطلب مورد نظر یافت نشد</h1><p class="text-muted">ممکن است حذف شده یا آدرس نادرست باشد.</p><a href="'.siteUrl().'" class="btn btn-primary mt-3">بازگشت به صفحه اصلی</a></div>';
     require_once __DIR__.'/../includes/footer.php'; exit;
 }
-if(($post['post_type'] ?? '')==='speech'){ redirect(siteUrl('speech?slug='.urlencode($post['slug']))); }
+if(($post['post_type'] ?? '')==='speech'){ redirect(speechUrl($post)); }
 
 $extraImgs=$db->prepare("SELECT * FROM post_images WHERE post_id=?");
 $extraImgs->execute([$post['id']]);
@@ -65,10 +68,11 @@ if(isset($typeMap[$post['post_type']])){
 }
 if($primaryTopic){
     foreach(getTopicBreadcrumbs((int)$primaryTopic['id']) as $bt){
-        $breadcrumbs[]=['name'=>$bt['name'],'url'=>siteUrl('topic?slug='.urlencode($bt['slug']))];
+        $breadcrumbs[]=['name'=>$bt['name'],'url'=>topicUrl($bt)];
     }
 }
-$breadcrumbs[]=['name'=>$post['title'],'url'=>canonicalUrl('post.php?slug='.urlencode($post['slug']))];
+$canonicalOverride = postUrl($post);
+$breadcrumbs[]=['name'=>$post['title'],'url'=>canonicalUrl(postUrl($post))];
 $breadcrumbsJsonLd=breadcrumbsJsonLd($breadcrumbs);
 $articleJsonLd=articleJsonLd($post);
 
@@ -84,7 +88,7 @@ require_once __DIR__.'/../includes/header.php';
 <div class="col-lg-8">
 <article class="single-post" itemscope itemtype="https://schema.org/Article">
 <header class="single-post-header">
-<div class="d-flex flex-wrap gap-2 mb-2"><?= postTypeBadge($post['post_type']) ?> <?php if($post['cat_name']): ?><a href="<?= siteUrl('category?slug='.urlencode($post['cat_slug'])) ?>" class="badge bg-secondary"><?= sanitize($post['cat_name']) ?></a><?php endif; ?><?php if($primaryTopic): ?><a href="<?= siteUrl('topic?slug='.urlencode($primaryTopic['slug'])) ?>" class="badge" style="background:#fdf6e3;color:#7a5a1a;border:1px solid #e8d5a3"><i class="bi bi-tag ms-1"></i><?= sanitize($primaryTopic['name']) ?></a><?php endif; ?></div>
+<div class="d-flex flex-wrap gap-2 mb-2"><?= postTypeBadge($post['post_type']) ?> <?php if($post['cat_name']): ?><a href="<?= categoryUrl($post['cat_slug']) ?>" class="badge bg-secondary"><?= sanitize($post['cat_name']) ?></a><?php endif; ?><?php if($primaryTopic): ?><a href="<?= topicUrl($primaryTopic) ?>" class="badge" style="background:#fdf6e3;color:#7a5a1a;border:1px solid #e8d5a3"><i class="bi bi-tag ms-1"></i><?= sanitize($primaryTopic['name']) ?></a><?php endif; ?></div>
 <h1 class="single-post-title mt-2" itemprop="headline"><?= sanitize($post['title']) ?></h1>
 <div class="single-post-meta d-flex flex-wrap align-items-center gap-3 mt-3">
 <span><i class="bi bi-calendar3 ms-1"></i><?= persianDate($post['published_at'] ?? $post['created_at']) ?></span>
@@ -94,7 +98,7 @@ require_once __DIR__.'/../includes/header.php';
 </div>
 <?php if($postTopics): ?>
 <div class="d-flex flex-wrap gap-1 mt-3">
-<?php foreach($postTopics as $t): ?><a href="<?= siteUrl('topic?slug='.urlencode($t['slug'])) ?>" class="badge bg-light text-dark border" style="font-size:.78rem"><i class="bi bi-folder ms-1"></i><?= sanitize($t['name']) ?></a><?php endforeach; ?>
+<?php foreach($postTopics as $t): ?><a href="<?= topicUrl($t) ?>" class="badge bg-light text-dark border" style="font-size:.78rem"><i class="bi bi-folder ms-1"></i><?= sanitize($t['name']) ?></a><?php endforeach; ?>
 </div>
 <?php endif; ?>
 </header>
@@ -155,20 +159,20 @@ require_once __DIR__.'/../includes/header.php';
 <?php if($postTopics): ?>
 <div class="mt-5 p-3" style="background:#f8f7f2;border:1px solid #e8e0c8;border-radius:12px">
 <h3 class="h6 fw-bold mb-3"><i class="bi bi-diagram-3 ms-2 text-gold"></i> موضوعات مرتبط</h3>
-<div class="d-flex flex-wrap gap-2 mb-3"><?php foreach($postTopics as $t): ?><a href="<?= siteUrl('topic?slug='.urlencode($t['slug'])) ?>" class="btn btn-sm" style="background:var(--jhd-surface);border:1px solid var(--jhd-border)"><i class="bi bi-tag ms-1"></i><?= sanitize($t['name']) ?></a><?php endforeach; ?></div>
+<div class="d-flex flex-wrap gap-2 mb-3"><?php foreach($postTopics as $t): ?><a href="<?= topicUrl($t) ?>" class="btn btn-sm" style="background:var(--jhd-surface);border:1px solid var(--jhd-border)"><i class="bi bi-tag ms-1"></i><?= sanitize($t['name']) ?></a><?php endforeach; ?></div>
 <?php if(!empty($relatedBooks)): ?>
-<h4 class="h6 fw-bold mt-3">کتاب‌های مرتبط</h4><div class="row g-2 mb-3"><?php foreach($relatedBooks as $b): ?><div class="col-6"><a href="<?= siteUrl('book?id='.(int)$b['id']) ?>" class="d-flex gap-2 p-2 border rounded small text-decoration-none"><i class="bi bi-book text-primary" style="font-size:1.2rem"></i><span><?= sanitize(mb_strimwidth($b['title'],0,35,'...')) ?></span></a></div><?php endforeach; ?></div>
+<h4 class="h6 fw-bold mt-3">کتاب‌های مرتبط</h4><div class="row g-2 mb-3"><?php foreach($relatedBooks as $b): ?><div class="col-6"><a href="<?= bookUrl($b) ?>" class="d-flex gap-2 p-2 border rounded small text-decoration-none"><i class="bi bi-book text-primary" style="font-size:1.2rem"></i><span><?= sanitize(mb_strimwidth($b['title'],0,35,'...')) ?></span></a></div><?php endforeach; ?></div>
 <?php endif; ?>
 <?php if(!empty($relatedLessons)): ?>
-<h4 class="h6 fw-bold">درس‌های مرتبط</h4><div class="row g-2"><?php foreach($relatedLessons as $ls): ?><div class="col-6"><a href="<?= siteUrl('lesson?slug='.urlencode($ls['slug'])) ?>" class="d-flex gap-2 p-2 border rounded small text-decoration-none"><i class="bi bi-mortarboard text-success"></i><span><?= sanitize(mb_strimwidth($ls['title'],0,35,'...')) ?></span></a></div><?php endforeach; ?></div>
+<h4 class="h6 fw-bold">درس‌های مرتبط</h4><div class="row g-2"><?php foreach($relatedLessons as $ls): ?><div class="col-6"><a href="<?= lessonUrl($ls) ?>" class="d-flex gap-2 p-2 border rounded small text-decoration-none"><i class="bi bi-mortarboard text-success"></i><span><?= sanitize(mb_strimwidth($ls['title'],0,35,'...')) ?></span></a></div><?php endforeach; ?></div>
 <?php endif; ?>
 </div>
 <?php endif; ?>
 
 <div class="single-post-share mt-5 p-4 bg-soft rounded-xl">
 <h2 class="h5 mb-3"><i class="bi bi-share ms-2 text-gold"></i> اشتراک‌گذاری</h2>
-<div class="d-flex flex-wrap gap-2 align-items-center mb-3"><div class="share-url-box flex-grow-1"><input type="text" id="postUrl" class="form-control form-control-sm" value="<?= htmlspecialchars(canonicalUrl('post.php?slug='.urlencode($post['slug']))) ?>" readonly style="direction:ltr;font-size:.82rem"></div><button class="btn btn-primary btn-sm" onclick="copyLink()"><i class="bi bi-clipboard ms-1"></i> کپی لینک</button></div>
-<div class="d-flex gap-2 flex-wrap"><a href="https://t.me/share/url?url=<?= urlencode(canonicalUrl('post.php?slug='.urlencode($post['slug']))) ?>&text=<?= urlencode($post['title']) ?>" target="_blank" class="btn btn-sm" style="background:#2ca5e0;color:#fff"><i class="bi bi-telegram ms-1"></i> تلگرام</a><a href="https://wa.me/?text=<?= urlencode($post['title'].' - '.canonicalUrl('post.php?slug='.urlencode($post['slug']))) ?>" target="_blank" class="btn btn-sm" style="background:#25d366;color:#fff"><i class="bi bi-whatsapp ms-1"></i> واتساپ</a></div>
+<div class="d-flex flex-wrap gap-2 align-items-center mb-3"><div class="share-url-box flex-grow-1"><input type="text" id="postUrl" class="form-control form-control-sm" value="<?= htmlspecialchars(canonicalUrl(postUrl($post))) ?>" readonly style="direction:ltr;font-size:.82rem"></div><button class="btn btn-primary btn-sm" onclick="copyLink()"><i class="bi bi-clipboard ms-1"></i> کپی لینک</button></div>
+<div class="d-flex gap-2 flex-wrap"><a href="https://t.me/share/url?url=<?= urlencode(canonicalUrl(postUrl($post))) ?>&text=<?= urlencode($post['title']) ?>" target="_blank" class="btn btn-sm" style="background:#2ca5e0;color:#fff"><i class="bi bi-telegram ms-1"></i> تلگرام</a><a href="https://wa.me/?text=<?= urlencode($post['title'].' - '.canonicalUrl(postUrl($post))) ?>" target="_blank" class="btn btn-sm" style="background:#25d366;color:#fff"><i class="bi bi-whatsapp ms-1"></i> واتساپ</a></div>
 <div id="copyMsg" class="text-success small mt-2" style="display:none"><i class="bi bi-check-circle ms-1"></i> لینک کپی شد!</div>
 </div>
 
@@ -177,10 +181,10 @@ require_once __DIR__.'/../includes/header.php';
 <div class="col-lg-4">
 <div class="sidebar">
 <?php if(!empty($related)): ?>
-<div class="sidebar-widget"><h2 class="sidebar-title"><i class="bi bi-grid ms-2 text-gold"></i> مطالب مرتبط</h2><div class="related-posts"><?php foreach($related as $r): ?><div class="related-item"><?php if($r['featured_image']): ?><img src="<?= imgUrl($r['featured_image']) ?>" alt="<?= sanitize($r['title']) ?>" class="related-thumb" loading="lazy"><?php else: ?><div class="related-thumb-placeholder"><i class="bi bi-file-text"></i></div><?php endif; ?><div class="related-info"><a href="<?= siteUrl('post?slug='.urlencode($r['slug'])) ?>" class="related-title"><?= sanitize(mb_strimwidth($r['title'],0,55,'...')) ?></a><span class="related-date"><?= persianDate($r['published_at'] ?? $r['created_at']) ?></span></div></div><?php endforeach; ?></div></div>
+<div class="sidebar-widget"><h2 class="sidebar-title"><i class="bi bi-grid ms-2 text-gold"></i> مطالب مرتبط</h2><div class="related-posts"><?php foreach($related as $r): ?><div class="related-item"><?php if($r['featured_image']): ?><img src="<?= imgUrl($r['featured_image']) ?>" alt="<?= sanitize($r['title']) ?>" class="related-thumb" loading="lazy"><?php else: ?><div class="related-thumb-placeholder"><i class="bi bi-file-text"></i></div><?php endif; ?><div class="related-info"><a href="<?= postUrl($r) ?>" class="related-title"><?= sanitize(mb_strimwidth($r['title'],0,55,'...')) ?></a><span class="related-date"><?= persianDate($r['published_at'] ?? $r['created_at']) ?></span></div></div><?php endforeach; ?></div></div>
 <?php endif; ?>
-<div class="sidebar-widget"><h2 class="sidebar-title"><i class="bi bi-newspaper ms-2 text-gold"></i> آخرین گزارش‌ها</h2><?php $sideNews=getPosts(['type'=>'report','limit'=>5]); if(empty($sideNews)) $sideNews=getPosts(['type'=>'news','limit'=>5]); ?><ul class="sidebar-list"><?php foreach($sideNews as $sn): ?><li><a href="<?= siteUrl('post?slug='.urlencode($sn['slug'])) ?>"><?= sanitize(mb_strimwidth($sn['title'],0,60,'...')) ?></a><span class="sidebar-date"><?= persianDate($sn['published_at'] ?? $sn['created_at']) ?></span></li><?php endforeach; ?></ul></div>
-<div class="sidebar-widget"><h2 class="sidebar-title"><i class="bi bi-tags ms-2 text-gold"></i> موضوعات</h2><div class="d-flex flex-wrap gap-1"><?php foreach(getTopics(['active'=>1,'limit'=>12]) as $ct): ?><a href="<?= siteUrl('topic?slug='.urlencode($ct['slug'])) ?>" class="badge bg-light text-dark border" style="font-size:.78rem"><?= sanitize($ct['name']) ?></a><?php endforeach; ?></div></div>
+<div class="sidebar-widget"><h2 class="sidebar-title"><i class="bi bi-newspaper ms-2 text-gold"></i> آخرین گزارش‌ها</h2><?php $sideNews=getPosts(['type'=>'report','limit'=>5]); if(empty($sideNews)) $sideNews=getPosts(['type'=>'news','limit'=>5]); ?><ul class="sidebar-list"><?php foreach($sideNews as $sn): ?><li><a href="<?= postUrl($sn) ?>"><?= sanitize(mb_strimwidth($sn['title'],0,60,'...')) ?></a><span class="sidebar-date"><?= persianDate($sn['published_at'] ?? $sn['created_at']) ?></span></li><?php endforeach; ?></ul></div>
+<div class="sidebar-widget"><h2 class="sidebar-title"><i class="bi bi-tags ms-2 text-gold"></i> موضوعات</h2><div class="d-flex flex-wrap gap-1"><?php foreach(getTopics(['active'=>1,'limit'=>12]) as $ct): ?><a href="<?= topicUrl($ct) ?>" class="badge bg-light text-dark border" style="font-size:.78rem"><?= sanitize($ct['name']) ?></a><?php endforeach; ?></div></div>
 </div>
 </div>
 </div></div></div>

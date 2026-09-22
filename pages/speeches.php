@@ -287,7 +287,7 @@ $speechIds    = array_column($speeches, 'id');
                                 </div>
 
                                 <h3 class="speech-card-title">
-                                    <a href="<?= siteUrl('speech?slug=' . urlencode($sp['slug'])) ?>">
+                                    <a href="<?= speechUrl($sp) ?>">
                                         <?= sanitize($sp['title']) ?>
                                     </a>
                                 </h3>
@@ -299,7 +299,7 @@ $speechIds    = array_column($speeches, 'id');
                                 <?php endif; ?>
 
                                 <div class="speech-card-footer">
-                                    <a href="<?= siteUrl('speech?slug=' . urlencode($sp['slug'])) ?>"
+                                    <a href="<?= speechUrl($sp) ?>"
                                        class="btn-read-more">
                                         مشاهده <i class="bi bi-arrow-left"></i>
                                     </a>

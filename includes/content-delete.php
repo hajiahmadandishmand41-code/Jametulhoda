@@ -28,13 +28,16 @@ function processStorageDeletions(): int {
     $db=getDB();$deleted=0;
     // A separate staging journal prevents older deletion workers from seeing
     // in-flight uploads. Promote only expired/completed requests atomically.
-    if (databaseDriver() === 'mysql') {
+    if (databaseDriver() === 'mysql' || databaseDriver() === 'sqlite') {
         // MySQL/MariaDB has no data-modifying CTE: claim each due row by
         // deleting it (rowCount proves the claim), then queue the deletion.
+        // SQLite uses the same portable loop (its NOW() is normalized).
         $due=$db->prepare('SELECT reference FROM pending_uploads WHERE not_before<=NOW() LIMIT 100');
         $due->execute();
         $claim=$db->prepare('DELETE FROM pending_uploads WHERE reference=? AND not_before<=NOW()');
-        $enqueue=$db->prepare('INSERT IGNORE INTO storage_deletions (reference) VALUES (?)');
+        $enqueue=$db->prepare(databaseDriver() === 'sqlite'
+            ? 'INSERT OR IGNORE INTO storage_deletions (reference) VALUES (?)'
+            : 'INSERT IGNORE INTO storage_deletions (reference) VALUES (?)');
         foreach($due->fetchAll(PDO::FETCH_COLUMN) as $reference) {
             $claim->execute([$reference]);
             if($claim->rowCount()>0) $enqueue->execute([$reference]);

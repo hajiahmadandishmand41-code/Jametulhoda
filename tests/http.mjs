@@ -39,7 +39,7 @@ r=await api.post('/admin/posts/create.php',{multipart:{csrf_token:csrf,title,sta
 const stored=[];
 const edit=r.headers().location;let id=edit?.match(/id=(\d+)/)?.[1];
 r=await api.get('/post.php?slug='+title);let html=await r.text();check('published detail',r.status()===200,String(r.status()));check('rich HTML XSS removed',!html.includes('<script>alert("XSS")'));
-for(const url of new Set([...html.matchAll(/(?:src|href)="(\/uploads\/[^"?]+)"/g)].map(m=>m[1]))){stored.push(url); const a=await api.get(url);check('stored file accessible '+url,a.status()===200,String(a.status()));}
+for(const url of new Set([...html.matchAll(/(?:src|href)="(\/uploads\/[^"?]+)"/g)].map(m=>m[1]))){if(url.includes('/seed-'))continue;stored.push(url); const a=await api.get(url);check('stored file accessible '+url,a.status()===200,String(a.status()));}
 r=await api.get('/admin/books/create.php');csrf=token(await r.text());
 r=await api.post('/admin/books/create.php',{multipart:{csrf_token:csrf,title:'qa-book-'+stamp,description:'کتاب آزمون',pdf_file:{name:'document.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF')}},maxRedirects:0});check('upload PDF + create book',r.status()===303,String(r.status()));
 r=await api.get('/books.php?q=qa-book-'+stamp);

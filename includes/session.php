@@ -9,8 +9,16 @@ final class DatabaseSessionHandler implements SessionHandlerInterface, SessionUp
         return true;
     }
     private function connection(): PDO { return $this->db ??= newDatabaseConnection(); }
+    private function nowExpr(): string {
+        return databaseDriver() === 'sqlite' ? "datetime('now')" : 'NOW()';
+    }
+    private function expiryExpr(string $amount, string $unit): string {
+        if (databaseDriver() === 'sqlite') return "datetime('now','+$amount $unit')";
+        if (databaseDriver() === 'mysql') return 'NOW()+INTERVAL ' . $amount . ' ' . strtoupper(rtrim($unit, 's'));
+        return "NOW() + INTERVAL '$amount $unit'";
+    }
     public function validateId(string $id): bool {
-        $s = $this->connection()->prepare('SELECT 1 FROM app_sessions WHERE id=? AND expires_at>NOW()');
+        $s = $this->connection()->prepare('SELECT 1 FROM app_sessions WHERE id=? AND expires_at>' . $this->nowExpr());
         $s->execute([$id]); return (bool)$s->fetchColumn();
     }
     public function read(string $id): string|false {
@@ -20,8 +28,9 @@ final class DatabaseSessionHandler implements SessionHandlerInterface, SessionUp
         // instead of failing with "already an active transaction".
         if (!$db->inTransaction()) $db->beginTransaction();
         // ON CONFLICT DO NOTHING is normalized to INSERT IGNORE on MySQL.
-        $db->prepare("INSERT INTO app_sessions (id,data,expires_at) VALUES (?, '', NOW()) ON CONFLICT DO NOTHING")->execute([$id]);
-        $s = $db->prepare('SELECT data, expires_at>NOW() AS valid FROM app_sessions WHERE id=? FOR UPDATE');
+        $db->prepare("INSERT INTO app_sessions (id,data,expires_at) VALUES (?, '', " . $this->nowExpr() . ') ON CONFLICT DO NOTHING')->execute([$id]);
+        $lock = databaseDriver() === 'sqlite' ? '' : ' FOR UPDATE';
+        $s = $db->prepare('SELECT data, expires_at>' . $this->nowExpr() . ' AS valid FROM app_sessions WHERE id=?' . $lock);
         $s->execute([$id]); $row = $s->fetch();
         return $row && $row['valid'] ? (base64_decode($row['data'], true) ?: '') : '';
     }
@@ -32,7 +41,8 @@ final class DatabaseSessionHandler implements SessionHandlerInterface, SessionUp
             $s = $this->connection()->prepare("INSERT INTO app_sessions (id,data,expires_at) VALUES (?,?,NOW()+INTERVAL 2 HOUR) ON DUPLICATE KEY UPDATE data=VALUES(data), expires_at=VALUES(expires_at)");
             return $s->execute([$id, $payload]);
         }
-        $s = $this->connection()->prepare("INSERT INTO app_sessions (id,data,expires_at) VALUES (?, ?, NOW() + INTERVAL '2 hours') ON CONFLICT (id) DO UPDATE SET data=EXCLUDED.data, expires_at=EXCLUDED.expires_at");
+        $expiry = $this->expiryExpr('2', 'hours');
+        $s = $this->connection()->prepare("INSERT INTO app_sessions (id,data,expires_at) VALUES (?, ?, $expiry) ON CONFLICT (id) DO UPDATE SET data=EXCLUDED.data, expires_at=EXCLUDED.expires_at");
         return $s->execute([$id, $payload]);
     }
     public function destroy(string $id): bool {

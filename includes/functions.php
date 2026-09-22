@@ -51,6 +51,71 @@ function currentUrl(): string {
     return rtrim(SITE_URL, '/') . '/' . ltrim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/', '/');
 }
 
+// ─── Canonical detail URLs ──────────────────────────────────────────────
+// Single source for link generation. Every helper returns a pretty URL that
+// is registered in config/routes.php. Legacy query-style URLs
+// (/post?slug=X, /book?id=N, ...) keep working forever for bookmarks and
+// indexed links, but new links must use these helpers.
+/** Detail URL for a post row (typed: /article/X, /news/X, /research/X, /speech/X, else /post/X). */
+function postUrl(array|string $post, string $fallbackType = 'post'): string {
+    if (is_string($post)) {
+        if ($post === '') return siteUrl('articles');
+        return siteUrl($fallbackType . '/' . rawurlencode($post));
+    }
+    $slug = $post['slug'] ?? '';
+    if ($slug === '') return siteUrl('articles');
+    $prefix = match ($post['post_type'] ?? '') {
+        'article' => 'article', 'news' => 'news', 'research' => 'research',
+        'speech' => 'speech', default => 'post',
+    };
+    return siteUrl($prefix . '/' . rawurlencode($slug));
+}
+/** Detail URL for a speech row (/speech/X). */
+function speechUrl(array|string $speech): string {
+    $slug = is_array($speech) ? ($speech['slug'] ?? '') : $speech;
+    if ($slug === '') return siteUrl('speeches');
+    return siteUrl('speech/' . rawurlencode($slug));
+}
+/** Detail URL for a book row (/book/slug, or /book/id when it has no slug). */
+function bookUrl(array $book): string {
+    $slug = trim($book['slug'] ?? '');
+    if ($slug !== '') return siteUrl('book/' . rawurlencode($slug));
+    return siteUrl('book/' . (int)($book['id'] ?? 0));
+}
+/** Detail URL for a lesson row (/lesson/X). */
+function lessonUrl(array|string $lesson): string {
+    $slug = is_array($lesson) ? ($lesson['slug'] ?? '') : $lesson;
+    if ($slug === '') return siteUrl('lessons');
+    return siteUrl('lesson/' . rawurlencode($slug));
+}
+/** Detail URL for a topic row (/topic/X). */
+function topicUrl(array|string $topic): string {
+    $slug = is_array($topic) ? ($topic['slug'] ?? '') : $topic;
+    if ($slug === '') return siteUrl('topics');
+    return siteUrl('topic/' . rawurlencode($slug));
+}
+/** Detail URL for a category row (/category/X). */
+function categoryUrl(array|string $category): string {
+    $slug = is_array($category) ? ($category['slug'] ?? '') : $category;
+    if ($slug === '') return siteUrl();
+    return siteUrl('category/' . rawurlencode($slug));
+}
+/** URL for a lesson collection, optionally with a volume (/lessons/X[/Y]). */
+function collectionUrl(array|string $collection, array|string|null $volume = null): string {
+    $slug = is_array($collection) ? ($collection['slug'] ?? '') : $collection;
+    if ($slug === '') return siteUrl('lessons');
+    $url = 'lessons/' . rawurlencode($slug);
+    $volumeSlug = $volume === null ? '' : (is_array($volume) ? ($volume['slug'] ?? '') : $volume);
+    if ($volumeSlug !== '') $url .= '/' . rawurlencode($volumeSlug);
+    return siteUrl($url);
+}
+/** Detail URL for a media_files record (/video/{id} or /audio/{id}). */
+function mediaUrl(string $kind, int $id): string {
+    $kind = $kind === 'audio' ? 'audio' : 'video';
+    if ($id < 1) return siteUrl($kind === 'audio' ? 'audios' : 'videos');
+    return siteUrl($kind . '/' . $id);
+}
+
 // ─── Slug ─────────────────────────────────────────────────────────────────────
 
 function makeSlug(string $text): string {

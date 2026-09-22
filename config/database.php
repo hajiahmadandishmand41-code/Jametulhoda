@@ -5,8 +5,11 @@ require_once __DIR__ . '/config.php';
  * Database connection:
  * - PostgreSQL/Neon remains supported through DATABASE_URL.
  * - MySQL/MariaDB is supported for InfinityFree through DB_* settings.
+ * - SQLite (DB_DRIVER=sqlite) is a local development/testing driver only and
+ *   is refused in production. It lets link audits, HTTP tests and UI work run
+ *   without a database server.
  * PostgreSQL-specific query fragments used by the existing application are
- * normalized transparently when the active driver is MySQL.
+ * normalized transparently when the active driver is MySQL or SQLite.
  */
 final class JametulhodaMySqlStatement extends PDOStatement {
     protected function __construct() {}
@@ -178,13 +181,108 @@ class JametulhodaMySqlPDO extends PDO {
     }
 }
 
+/**
+ * SQLite wrapper: normalizes the PostgreSQL-flavoured SQL used across the
+ * application (ILIKE, ANY(string_to_array(...)), NOW() +/- INTERVAL, row
+ * locking) into SQLite equivalents. ON CONFLICT, RETURNING and NULLS
+ * FIRST/LAST are native to SQLite and pass through untouched.
+ */
+class JametulhodaSqlitePDO extends PDO {
+    public static function normalizeSql(string $sql): string {
+        // Case-insensitive match. Persian script has no case, so LIKE is fine.
+        $sql = preg_replace('/\bILIKE\b/i', 'LIKE', $sql) ?? $sql;
+
+        // page_section stores comma-separated sections.
+        $sql = preg_replace(
+            "/\?\s*=\s*ANY\(string_to_array\(REPLACE\(([^,]+),\s*' ',\s*''\),\s*','\)\)/i",
+            "(instr(',' || REPLACE($1, ' ', '') || ',', ',' || ? || ',') > 0)",
+            $sql
+        ) ?? $sql;
+
+        // NOW() +/- INTERVAL 'N units' (PostgreSQL style, incl. contact.php's
+        // subtraction form and the upload journal's 24h form).
+        $sql = preg_replace_callback(
+            "/\bNOW\(\)\s*([+-])\s*INTERVAL\s+'(\d+)\s+(seconds?|minutes?|hours?|days?|weeks?)'?/i",
+            static function (array $m): string {
+                $unit = strtolower(rtrim($m[3], 's')) . 's';
+                return "datetime('now', '" . $m[1] . $m[2] . ' ' . $unit . "')";
+            },
+            $sql
+        ) ?? $sql;
+        // NOW()+INTERVAL N UNIT (MySQL style, kept for completeness).
+        $sql = preg_replace_callback(
+            "/\bNOW\(\)\s*\+\s*INTERVAL\s+(\d+)\s+(SECOND|MINUTE|HOUR|DAY|WEEK)S?/i",
+            static function (array $m): string {
+                return "datetime('now', '+" . $m[1] . ' ' . strtolower($m[2]) . "s')";
+            },
+            $sql
+        ) ?? $sql;
+        $sql = preg_replace('/\bNOW\(\)/i', "datetime('now')", $sql) ?? $sql;
+
+        // SQLite has no SELECT ... FOR UPDATE / SKIP LOCKED.
+        $sql = preg_replace('/\s+FOR\s+UPDATE(\s+SKIP\s+LOCKED)?\b/i', '', $sql) ?? $sql;
+
+        // EXTRACT(YEAR FROM col) — used by the speeches year filter.
+        $sql = preg_replace_callback(
+            "/\bEXTRACT\s*\(\s*YEAR\s+FROM\s+([^)]+)\)/i",
+            static fn(array $m): string => "CAST(strftime('%Y', " . $m[1] . ') AS INTEGER)',
+            $sql
+        ) ?? $sql;
+
+        return $sql;
+    }
+
+    public function prepare(string $query, array $options = []): PDOStatement|false {
+        return parent::prepare(self::normalizeSql($query), $options);
+    }
+
+    public function query(string $query, ?int $fetchMode = null, mixed ...$fetchModeArgs): PDOStatement|false {
+        $query = self::normalizeSql($query);
+        if ($fetchMode === null) return parent::query($query);
+        return parent::query($query, $fetchMode, ...$fetchModeArgs);
+    }
+
+    public function exec(string $statement): int|false {
+        return parent::exec(self::normalizeSql($statement));
+    }
+}
+
 function databaseDriver(): string {
     $configured = strtolower(trim(env_value('DB_DRIVER')));
     if ($configured === 'mysql' || $configured === 'pgsql') return $configured;
+    if ($configured === 'sqlite') {
+        if (APP_ENV === 'production' || env_value('VERCEL') !== '') {
+            throw new RuntimeException('SQLite is for local development/testing only.');
+        }
+        return 'sqlite';
+    }
     return env_value('DATABASE_URL') !== '' ? 'pgsql' : 'mysql';
 }
 
 function newDatabaseConnection(): PDO {
+    if (databaseDriver() === 'sqlite') {
+        $path = trim(env_value('SQLITE_PATH', ''));
+        if ($path === '') {
+            $path = rtrim(sys_get_temp_dir(), '/') . '/jametulhoda-test.sqlite';
+        }
+        // A file database is required: :memory: would isolate each connection
+        // (application vs. journal/session connections) into separate stores.
+        if ($path === ':memory:' || !str_starts_with($path, '/') || str_contains($path, '..')) {
+            throw new RuntimeException('Invalid SQLITE_PATH.');
+        }
+        $dir = dirname($path);
+        if (!is_dir($dir) && !@mkdir($dir, 0777, true)) {
+            throw new RuntimeException('Cannot create SQLite directory.');
+        }
+        $pdo = new JametulhodaSqlitePDO('sqlite:' . $path, null, null, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+            PDO::ATTR_PERSISTENT => false,
+        ]);
+        $pdo->exec('PRAGMA foreign_keys=ON');
+        return $pdo;
+    }
     if (databaseDriver() === 'mysql') {
         $host = env_value('DB_HOST', 'sql304.infinityfree.com');
         $port = (int)env_value('DB_PORT', '3306');

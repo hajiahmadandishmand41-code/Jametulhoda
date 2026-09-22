@@ -6,7 +6,16 @@ function &contentUploadScope(): array {
     static $scope = ['active'=>false, 'completed'=>[]];
     return $scope;
 }
-/** Separate autocommit connection: a content rollback must not erase cleanup intent. */
+/**
+ * Upload-time journal connection. It stays separate (autocommit) so a later
+ * content rollback cannot erase the cleanup intent recorded during upload.
+ * The shutdown-time journal UPDATE below deliberately reuses getDB(): at
+ * request end the app connection may still hold open cursors (e.g. an
+ * INSERT ... RETURNING awaiting close) that keep the database locked, and a
+ * second connection writing then would block on that lock. Uploads always
+ * run before any content write, so the upload-time journal INSERT here is
+ * never contended.
+ */
 function uploadJournalDB(): PDO {
     static $db;
     return $db ??= newDatabaseConnection();
@@ -21,7 +30,11 @@ function beginContentUploadScope(): void {
         try {
             // An unfinished transaction cannot be a successful save at request end.
             if (getDB()->inTransaction()) getDB()->rollBack();
-            $ready = uploadJournalDB()->prepare('UPDATE pending_uploads SET not_before=NOW() WHERE reference=?');
+            // Same-connection journal write (see uploadJournalDB note): a
+            // second connection could block forever on locks held by still-
+            // open request cursors. The rollback above already released any
+            // transaction lock, so this UPDATE commits standalone.
+            $ready = getDB()->prepare('UPDATE pending_uploads SET not_before=NOW() WHERE reference=?');
             foreach ($scope['completed'] as $url) $ready->execute([$url]);
             require_once __DIR__.'/content-delete.php';
             processStorageDeletions();

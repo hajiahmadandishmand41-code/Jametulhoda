@@ -69,7 +69,7 @@ $breadcrumbsJsonLd = json_encode([
 <?php if($topic): ?>
 <div class="mb-4 p-3 rounded-4" style="background:#fafaf7;border:1px solid #e8e6dc">
 <strong><?= sanitize($topic['name']) ?></strong> <?php if($topic['description']): ?><span class="text-muted small"> — <?= sanitize(mb_strimwidth($topic['description'],0,160,'…')) ?></span><?php endif; ?>
-<div class="mt-2"><a href="<?= siteUrl('topic?slug='.urlencode($topic['slug'])) ?>" class="btn btn-sm btn-outline-primary">صفحه موضوع <i class="bi bi-arrow-left ms-1"></i></a></div>
+<div class="mt-2"><a href="<?= topicUrl($topic) ?>" class="btn btn-sm btn-outline-primary">صفحه موضوع <i class="bi bi-arrow-left ms-1"></i></a></div>
 </div>
 <?php endif; ?>
 
@@ -83,7 +83,7 @@ $breadcrumbsJsonLd = json_encode([
 <div class="row g-4">
 <?php foreach($books as $b):
   $bookSlug = $b['slug'] ?: $b['id'];
-  $bookUrl = $b['slug'] ? siteUrl('book?slug='.urlencode($b['slug'])) : siteUrl('book?id='.$b['id']);
+  $bookUrl = bookUrl($b);
   $cover = $b['cover_image'] ?? '';
 ?>
 <div class="col-6 col-md-4 col-lg-3">

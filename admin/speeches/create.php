@@ -63,6 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $admin['id'], $status
                     ]);
                     $newId = (int)$stmt->fetchColumn();
+                    $stmt->closeCursor(); // release the write lock promptly (shutdown journal writes must never block)
 
                     // آپلود فایل صوتی — الزامی
                     if (!empty($_FILES['audio_file']['name']) && $_FILES['audio_file']['error'] === UPLOAD_ERR_OK) {

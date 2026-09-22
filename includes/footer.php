@@ -64,7 +64,7 @@ $siteEmail     = getSetting('email', SITE_EMAIL);
                         <ul class="footer-posts">
                             <?php foreach ($recentPosts as $rp): ?>
                             <li>
-                                <a href="<?= siteUrl('post?slug=' . urlencode($rp['slug'])) ?>">
+                                <a href="<?= postUrl($rp) ?>">
                                     <span class="footer-post-title"><?= sanitize($rp['title']) ?></span>
                                     <span class="footer-post-date"><i class="bi bi-calendar3 ms-1"></i><?= persianDate($rp['published_at'] ?? $rp['created_at']) ?></span>
                                 </a>

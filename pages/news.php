@@ -103,13 +103,13 @@ if (!empty($postIds)) {
                             
                         </div>
                         <h3 class="news-card-title">
-                            <a href="<?= siteUrl('post?slug=' . urlencode($news['slug'])) ?>"><?= sanitize($news['title']) ?></a>
+                            <a href="<?= postUrl($news) ?>"><?= sanitize($news['title']) ?></a>
                         </h3>
                         <?php if ($news['summary']): ?>
                         <p class="news-card-summary"><?= sanitize(excerpt($news['summary'], 130)) ?></p>
                         <?php endif; ?>
                         <div class="news-card-footer">
-                            <a href="<?= siteUrl('post?slug=' . urlencode($news['slug'])) ?>" class="btn-read-more">
+                            <a href="<?= postUrl($news) ?>" class="btn-read-more">
                                 ادامه مطلب <i class="bi bi-arrow-left"></i>
                             </a>
                             <div class="d-flex gap-2 align-items-center">
@@ -117,7 +117,7 @@ if (!empty($postIds)) {
                                 
                                 <!-- کپی لینک -->
                                 <button class="btn-copy-link" title="کپی لینک خبر"
-                                    onclick="navigator.clipboard.writeText('<?= siteUrl('post?slug=' . urlencode($news['slug'])) ?>').then(function(){this.innerHTML='<i class=\'bi bi-check-circle text-success\'></i>';}.bind(this))">
+                                    onclick="navigator.clipboard.writeText('<?= postUrl($news) ?>').then(function(){this.innerHTML='<i class=\'bi bi-check-circle text-success\'></i>';}.bind(this))">
                                     <i class="bi bi-link-45deg"></i>
                                 </button>
                             </div>

@@ -173,7 +173,7 @@ $withAudio  = (int)$db->query("SELECT COUNT(*) FROM lessons WHERE audio_file IS 
             <td>
               <div class="d-flex gap-1">
                 <a href="<?= siteUrl('admin/lessons/edit?id=' . $l['id']) ?>" class="btn btn-sm btn-outline-primary py-0 px-2" title="ویرایش"><i class="bi bi-pencil"></i></a>
-                <a href="<?= siteUrl('lesson?slug=' . urlencode($l['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2" title="مشاهده"><i class="bi bi-eye"></i></a>
+                <a href="<?= lessonUrl($l) ?>" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2" title="مشاهده"><i class="bi bi-eye"></i></a>
                 <a href="<?= siteUrl('admin/lessons/delete?id=' . $l['id']) ?>"
                    class="btn btn-sm btn-outline-danger py-0 px-2"
                    title="حذف"

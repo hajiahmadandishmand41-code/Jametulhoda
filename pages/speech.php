@@ -41,6 +41,7 @@ $next->execute([$post['published_at']]);
 $nextRow = $next->fetch();
 
 $pageTitle = $post['title'];
+$canonicalOverride = speechUrl($post);
 require_once __DIR__ . '/../includes/header.php';
 ?>
 <div class="breadcrumb-bar"><div class="container"><nav><ol class="breadcrumb mb-0">
@@ -174,12 +175,12 @@ require_once __DIR__ . '/../includes/header.php';
                 <!-- Prev / Next Navigation between speeches -->
                 <div class="post-nav mt-5 d-flex justify-content-between gap-2 flex-wrap">
                     <?php if ($prevRow): ?>
-                    <a href="<?= siteUrl('speech?slug=' . urlencode($prevRow['slug'])) ?>" class="btn btn-outline-secondary">
+                    <a href="<?= speechUrl($prevRow) ?>" class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-right ms-1"></i> سخنرانی قبلی: <?= sanitize(mb_strimwidth($prevRow['title'],0,30,'...')) ?>
                     </a>
                     <?php else: ?><span></span><?php endif; ?>
                     <?php if ($nextRow): ?>
-                    <a href="<?= siteUrl('speech?slug=' . urlencode($nextRow['slug'])) ?>" class="btn btn-outline-secondary">
+                    <a href="<?= speechUrl($nextRow) ?>" class="btn btn-outline-secondary">
                         سخنرانی بعدی: <?= sanitize(mb_strimwidth($nextRow['title'],0,30,'...')) ?> <i class="bi bi-arrow-left ms-1"></i>
                     </a>
                     <?php endif; ?>
@@ -194,7 +195,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <ul class="sidebar-list">
                         <?php foreach ($otherSpeeches as $os): ?>
                         <li>
-                            <a href="<?= siteUrl('speech?slug=' . urlencode($os['slug'])) ?>"><?= sanitize(mb_strimwidth($os['title'],0,55,'...')) ?></a>
+                            <a href="<?= speechUrl($os) ?>"><?= sanitize(mb_strimwidth($os['title'],0,55,'...')) ?></a>
                             <span class="sidebar-date"><i class="bi bi-calendar3 ms-1"></i><?= persianDate($os['published_at']) ?></span>
                         </li>
                         <?php endforeach; ?>

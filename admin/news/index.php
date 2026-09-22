@@ -104,7 +104,7 @@ $urlBase = '?status=' . urlencode($status) . '&q=' . urlencode($search) . '&page
                         <td>
                             <div class="d-flex gap-1">
                                 <a href="<?= siteUrl('admin/news/edit?id=' . $p['id']) ?>" class="btn btn-sm btn-outline-primary py-0 px-2" title="ویرایش"><i class="bi bi-pencil"></i></a>
-                                <a href="<?= siteUrl('post?slug=' . urlencode($p['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2" title="مشاهده"><i class="bi bi-eye"></i></a>
+                                <a href="<?= postUrl($p) ?>" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2" title="مشاهده"><i class="bi bi-eye"></i></a>
                                 <a href="<?= siteUrl('admin/news/delete?id=' . $p['id']) ?>"
                                    class="btn btn-sm btn-outline-danger py-0 px-2"
                                    title="حذف"

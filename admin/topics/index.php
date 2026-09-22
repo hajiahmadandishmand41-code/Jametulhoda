@@ -163,7 +163,7 @@ function renderRows($nodes,$depth=0){
         echo '<td><span class="badge bg-light text-dark border">'.$cnt.'</span></td>';
         echo '<td><div class="d-flex gap-1">';
         echo '<a href="'.siteUrl('admin/topics/?edit='. $n['id']).'" class="btn btn-sm btn-outline-primary py-0 px-2"><i class="bi bi-pencil"></i></a>';
-        echo '<a href="'.siteUrl('topic?slug='.urlencode($n['slug'])).'" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2"><i class="bi bi-eye"></i></a>';
+        echo '<a href="'.topicUrl($n).'" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2"><i class="bi bi-eye"></i></a>';
         echo '<form method="post" style="display:inline" onsubmit="return confirm(\'حذف موضوع؟\')"><input type="hidden" name="delete" value="'.$n['id'].'">'.csrfField().'<button class="btn btn-sm btn-outline-danger py-0 px-2"><i class="bi bi-trash"></i></button></form>';
         echo '</div></td>';
         echo '</tr>';
