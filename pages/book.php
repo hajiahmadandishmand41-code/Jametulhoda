@@ -63,16 +63,7 @@ $bookJsonLd = json_encode([
 ], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
 
 $topics = getTopicsForBook((int)$book['id']);
-$related = [];
-if($topics){
-    try{
-        $ids=array_column($topics,'id');
-        $in=implode(',', array_fill(0,count($ids),'?'));
-        $stmt=getDB()->prepare("SELECT b.* FROM books b JOIN book_topics bt ON bt.book_id=b.id WHERE bt.topic_id IN ($in) AND b.id<>? AND b.status='published' GROUP BY b.id ORDER BY b.created_at DESC LIMIT 6");
-        $stmt->execute(array_merge($ids,[(int)$book['id']]));
-        $related=$stmt->fetchAll();
-    }catch(PDOException $e){ $related=[]; }
-}
+$related = getRelatedBooks((int)$book['id'], 6);
 require __DIR__.'/../includes/header.php';
 ?>
 <script type="application/ld+json"><?= $breadcrumbsJsonLd ?></script>

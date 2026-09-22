@@ -690,6 +690,19 @@ function getBookBySlug(string $slug): ?array {
     if($slug==='') return null;
     try{ $stmt=getDB()->prepare("SELECT * FROM books WHERE slug=? LIMIT 1"); $stmt->execute([$slug]); $row=$stmt->fetch(); return $row?:null; }catch(PDOException $e){ return null; }
 }
+/** Published books sharing any topic with the given book (newest first). */
+function getRelatedBooks(int $bookId, int $limit=6): array {
+    if($bookId<1 || $limit<1) return [];
+    try{
+        $topics=getTopicsForBook($bookId);
+        if(!$topics) return [];
+        $ids=array_column($topics,'id');
+        $in=implode(',', array_fill(0,count($ids),'?'));
+        $stmt=getDB()->prepare("SELECT b.* FROM books b JOIN book_topics bt ON bt.book_id=b.id WHERE bt.topic_id IN ($in) AND b.id<>? AND b.status='published' GROUP BY b.id ORDER BY b.created_at DESC LIMIT $limit");
+        $stmt->execute(array_merge($ids,[$bookId]));
+        return $stmt->fetchAll();
+    }catch(PDOException $e){ return []; }
+}
 function uploadBookFile(array $file, string $type = 'pdf'): string {
     return uploadFile($file, $type === 'pdf' ? 'pdf' : 'word', UPLOAD_DOCUMENTS);
 }
