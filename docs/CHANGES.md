@@ -220,8 +220,8 @@
 | `storage/logs/`, `storage/cache/` | ایجاد شدند؛ در production خطاها در `storage/logs/php-error.log` ثبت می‌شوند (در development همان stderr تا CI هشدارها را ببیند). |
 | `config/routes.php` | بازنویسی به‌عنوان تنها مرجع مسیرها: `routes` + `aliases` + `patterns`؛ افزودن `/videos`، `/audios`، `/admin/users/`، `/lessons/{collection}/{volume}`، `/book/{slug}`، `/search/{q}`. |
 | `router.php` | گسترش خودکار هر نشانی به `/x`، `/x/`، `/x.php` و `/x/index.php`؛ سرو static با alias تصویر؛ تنظیم `JHD_ROUTE_PATH`؛ توابع جدا برای ۴۰۴ و سرو فایل. |
-| `.htaccess` | سرو مستقیم فایل‌های واقعی `assets/` و `uploads/` توسط Apache (بدون مصرف PHP)، مسدودسازی فایل‌های `sql/lock/log/ini/md/json/yml/…`، `DirectoryIndex`. |
-| `.htaccess`های جدید | `config/`, `includes/`, `pages/`, `content/`, `database/`, `database/migrations/`, `storage/`, `storage/logs/`, `storage/cache/`, `bin/`, `php/`, `tests/`, `docs/`, `admin/`, `admin/includes/`, `admin/*/`, `uploads/*/` → `Require all denied` (با fallback برای Apache 2.2). |
+| `.htaccess` | سرو مستقیم فایل‌های واقعی `assets/` و `uploads/` توسط Apache (بدون مصرف PHP) و ارجاع بقیهٔ درخواست‌ها به `router.php`؛ هیچ `Require all denied`‌ای ندارد (Apache آن را پیش از mod_rewrite اجرا می‌کند و ۴۰۳ به‌جای ۴۰۴ می‌داد). |
+| `.htaccess`های جدید | پوشه‌های داخلی (`config/`, `includes/`, `pages/`, `content/`, `database/`, `database/migrations/`, `storage/`, `storage/logs/`, `storage/cache/`, `bin/`, `php/`, `tests/`, `docs/`, `admin/`, `admin/includes/`, `admin/*/`) → `Options -Indexes`؛ `uploads/` و `uploads/*/` → `Options -Indexes -ExecCGI` + `RemoveHandler`/`RemoveType` برای اسکریپت‌ها. پاسخ همهٔ مسیرهای غیرمجاز از طرف `router.php` با ۴۰۴ داده می‌شود. |
 | `config/config.php` | `BASE_DIR`/`STORAGE_DIR`، `DEFAULT_ADMIN_USERNAME`/`DEFAULT_ADMIN_PASSWORD`، مسیر error_log در production، پوشه‌های آپلود صوت/ویدیو. |
 | `config/local.example.php` | **جدید** — الگوی فایل تنظیمات خصوصی برای نصب دستی. |
 | `php/install.php` | مسیر schema به `database/`؛ اگر حساب مدیر وجود داشته باشد رمز آن با `password_hash()` بازنشانی و `auth_version` افزایش می‌یابد؛ فیلد رمز خالی = رمز پیش‌فرض مستند؛ لینک‌های تمیز. |

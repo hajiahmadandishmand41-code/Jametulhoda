@@ -1,10 +1,4 @@
-# Internal directory — no direct web access.
-# These files are included by PHP (router.php / controllers) only.
+# The installer is reached through router.php as /php/install (a public route).
+# Direct file access is answered by router.php too, so no access control here:
+# a `Require all denied` would run before mod_rewrite and break the installer.
 Options -Indexes
-<IfModule mod_authz_core.c>
-    Require all denied
-</IfModule>
-<IfModule !mod_authz_core.c>
-    Order allow,deny
-    Deny from all
-</IfModule>

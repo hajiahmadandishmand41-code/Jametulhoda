@@ -79,14 +79,23 @@ PHP Warning/Fatal در لاگ سرور. جریان «سایت هنوز نصب ن
 
 ## ۵. محافظت از فایل‌های حساس
 
-* `config/local.php` و `config/install.lock`: در `.gitignore`، خارج از allowlist مسیرها
-  (→ ۴۰۴) و `config/.htaccess` با `Require all denied` (+ fallback برای Apache 2.2).
+* مرز اصلی امنیت، **allowlist خود `router.php`** است: `.htaccess` ریشه هر درخواستی را که فایل
+  واقعیِ `assets/` یا `uploads/` نباشد به `router.php` می‌فرستد و router هرچه در جدول مسیرها
+  نباشد را با **۴۰۴ یکسان** پاسخ می‌دهد (بدون افشای وجود فایل).
   آزمون شد: `/config/local.php`، `/config/install.lock`، `/config/config.php`،
-  `/config/routes.php`، `/config/local.example.php` → **۴۰۴**.
-* همین محافظت برای `includes/`, `pages/`, `content/`, `database/`, `storage/`, `bin/`, `php/`,
-  `tests/`, `docs/`, `admin/includes/` و فایل‌های `*.sql|lock|log|ini|md|json|yml|env` در ریشه.
-* `uploads/`: اجرای اسکریپت ممنوع (`Options -Indexes -ExecCGI` + FilesMatch)، و router فقط
-  پسوندهای مجاز را سرو می‌کند. آزمون شد: `/uploads/test.php`، `/uploads/images/test.php`،
+  `/config/routes.php`، `/config/local.example.php`، `/database/database.mysql.sql`، `/.env`،
+  `/includes/auth.php`، `/pages/about.php`، `/bin/migrate.php`، `/storage/logs/.gitkeep` → **۴۰۴**.
+* `config/local.php` و `config/install.lock` علاوه بر این در `.gitignore` هستند و هرگز commit
+  نمی‌شوند؛ رمزها فقط با `password_hash()` ذخیره می‌شوند.
+* `.htaccess` پوشه‌های داخلی (`config/ includes/ pages/ content/ database/ storage/ bin/ php/
+  tests/ docs/ admin/ admin/*/`) فقط `Options -Indexes` دارد. عمداً `Require all denied`
+  گذاشته **نشده**: Apache این دستور را در فاز authorization، یعنی **پیش از** mod_rewrite
+  اجرا می‌کند، پس هر درخواستی ۴۰۳ می‌شد (به‌جای ۴۰۴) و `/php/install` هم از کار می‌افتاد.
+  این مشکل در CI (کانتینر Apache) دیده و برطرف شد؛ اکنون در Apache هم پاسخ‌ها ۴۰۴ یکسان است.
+* `uploads/`: `Options -Indexes -ExecCGI` به‌همراه `RemoveHandler`/`RemoveType` برای
+  `php/phtml/phar/cgi/pl/py` → حتی اگر فایل اسکریپتی آنجا قرار بگیرد **اجرا نمی‌شود**
+  (به‌جای ۴۰۳، ۴۰۴/متن ساده) و router هم فقط پسوندهای مجاز رسانه/سند را سرو می‌کند.
+  آزمون شد: `/uploads/test.php`، `/uploads/images/test.php`،
   `/uploads/audios/../../config/local.php` → **۴۰۴**.
 
 ## ۶. خطاهایی که هنگام بازسازی پیدا و رفع شد
@@ -99,6 +108,8 @@ PHP Warning/Fatal در لاگ سرور. جریان «سایت هنوز نصب ن
 | دو صفحهٔ موازی پیام‌ها | `admin/messages.php` و `admin/messages/index.php` | یکی‌سازی؛ نشانی قدیمی redirect است و قابلیت «علامت همه» حفظ شد |
 | نشت مسیر داخلی در canonical | `SCRIPT_NAME` پس از انتقال به `pages/` مقدار `pages/about.php` می‌گرفت | افزودن `JHD_ROUTE_PATH` و استفاده از آن در canonical |
 | نبود `/videos` و `/audios` | فقط `videos.php`/`audios.php` در allowlist بود | افزودن نشانی‌های تمیز با `kind` پیش‌فرض (بدون حذف مقدار صریح query) |
+| ۴۰۳ به‌جای ۴۰۴ در Apache و بسته‌شدن `/php/install` (فقط روی Apache؛ CI پیدایش کرد) | `Require all denied` در `.htaccess` پوشه‌ها در فاز authorization و **پیش از** mod_rewrite ارزیابی می‌شود | حذف آن دستورها؛ ارجاع همهٔ درخواست‌ها به `router.php` (۴۰۴ یکسان) + `RemoveHandler` برای اسکریپت‌ها در `uploads/` |
+| انتظار نادرست آزمون برای `/speech` و `/book` بدون شناسه | صفحهٔ جزئیات بدون slug/id به‌درستی ۴۰۴ می‌دهد، ولی آزمون ۲۰۰/۳۰۲ می‌خواست | در `tests/http.mjs` این چهار مسیرِ برهنه جداگانه بررسی می‌شوند: باید ۲۰۰/۳۰۲/۴۰۴ باشند، بدون خطای PHP و بدون 5xx |
 
 ## ۷. خطاها و محدودیت‌های باقی‌مانده (صادقانه)
 
@@ -116,10 +127,17 @@ PHP Warning/Fatal در لاگ سرور. جریان «سایت هنوز نصب ن
    (۱۰ بررسی: journal، rollback، grace period، حذف فایل همراه با محتوا).
    تست‌های multipart واقعی در CI (`tests/http.mjs` با Playwright) اجرا می‌شوند.
 3. **`tests/browser.mjs` اجرا نشد** (نیاز به دانلود Chromium؛ در این محیط مسدود). در CI اجرا می‌شود.
-4. **رفتار واقعی `.htaccess` روی Apache آزمون نشد** (سرور Apache در دسترس نبود). همهٔ
-   دستورهای استفاده‌شده استاندارد و با `<IfModule>` محافظت‌شده‌اند (`mod_rewrite`،
-   `mod_authz_core` با fallback `Order/Deny` برای Apache 2.2، `mod_headers`) و flag `[END]`
-   که از قبل در پروژه بود حفظ شد.
+4. **Apache در sandbox نبود، ولی CI آن را پوشش داد.** مرحلهٔ «Container runtime» در CI
+   همین پروژه را داخل `php:8.3-apache` (با `AllowOverride All`) روی پورت دلخواه اجرا می‌کند و
+   `tests/http.mjs` و `tests/browser.mjs` را مقابل آن می‌زند. اولین اجرای CI بعد از بازسازی
+   یک **رگرسیون Apache-only** را نشان داد: `Require all denied` در `.htaccess` پوشه‌ها پیش از
+   mod_rewrite ارزیابی می‌شود، پس مسیرهای محافظت‌شده ۴۰۳ می‌شدند (به‌جای ۴۰۴) و
+   `/php/install` کاملاً بسته می‌شد. برطرف شد: آن دستورها حذف شدند و allowlist خود
+   `router.php` مرز امنیتی است (۴۰۴ یکسان در php -S و Apache)، و در `uploads/` اجرای
+   اسکریپت با `RemoveHandler`/`RemoveType` بسته شد.
+   نکتهٔ باقی‌مانده: درخواست مستقیم خودِ فایل‌های `.htaccess` در Apache با **۴۰۳** پاسخ
+   می‌گیرد (قاعدهٔ داخلی هستهٔ Apache در `apache2.conf`) و در سرور محلی/php -S با ۴۰۴؛
+   در هر دو حالت قابل دانلود نیستند.
 5. **`/admin/topics/create` و `/admin/topics/edit` ریدایرکت (۳۰۲) به `/admin/topics/` هستند** —
    ایجاد/ویرایش موضوع به‌صورت inline در همان صفحه است (طرح قبلی، بدون تغییر نگه داشته شد).
 6. **`storage/cache/` ساخته شد ولی هنوز مصرف‌کننده ندارد** (لایهٔ cache در پروژه پیاده نشده)؛

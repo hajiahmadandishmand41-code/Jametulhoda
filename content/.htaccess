@@ -1,10 +1,4 @@
-# Internal directory — no direct web access.
-# These files are included by PHP (router.php / controllers) only.
+# Internal directory — the files here are loaded by PHP (router.php/controllers) only.
+# Every direct HTTP request is forwarded to router.php by the document-root .htaccess
+# and answered with a 404; directory listing is disabled as an extra safeguard.
 Options -Indexes
-<IfModule mod_authz_core.c>
-    Require all denied
-</IfModule>
-<IfModule !mod_authz_core.c>
-    Order allow,deny
-    Deny from all
-</IfModule>

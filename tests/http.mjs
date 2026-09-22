@@ -16,10 +16,15 @@ const publicPaths=['/','/index.php',
  '/search','/search?q=test','/search.php?q=test','/category?slug=fiqh-osul','/category.php?slug=fiqh-osul',
  '/topics','/topics.php','/topic','/reports','/reports.php','/research','/research.php','/qa','/qa.php',
  '/media-library','/media-library.php','/audio','/audios','/video','/videos','/files','/library',
- '/post','/lesson','/speech','/book','/sitemap.xml','/sitemap.php','/robots.txt','/robots.php',
+ '/sitemap.xml','/sitemap.php','/robots.txt','/robots.php',
  '/assets/css/style.css','/assets/img/logo.jpg','/assets/images/logo.jpg','/assets/img/placeholder.svg',
  '/php/install','/php/install.php','/php/install/'];
 for(const path of publicPaths){const r=await api.get(path);check('GET '+path,r.status()===200||r.status()===302,String(r.status()));}
+// Bare detail routes carry no slug/id: they either redirect to their listing
+// (/post, /lesson, /topic) or render the 404 detail page (/speech, /book).
+// What matters is that they fail gracefully — never a PHP warning or a 5xx.
+const bareDetail=['/post','/post.php','/lesson','/lesson.php','/speech','/speech.php','/book','/book.php','/category','/topic.php'];
+for(const path of bareDetail){const r=await api.get(path,{maxRedirects:0});const body=r.status()===200?await r.text():'';check('detail without id '+path,[200,302,404].includes(r.status())&&r.status()<500&&!/(Warning|Fatal error|Parse error|Deprecated):/.test(body),String(r.status()));}
 for(const path of ['/missing-page','/.env','/.git/config','/config/database.php','/config/local.php','/config/install.lock','/config/local.example.php','/database.sql','/database/database.mysql.sql','/database/database.postgres.sql','/install.php','/includes/auth.php','/includes/functions.php','/pages/about.php','/content/home-intro.php','/admin/includes/header.php','/storage/logs/.gitkeep','/bin/migrate.php','/uploads/test.php','/uploads/images/test.php']){const r=await api.get(path);check('protected '+path,r.status()===404,String(r.status()));}
 let r=await api.get('/admin/',{maxRedirects:0});check('admin requires login',r.status()===302);
 r=await api.get('/admin/login.php');let csrf=token(await r.text());

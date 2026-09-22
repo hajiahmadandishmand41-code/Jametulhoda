@@ -62,6 +62,12 @@ jobs:
           npm run test:browser 2>&1 | tee /tmp/browser-tests.log
           node tests/links.mjs 2>&1 | tee /tmp/link-tests.log
           if grep -Ei "PHP (Warning|Fatal|Parse)|Application failure|Upload failed" test-server.log; then exit 1; fi
+          # `tee` swallows the suite exit codes, so a FAIL line has to be caught here too
+          # (the container step below already does the same for Apache).
+          if grep -q "FAIL" /tmp/http-tests.log; then
+            echo "::error title=HTTP FAIL::$(grep FAIL /tmp/http-tests.log | head -n 20 | tr '\n' ' ' | cut -c1-800)"
+            exit 1
+          fi
       - name: Failure diagnostics
         if: failure()
         run: |

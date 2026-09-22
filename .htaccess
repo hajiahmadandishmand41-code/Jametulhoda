@@ -1,43 +1,19 @@
 # Jametulhoda — Apache configuration (InfinityFree / cPanel / Docker)
-# Every request goes through router.php; only real files inside assets/ and
-# uploads/ are served by Apache directly (no PHP process needed).
+# router.php owns the route table: every request that is not a real file inside
+# assets/ or uploads/ is handed to it, and it answers a uniform 404 for anything
+# that is not a public route (including config/, includes/, pages/, bin/, tests/,
+# database/, storage/ and repository files such as *.sql or .env).
 Options -Indexes
-DirectoryIndex index.php
 
-<IfModule mod_rewrite.c>
-    RewriteEngine On
+RewriteEngine On
 
-    # Static files that exist on disk are served as-is.
-    RewriteCond %{REQUEST_URI} /(assets|uploads)/ [NC]
-    RewriteCond %{REQUEST_FILENAME} -f
-    RewriteRule ^ - [L]
+# Real static files are served by Apache directly (no PHP process needed).
+RewriteCond %{REQUEST_URI} /(assets|uploads)/ [NC]
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
 
-    RewriteRule ^router\.php$ - [L]
-    RewriteRule ^ router.php [END,QSA]
-</IfModule>
-
-# Defence in depth: even if rewriting is unavailable, repository, configuration
-# and runtime files are never served. config/local.php and config/install.lock
-# are additionally blocked by config/.htaccess.
-<FilesMatch "(?i)\.(sql|lock|log|ini|md|json|ya?ml|dist|sh|bak|swp|env)$">
-    <IfModule mod_authz_core.c>
-        Require all denied
-    </IfModule>
-    <IfModule !mod_authz_core.c>
-        Order allow,deny
-        Deny from all
-    </IfModule>
-</FilesMatch>
-
-<FilesMatch "(?i)^(\.htaccess|\.htpasswd|\.gitignore|\.gitattributes|\.dockerignore|\.env|composer\.lock|package-lock\.json)$">
-    <IfModule mod_authz_core.c>
-        Require all denied
-    </IfModule>
-    <IfModule !mod_authz_core.c>
-        Order allow,deny
-        Deny from all
-    </IfModule>
-</FilesMatch>
+RewriteRule ^router\.php$ - [L]
+RewriteRule ^ router.php [END,QSA]
 
 <IfModule mod_headers.c>
     Header always set X-Content-Type-Options "nosniff"
