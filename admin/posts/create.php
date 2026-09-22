@@ -108,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $_SESSION['flash_msg']  = 'مطلب با موفقیت ذخیره شد.';
                 $_SESSION['flash_type'] = 'success';
-                redirect(siteUrl('admin/posts/edit.php?id=' . $postId));
+                redirect(siteUrl('admin/posts/edit?id=' . $postId));
             }
         }
     }

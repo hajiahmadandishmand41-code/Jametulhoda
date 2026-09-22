@@ -1,4 +1,20 @@
+# Jametulhoda — Apache configuration (InfinityFree / cPanel / Docker)
+# router.php owns the route table: every request that is not a real file inside
+# assets/ or uploads/ is handed to it, and it answers a uniform 404 for anything
+# that is not a public route (including config/, includes/, pages/, bin/, tests/,
+# database/, storage/ and repository files such as *.sql or .env).
 Options -Indexes
+
 RewriteEngine On
+
+# Real static files are served by Apache directly (no PHP process needed).
+RewriteCond %{REQUEST_URI} /(assets|uploads)/ [NC]
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
 RewriteRule ^router\.php$ - [L]
 RewriteRule ^ router.php [END,QSA]
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+</IfModule>

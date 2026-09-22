@@ -22,6 +22,17 @@ if (isset($_POST['read']) && is_numeric($_POST['read'])) {
     exit;
 }
 
+// علامت‌گذاری همه پیام‌ها به‌عنوان خوانده‌شده
+// (این قابلیت از admin/messages.php که حذف تکراری شد، به اینجا منتقل شده است.)
+if (isset($_POST['mark_all_read'])) {
+    requirePostCsrf();
+    $db->exec("UPDATE contact_messages SET is_read=1 WHERE is_read=0");
+    $_SESSION['flash_msg']  = 'همه پیام‌ها خوانده علامت خوردند.';
+    $_SESSION['flash_type'] = 'success';
+    header('Location: ' . siteUrl('admin/messages'));
+    exit;
+}
+
 // حذف پیام
 if (isset($_POST['delete']) && is_numeric($_POST['delete'])) {
     if (verifyCsrfToken($_POST[CSRF_TOKEN_NAME] ?? '')) {
@@ -62,6 +73,14 @@ $newCount = (int)$db->query("SELECT COUNT(*) FROM contact_messages WHERE is_read
         <span class="badge bg-danger ms-2"><?= $newCount ?> جدید</span>
         <?php endif; ?>
     </h5>
+    <?php if ($newCount > 0): ?>
+    <form method="post" action="<?= sanitize(siteUrl('admin/messages')) ?>" class="mb-0">
+        <?= csrfField() ?>
+        <button type="submit" name="mark_all_read" value="1" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-check2-all ms-1"></i>همه را خوانده علامت بزن
+        </button>
+    </form>
+    <?php endif; ?>
 </div>
 
 <?php if (!empty($_SESSION['flash_msg'])): ?>

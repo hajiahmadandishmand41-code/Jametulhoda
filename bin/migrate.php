@@ -58,6 +58,6 @@ function applyDatabaseSchema(PDO $db, string $schemaPath): int {
 
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 $driver = databaseDriver();
-$schemaPath = $driver === 'mysql' ? __DIR__ . '/../database.mysql.sql' : __DIR__ . '/../database.sql';
+$schemaPath = __DIR__ . '/../database/' . ($driver === 'mysql' ? 'database.mysql.sql' : 'database.postgres.sql');
 $applied = applyDatabaseSchema(getDB(), $schemaPath);
 echo ($driver === 'mysql' ? 'MySQL' : 'PostgreSQL') . " schema applied: {$applied} statement(s). Existing content is not deleted.\n";

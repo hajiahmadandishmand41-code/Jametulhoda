@@ -1,8 +1,17 @@
 <?php
-/** Shared front controller for Apache containers and local PHP development. */
+/**
+ * router.php — تنها درگاه ورودی درخواست‌ها (front controller)
+ *
+ * `.htaccess` همه درخواست‌ها را اینجا می‌فرستد. این فایل سه کار می‌کند:
+ *   ۱) سرو کردن مستقیم فایل‌های استاتیک `assets/` و `uploads/`
+ *   ۲) resolving مسیرها فقط از روی `config/routes.php`
+ *   ۳) ۴۰۴ برای هر چیز دیگر (هیچ فایل PHP دیگری از بیرون قابل اجرا نیست)
+ */
 require_once __DIR__ . '/config/config.php';
+
 if (env_value('VERCEL') && (int)($_SERVER['CONTENT_LENGTH'] ?? 0)>4*1024*1024) { http_response_code(413); exit('حجم درخواست بیش از حد مجاز است.'); }
 foreach ($_GET as $value) { if (!is_string($value)) { http_response_code(400); exit('Invalid query parameter'); } }
+
 $path = rawurldecode(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/');
 if (BASE_PATH) {
     if ($path === BASE_PATH) $path='/';
@@ -10,52 +19,116 @@ if (BASE_PATH) {
     else { http_response_code(404); exit; }
 }
 if (str_contains($path, '..') || str_contains($path, "\0") || str_contains($path, '\\')) { http_response_code(404); exit; }
-if (preg_match('~^/assets/[a-zA-Z0-9_./-]+\.(css|js|svg|png|jpe?g|webp|gif|woff2?)$~D', $path) ||
-    (UPLOAD_STORAGE === 'local' && preg_match('~^/uploads/(?:[a-zA-Z0-9_-]+/)+[a-zA-Z0-9_.-]+\.(jpg|jpeg|png|gif|webp|mp3|ogg|wav|m4a|mp4|webm|mov|mkv|pdf|doc|docx)$~D', $path))) {
-    $file = str_starts_with($path, '/uploads/') ? UPLOAD_DIR . substr($path,9) : __DIR__ . $path;
-    if (is_file($file) && !is_link($file)) {
-        $types=['css'=>'text/css','js'=>'application/javascript','svg'=>'image/svg+xml','woff'=>'font/woff','woff2'=>'font/woff2'];
-        $ext = pathinfo($file, PATHINFO_EXTENSION);
-        header('Content-Type: '.($types[$ext] ?? (new finfo(FILEINFO_MIME_TYPE))->file($file)));
-        header('Cache-Control: public, max-age=3600');
-        $etag='"'.dechex(filemtime($file)).'-'.dechex(filesize($file)).'"';
-        header('ETag: '.$etag);
-        if (($_SERVER['HTTP_IF_NONE_MATCH'] ?? '') === $etag) { http_response_code(304); exit; }
-        if (in_array($ext, ['pdf','doc','docx'],true)) header('Content-Disposition: attachment');
-        $size = filesize($file); $start=0; $end=$size-1;
-        header('Accept-Ranges: bytes');
-        if (isset($_SERVER['HTTP_RANGE'])) {
-            if (!preg_match('/^bytes=(\d*)-(\d*)$/D', $_SERVER['HTTP_RANGE'], $range) || ($range[1]==='' && $range[2]==='') || ($range[1]!=='' && (int)$range[1] >= $size)) {
-                http_response_code(416); header('Content-Range: bytes */'.$size); exit;
-            }
-            $start=$range[1]==='' ? max(0,$size-(int)$range[2]) : (int)$range[1];
-            $end=$range[1]!=='' && $range[2]!=='' ? min((int)$range[2],$end) : $end;
-            if ($end<$start) { http_response_code(416); exit; }
-            http_response_code(206); header("Content-Range: bytes $start-$end/$size");
-        }
-        header('Content-Length: '.($end-$start+1));
-        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'HEAD') {
-            while (ob_get_level()) ob_end_flush();
-            $handle=fopen($file,'rb'); fseek($handle,$start); $remaining=$end-$start+1;
-            while ($remaining>0 && !feof($handle)) { $data=fread($handle,min(65536,$remaining)); echo $data; $remaining-=strlen($data); }
-            fclose($handle);
-        }
-        exit;
-    }
-}
-if (in_array($path, ['/audio','/video'], true)) $_GET['kind']=ltrim($path,'/');
-$routes = require __DIR__ . '/config/routes.php';
-if (preg_match('~^/book/(\d+)/?$~', $path, $bookMatch)) { $path='/book.php'; $_GET['id']=$bookMatch[1]; }
-if (preg_match('~^/(post|lesson|speech|category|topic)/([^/]+)/?$~u', $path, $match)) {
-    $path='/'.$match[1].'.php'; $_GET['slug']=$match[2];
-}
-if (preg_match('~^/lessons/([^/]+)/?$~u', $path, $lm)) { $path='/lessons.php'; $_GET['collection']=$lm[1]; }
-if (isset($routes[$path])) {
-    $_SERVER['SCRIPT_NAME'] = BASE_PATH . '/' . $routes[$path];
-    $_SERVER['PHP_SELF'] = $_SERVER['SCRIPT_NAME'];
-    require __DIR__ . '/' . $routes[$path];
+
+/** 404 page shared by every unmatched request. */
+function jhdNotFound(): void {
+    http_response_code(404);
+    header('Content-Type: text/html; charset=utf-8');
+    echo '<!doctype html><html lang="fa" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>صفحه پیدا نشد</title><main style="font-family:Tahoma;text-align:center;padding:12vh 1rem"><h1>۴۰۴ — صفحه پیدا نشد</h1><p>ممکن است نشانی تغییر کرده باشد.</p><a href="'.htmlspecialchars(BASE_PATH.'/',ENT_QUOTES).'">بازگشت به صفحه اصلی</a></main></html>';
     exit;
 }
-http_response_code(404);
-header('Content-Type: text/html; charset=utf-8');
-echo '<!doctype html><html lang="fa" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>صفحه پیدا نشد</title><main style="font-family:Tahoma;text-align:center;padding:12vh 1rem"><h1>۴۰۴ — صفحه پیدا نشد</h1><p>ممکن است نشانی تغییر کرده باشد.</p><a href="'.htmlspecialchars(BASE_PATH.'/',ENT_QUOTES).'">بازگشت به صفحه اصلی</a></main></html>';
+
+/**
+ * Expand the canonical table from config/routes.php into every accepted URL
+ * spelling: /x, /x/ and /x.php (plus /x/index.php for directory controllers).
+ * Paths that already contain a dot (/sitemap.xml, /robots.txt, /index.php) stay
+ * exact. Aliases reuse the canonical entry of their target.
+ */
+function jhdRouteTable(array $routes, array $aliases): array {
+    $add = static function (array &$table, string $path, array $entry, bool $variants = true): void {
+        $table[$path] = $entry;
+        if ($path === '/' || str_contains(substr($path, 1), '.')) return;
+        $table[$path . '/'] = $entry;
+        if (!$variants) return;   // aliases answer as written (plus a trailing slash)
+        $table[$path . '.php'] = $entry;
+        if (basename($entry['file']) === 'index.php') $table[$path . '/index.php'] = $entry;
+    };
+    $table = [];
+    foreach ($routes as $path => $target) {
+        $entry = is_array($target) ? $target : ['file' => $target];
+        $entry['canonical'] = $path;
+        $add($table, $path, $entry);
+    }
+    foreach ($aliases as $from => $to) {
+        if (isset($table[$to])) $add($table, $from, $table[$to], false);
+    }
+    return $table;
+}
+
+/** Stream a static file with content type, caching, ETag and range support. */
+function jhdServeStatic(string $file): void {
+    $types=['css'=>'text/css','js'=>'application/javascript','svg'=>'image/svg+xml','woff'=>'font/woff','woff2'=>'font/woff2'];
+    $ext = pathinfo($file, PATHINFO_EXTENSION);
+    header('Content-Type: '.($types[$ext] ?? (new finfo(FILEINFO_MIME_TYPE))->file($file)));
+    header('Cache-Control: public, max-age=3600');
+    $etag='"'.dechex(filemtime($file)).'-'.dechex(filesize($file)).'"';
+    header('ETag: '.$etag);
+    if (($_SERVER['HTTP_IF_NONE_MATCH'] ?? '') === $etag) { http_response_code(304); exit; }
+    if (in_array($ext, ['pdf','doc','docx'],true)) header('Content-Disposition: attachment');
+    $size = filesize($file); $start=0; $end=$size-1;
+    header('Accept-Ranges: bytes');
+    if (isset($_SERVER['HTTP_RANGE'])) {
+        if (!preg_match('/^bytes=(\d*)-(\d*)$/D', $_SERVER['HTTP_RANGE'], $range) || ($range[1]==='' && $range[2]==='') || ($range[1]!=='' && (int)$range[1] >= $size)) {
+            http_response_code(416); header('Content-Range: bytes */'.$size); exit;
+        }
+        $start=$range[1]==='' ? max(0,$size-(int)$range[2]) : (int)$range[1];
+        $end=$range[1]!=='' && $range[2]!=='' ? min((int)$range[2],$end) : $end;
+        if ($end<$start) { http_response_code(416); exit; }
+        http_response_code(206); header("Content-Range: bytes $start-$end/$size");
+    }
+    header('Content-Length: '.($end-$start+1));
+    if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'HEAD') {
+        while (ob_get_level()) ob_end_flush();
+        $handle=fopen($file,'rb'); fseek($handle,$start); $remaining=$end-$start+1;
+        while ($remaining>0 && !feof($handle)) { $data=fread($handle,min(65536,$remaining)); echo $data; $remaining-=strlen($data); }
+        fclose($handle);
+    }
+    exit;
+}
+
+// ─── ۱) فایل‌های استاتیک ─────────────────────────────────────────────────────
+// `assets/images/…` نام قدیمی پوشه تصاویر است؛ به `assets/img/…` نگاشت می‌شود تا
+// مقدارهای ذخیره‌شده در دیتابیس (مثل site_logo) و کش مرورگرها نشکنند.
+$assetPath = preg_replace('~^/assets/images/~', '/assets/img/', $path);
+if (preg_match('~^/assets/[a-zA-Z0-9_./-]+\.(css|js|svg|png|jpe?g|webp|gif|woff2?)$~D', $assetPath)) {
+    $file = __DIR__ . $assetPath;
+    if (is_file($file) && !is_link($file)) jhdServeStatic($file);
+}
+if (UPLOAD_STORAGE === 'local' && preg_match('~^/uploads/(?:[a-zA-Z0-9_-]+/)+[a-zA-Z0-9_.-]+\.(jpg|jpeg|png|gif|webp|mp3|ogg|wav|m4a|mp4|webm|mov|mkv|pdf|doc|docx)$~D', $path)) {
+    $file = UPLOAD_DIR . substr($path, 9);
+    if (is_file($file) && !is_link($file)) jhdServeStatic($file);
+}
+
+// ─── ۲) مسیرهای دقیق و الگوهای پویا ─────────────────────────────────────────
+$definition = require __DIR__ . '/config/routes.php';
+$table = jhdRouteTable($definition['routes'], $definition['aliases']);
+$entry = $table[$path] ?? null;
+
+if ($entry === null) {
+    foreach ($definition['patterns'] as [$pattern, $script, $params]) {
+        if (!preg_match($pattern, $path, $matches)) continue;
+        // `pages/$1.php` — only fixed alternations are captured into the script name.
+        $script = preg_replace_callback('/\$(\d+)/', static fn($m) => $matches[(int)$m[1]] ?? '', $script);
+        foreach ($params as $key => $index) {
+            if (($matches[$index] ?? '') !== '') $_GET[$key] = $matches[$index];
+        }
+        $entry = ['file' => $script, 'canonical' => $path];
+        break;
+    }
+}
+
+if ($entry === null) jhdNotFound();
+foreach ($entry['get'] ?? [] as $key => $value) $_GET[$key] ??= $value;
+
+$target = $entry['file'];
+$file = realpath(__DIR__ . '/' . $target);
+if ($file === false || !str_starts_with($file, realpath(__DIR__) . DIRECTORY_SEPARATOR) || !is_file($file)) jhdNotFound();
+
+// Pages read the script path from these (menu highlighting, role gates) and the
+// public URL from JHD_ROUTE_PATH (canonical link) — internal paths never leak.
+$_SERVER['SCRIPT_NAME'] = BASE_PATH . '/' . $target;
+$_SERVER['PHP_SELF'] = $_SERVER['SCRIPT_NAME'];
+$_SERVER['JHD_ROUTE_PATH'] = BASE_PATH . $entry['canonical'];
+
+require $file;
+exit;

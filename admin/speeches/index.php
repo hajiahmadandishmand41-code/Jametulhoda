@@ -44,7 +44,7 @@ $urlBase = '?status=' . urlencode($status) . '&q=' . urlencode($search) . '&page
 ?>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h5 class="mb-0"><i class="bi bi-mic ms-2 text-info"></i>سخنرانی‌ها (<?= number_format($total) ?>)</h5>
-    <a href="<?= siteUrl('admin/speeches/create.php') ?>" class="btn btn-info text-white">
+    <a href="<?= siteUrl('admin/speeches/create') ?>" class="btn btn-info text-white">
         <i class="bi bi-plus-circle ms-1"></i>سخنرانی جدید
     </a>
 </div>
@@ -75,7 +75,7 @@ $urlBase = '?status=' . urlencode($status) . '&q=' . urlencode($search) . '&page
         <div class="text-center py-5 text-muted">
             <i class="bi bi-mic display-4 d-block mb-3 opacity-25"></i>
             <p>سخنرانی‌ای یافت نشد.</p>
-            <a href="<?= siteUrl('admin/speeches/create.php') ?>" class="btn btn-info text-white">سخنرانی جدید ثبت کنید</a>
+            <a href="<?= siteUrl('admin/speeches/create') ?>" class="btn btn-info text-white">سخنرانی جدید ثبت کنید</a>
         </div>
         <?php else: ?>
         <div class="table-responsive">
@@ -98,7 +98,7 @@ $urlBase = '?status=' . urlencode($status) . '&q=' . urlencode($search) . '&page
                     <tr>
                         <td class="text-muted small"><?= $offset + $i + 1 ?></td>
                         <td>
-                            <a href="<?= siteUrl('admin/speeches/edit.php?id=' . $p['id']) ?>" class="fw-bold text-dark text-decoration-none">
+                            <a href="<?= siteUrl('admin/speeches/edit?id=' . $p['id']) ?>" class="fw-bold text-dark text-decoration-none">
                                 <?= sanitize(mb_strimwidth($p['title'], 0, 55, '...')) ?>
                             </a>
                         </td>
@@ -118,9 +118,9 @@ $urlBase = '?status=' . urlencode($status) . '&q=' . urlencode($search) . '&page
                         <td class="text-muted" style="font-size:.78rem;white-space:nowrap"><?= persianDate($p['created_at']) ?></td>
                         <td>
                             <div class="d-flex gap-1">
-                                <a href="<?= siteUrl('admin/speeches/edit.php?id=' . $p['id']) ?>" class="btn btn-sm btn-outline-primary py-0 px-2" title="ویرایش"><i class="bi bi-pencil"></i></a>
-                                <a href="<?= siteUrl('speech.php?slug=' . urlencode($p['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2" title="مشاهده"><i class="bi bi-eye"></i></a>
-                                <a href="<?= siteUrl('admin/speeches/delete.php?id=' . $p['id']) ?>"
+                                <a href="<?= siteUrl('admin/speeches/edit?id=' . $p['id']) ?>" class="btn btn-sm btn-outline-primary py-0 px-2" title="ویرایش"><i class="bi bi-pencil"></i></a>
+                                <a href="<?= siteUrl('speech?slug=' . urlencode($p['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2" title="مشاهده"><i class="bi bi-eye"></i></a>
+                                <a href="<?= siteUrl('admin/speeches/delete?id=' . $p['id']) ?>"
                                    class="btn btn-sm btn-outline-danger py-0 px-2"
                                    title="حذف"
                                    data-confirm="آیا از حذف «<?= sanitize($p['title']) ?>» اطمینان دارید؟">

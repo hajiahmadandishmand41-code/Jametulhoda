@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $_SESSION['flash_msg']  = 'مقاله با موفقیت ذخیره شد.';
                 $_SESSION['flash_type'] = 'success';
-                redirect(siteUrl('admin/articles/edit.php?id=' . $newId));
+                redirect(siteUrl('admin/articles/edit?id=' . $newId));
             } catch (PDOException $e) {
                 $error = 'خطا در ذخیره مقاله: ';
             }

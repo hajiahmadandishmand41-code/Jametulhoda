@@ -23,6 +23,9 @@ function env_value(string $key, string $default = ''): string {
 
 define('APP_ENV', env_value('APP_ENV', env_value('VERCEL') ? 'production' : 'development'));
 define('BASE_PATH', rtrim('/' . trim(env_value('BASE_PATH'), '/'), '/'));
+/** Absolute project root (the directory that holds router.php). */
+define('BASE_DIR', dirname(__DIR__));
+define('STORAGE_DIR', BASE_DIR . '/storage');
 
 // Site
 define('SITE_NAME',   'مدرسه علمیه جامعه‌الهدی');
@@ -37,8 +40,11 @@ define('UPLOAD_STORAGE', env_value('UPLOAD_STORAGE', 'local'));
 define('UPLOAD_DIR', rtrim(env_value('UPLOAD_LOCAL_PATH', __DIR__ . '/../uploads'), '/') . '/');
 define('UPLOAD_BASE_URL', rtrim(env_value('UPLOAD_BASE_URL', BASE_PATH . '/uploads'), '/'));
 define('UPLOAD_IMAGES', 'images');
-define('UPLOAD_AUDIO', 'audio');
-define('UPLOAD_VIDEO', 'video');
+// `audios`/`videos` are the current folder names; the older `audio`/`video`
+// folders stay readable (see the allowlist in includes/storage.php) so files
+// uploaded before this rename keep working.
+define('UPLOAD_AUDIO', env_value('UPLOAD_AUDIO_DIR', 'audios'));
+define('UPLOAD_VIDEO', env_value('UPLOAD_VIDEO_DIR', 'videos'));
 define('UPLOAD_DOCUMENTS', 'documents');
 define('MAX_FILE_SIZE', 20 * 1024 * 1024);
 define('MAX_VIDEO_SIZE', 200 * 1024 * 1024);
@@ -57,10 +63,25 @@ define('LESSONS_PER_PAGE', 12);
 // Security
 define('CSRF_TOKEN_NAME', 'csrf_token');
 
+/**
+ * Default administrator account used by the installer (php/install.php) and by
+ * bin/create-admin.php. The password is stored **only** as a password_hash()
+ * digest; if the account already exists its password is reset to this value and
+ * auth_version is bumped so every existing session is invalidated.
+ * Override both per deployment with ADMIN_USERNAME / ADMIN_PASSWORD.
+ */
+define('DEFAULT_ADMIN_USERNAME', env_value('DEFAULT_ADMIN_USERNAME', 'admin'));
+define('DEFAULT_ADMIN_PASSWORD', env_value('DEFAULT_ADMIN_PASSWORD', 'JH@2026#Admin'));
+
 // Error Reporting
 error_reporting(E_ALL);
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
+// Production logs into storage/logs/php-error.log when that folder is writable.
+// Development keeps the server's own log so warnings stay visible in CI output.
+if (APP_ENV === 'production' && is_dir(STORAGE_DIR . '/logs') && is_writable(STORAGE_DIR . '/logs')) {
+    ini_set('error_log', STORAGE_DIR . '/logs/php-error.log');
+}
 
 // Timezone
 date_default_timezone_set('Asia/Kabul');

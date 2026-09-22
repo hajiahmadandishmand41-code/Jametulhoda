@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', function () {
         img.addEventListener('error', function () {
             if (!this.dataset.errorHandled) {
                 this.dataset.errorHandled = '1';
-                this.src = (window._imgPlaceholder || '/assets/images/placeholder.svg');
+                this.src = (window._imgPlaceholder || '/assets/img/placeholder.svg');
             }
         });
     });

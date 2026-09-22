@@ -196,3 +196,43 @@
 | `bin/migrate.php`، `php/install.php` | مهاجرت/نصب تکرارپذیر روی MySQL (نادیده‌گرفتن «از قبل موجود» برای ایندکس‌ها) و ردشدن از `;` داخل کامنت. |
 | `admin/settings.php`، `admin/topics/create.php` | upsert تنظیمات با کلید جدید؛ رفع فراخوانی `redirect()` بدون بارگذاری توابع. |
 | `Dockerfile.vercel`، `vercel.json` | افزودن `pdo_mysql` به image و اصلاح ساختار `services` برای runtime کانتینری. |
+
+---
+
+## مرحله بازسازی ساختار (2026-09-22)
+
+بازچینی ساختار پوشه‌ها بدون حذف هیچ قابلیت سالم. نگاشت کامل «فایل قدیم → جدید» و
+جدول مسیرها در [FILE_ROUTE_MAP.md](FILE_ROUTE_MAP.md) و گزارش نهایی در
+[RESTRUCTURE_REPORT_FA.md](RESTRUCTURE_REPORT_FA.md).
+
+| فایل / پوشه | تغییر |
+|---|---|
+| ۲۲ کنترل‌کننده عمومی ریشه (`about.php` … `topics.php`) | انتقال به `pages/` و اصلاح همه `require`ها به `__DIR__.'/../…'`. |
+| `index.php`, `router.php`, `robots.php`, `sitemap.php`, `.htaccess` | تنها فایل‌های باقی‌مانده در ریشه وب. |
+| `includes/home-intro.php` | انتقال به `content/home-intro.php` (قطعه نمایشی) + اصلاح require در `index.php`. |
+| `admin/users.php` | انتقال به `admin/users/index.php` (ساختار پوشه‌ای مثل بقیه بخش‌ها). |
+| `admin/messages.php` | حذف منطق تکراری؛ تبدیل به redirect به `admin/messages/`. قابلیت «همه را خوانده علامت بزن» به `admin/messages/index.php` منتقل شد. |
+| `database.sql`, `database.mysql.sql`, `update.sql` | انتقال به `database/database.postgres.sql`، `database/database.mysql.sql` و `database/migrations/0001-legacy-update-note.sql`. |
+| `install.php`, `db-test.php`, `migrate-sections.php` (ریشه) | انتقال به `bin/install-cli.php`، `bin/db-test.php`، `bin/migrate-sections.php` (فقط CLI؛ از وب ۴۰۴). |
+| `assets/images/` | تغییر نام به `assets/img/`؛ router نگاشت `/assets/images/*` را به‌عنوان alias نگه می‌دارد. |
+| `admin.htaccess`, `uploads.htaccess`, `admin/*.htaccess`, `uploads/*.htaccess` | این کپی‌های بدون نقطهٔ ابتدایی بی‌اثر بودند؛ به `.htaccess` واقعی در همان پوشه‌ها تبدیل/ادغام شدند. |
+| `uploads/` | ساخت `images/ books/ videos/ audios/ documents/` با `.htaccess` و `.gitkeep`؛ `UPLOAD_AUDIO`/`UPLOAD_VIDEO` به `audios`/`videos` تغییر کردند و پوشه‌های قدیمی `audio`/`video` در allowlist ماندند. |
+| `storage/logs/`, `storage/cache/` | ایجاد شدند؛ در production خطاها در `storage/logs/php-error.log` ثبت می‌شوند (در development همان stderr تا CI هشدارها را ببیند). |
+| `config/routes.php` | بازنویسی به‌عنوان تنها مرجع مسیرها: `routes` + `aliases` + `patterns`؛ افزودن `/videos`، `/audios`، `/admin/users/`، `/lessons/{collection}/{volume}`، `/book/{slug}`، `/search/{q}`. |
+| `router.php` | گسترش خودکار هر نشانی به `/x`، `/x/`، `/x.php` و `/x/index.php`؛ سرو static با alias تصویر؛ تنظیم `JHD_ROUTE_PATH`؛ توابع جدا برای ۴۰۴ و سرو فایل. |
+| `.htaccess` | سرو مستقیم فایل‌های واقعی `assets/` و `uploads/` توسط Apache (بدون مصرف PHP) و ارجاع بقیهٔ درخواست‌ها به `router.php`؛ هیچ `Require all denied`‌ای ندارد (Apache آن را پیش از mod_rewrite اجرا می‌کند و ۴۰۳ به‌جای ۴۰۴ می‌داد). |
+| `.htaccess`های جدید | پوشه‌های داخلی (`config/`, `includes/`, `pages/`, `content/`, `database/`, `database/migrations/`, `storage/`, `storage/logs/`, `storage/cache/`, `bin/`, `php/`, `tests/`, `docs/`, `admin/`, `admin/includes/`, `admin/*/`) → `Options -Indexes`؛ `uploads/` و `uploads/*/` → `Options -Indexes -ExecCGI` + `RemoveHandler`/`RemoveType` برای اسکریپت‌ها. پاسخ همهٔ مسیرهای غیرمجاز از طرف `router.php` با ۴۰۴ داده می‌شود. |
+| `config/config.php` | `BASE_DIR`/`STORAGE_DIR`، `DEFAULT_ADMIN_USERNAME`/`DEFAULT_ADMIN_PASSWORD`، مسیر error_log در production، پوشه‌های آپلود صوت/ویدیو. |
+| `config/local.example.php` | **جدید** — الگوی فایل تنظیمات خصوصی برای نصب دستی. |
+| `php/install.php` | مسیر schema به `database/`؛ اگر حساب مدیر وجود داشته باشد رمز آن با `password_hash()` بازنشانی و `auth_version` افزایش می‌یابد؛ فیلد رمز خالی = رمز پیش‌فرض مستند؛ لینک‌های تمیز. |
+| `bin/create-admin.php` | پیش‌فرض `admin` / `JH@2026#Admin`؛ ایجاد **یا** بازنشانی امن رمز + `auth_version`؛ پیام دقیق‌تر. |
+| `bin/migrate.php` | انتخاب schema از `database/` بر اساس درایور. |
+| همه پیوندهای داخلی (۲۹۷ مورد در ۵۳ فایل) | `siteUrl('about.php')` → `siteUrl('about')` و به‌همین ترتیب برای همه صفحات عمومی، admin و رسانه؛ شکل `.php` همچنان به‌عنوان alias کار می‌کند. |
+| `includes/header.php` | canonical از `JHD_ROUTE_PATH` (مسیر عمومی) به‌جای `SCRIPT_NAME` (مسیر داخلی `pages/…`)؛ `search?q=` در JSON-LD. |
+| `includes/functions.php` | رفع `ValueError` در `paginate()`: مقدارهای percent-encoded داخل الگو (مثل `q=%D8%A7`) دیگر باعث ۵۰۳ نمی‌شوند. |
+| `includes/storage.php` | پوشه‌های `audios`/`videos` به allowlist کلید ذخیره‌سازی اضافه شدند (پوشه‌های قدیمی هم ماندند). |
+| `admin/topics/index.php` | رفع هشدار «Undefined array key parent_id» و خطای ۵۰۳ وقتی `parent_id` فرستاده نمی‌شد. |
+| `sitemap.php` | نشانی‌های تمیز (`topic/{slug}`، `post/{slug}`، `book/{slug|id}`، `lessons/{collection}`، `category/{slug}`) + `/videos` و `/audios`. |
+| `tests/http.mjs` | پوشش مسیرهای تمیز و `.php`، مسیرهای محافظت‌شده جدید، همه شکل‌های `/admin/users`، کشف کتاب با نشانی تمیز. |
+| `tests/security.php` | بررسی‌های تازه برای پوشه‌های `videos`/`audios`، کلیدهای قدیمی و نشانی‌های تمیز. |
+| `README.md`, `INSTALL_GUIDE_FA.md`, `docs/INVENTORY.md` | به‌روزرسانی ساختار، جدول مسیرها، حساب مدیر پیش‌فرض و مسیر فایل‌های schema. |

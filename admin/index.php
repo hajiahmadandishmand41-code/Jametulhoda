@@ -69,12 +69,12 @@ $recentMsgs = $db->query("SELECT * FROM contact_messages ORDER BY created_at DES
             <div class="admin-card-header">عملیات سریع — مدیریت محتوای موضوع‌محور</div>
             <div class="admin-card-body d-flex flex-wrap gap-2">
                 <a href="<?= siteUrl('admin/topics/') ?>" class="btn btn-warning"><i class="bi bi-diagram-3 ms-1"></i> مدیریت موضوعات</a>
-                <a href="<?= siteUrl('admin/posts/create.php') ?>" class="btn btn-success"><i class="bi bi-plus-circle ms-1"></i> مطلب جدید (گزارش/مقاله/پژوهش)</a>
-                <a href="<?= siteUrl('admin/books/create.php') ?>" class="btn btn-outline-warning"><i class="bi bi-book ms-1"></i> کتاب جدید</a>
+                <a href="<?= siteUrl('admin/posts/create') ?>" class="btn btn-success"><i class="bi bi-plus-circle ms-1"></i> مطلب جدید (گزارش/مقاله/پژوهش)</a>
+                <a href="<?= siteUrl('admin/books/create') ?>" class="btn btn-outline-warning"><i class="bi bi-book ms-1"></i> کتاب جدید</a>
                 <a href="<?= siteUrl('admin/lesson-collections/') ?>" class="btn btn-primary"><i class="bi bi-collection ms-1"></i> مجموعه‌های درسی</a>
-                <a href="<?= siteUrl('admin/lessons/create.php') ?>" class="btn btn-outline-primary"><i class="bi bi-plus-square ms-1"></i> درس جدید</a>
+                <a href="<?= siteUrl('admin/lessons/create') ?>" class="btn btn-outline-primary"><i class="bi bi-plus-square ms-1"></i> درس جدید</a>
                 <a href="<?= siteUrl('admin/banners/') ?>" class="btn btn-outline-secondary"><i class="bi bi-megaphone ms-1"></i> بنر ویژه</a>
-                <a href="<?= siteUrl('admin/messages.php') ?>" class="btn btn-outline-secondary"><i class="bi bi-envelope ms-1"></i> پیام‌ها <?php if ($unreadMsgs > 0): ?><span class="badge bg-danger"><?= $unreadMsgs ?></span><?php endif; ?></a>
+                <a href="<?= siteUrl('admin/messages') ?>" class="btn btn-outline-secondary"><i class="bi bi-envelope ms-1"></i> پیام‌ها <?php if ($unreadMsgs > 0): ?><span class="badge bg-danger"><?= $unreadMsgs ?></span><?php endif; ?></a>
                 <a href="<?= siteUrl('admin/media/') ?>" class="btn btn-outline-secondary"><i class="bi bi-images ms-1"></i> رسانه</a>
             </div>
         </div>
@@ -98,11 +98,11 @@ $recentMsgs = $db->query("SELECT * FROM contact_messages ORDER BY created_at DES
                         <tbody>
                             <?php foreach ($recentPosts as $p): ?>
                             <tr>
-                                <td><a href="<?= siteUrl('admin/posts/edit.php?id=' . $p['id']) ?>" class="text-decoration-none fw-bold text-dark"><?= sanitize(mb_strimwidth($p['title'],0,40,'...')) ?></a><?php if ($p['cat_name']): ?><div class="text-muted" style="font-size:.75rem"><?= sanitize($p['cat_name']) ?></div><?php endif; ?></td>
+                                <td><a href="<?= siteUrl('admin/posts/edit?id=' . $p['id']) ?>" class="text-decoration-none fw-bold text-dark"><?= sanitize(mb_strimwidth($p['title'],0,40,'...')) ?></a><?php if ($p['cat_name']): ?><div class="text-muted" style="font-size:.75rem"><?= sanitize($p['cat_name']) ?></div><?php endif; ?></td>
                                 <td><?= postTypeBadge($p['post_type']) ?></td>
                                 <td><span class="badge <?= $p['status']==='published'?'bg-success':'bg-secondary' ?>"><?= $p['status']==='published'?'منتشر':'پیش‌نویس' ?></span></td>
                                 <td class="text-muted" style="font-size:.8rem"><?= persianDate($p['created_at']) ?></td>
-                                <td><a href="<?= siteUrl('admin/posts/edit.php?id=' . $p['id']) ?>" class="btn btn-sm btn-outline-primary py-0 px-2"><i class="bi bi-pencil"></i></a><a href="<?= siteUrl('post.php?slug=' . urlencode($p['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2"><i class="bi bi-eye"></i></a></td>
+                                <td><a href="<?= siteUrl('admin/posts/edit?id=' . $p['id']) ?>" class="btn btn-sm btn-outline-primary py-0 px-2"><i class="bi bi-pencil"></i></a><a href="<?= siteUrl('post?slug=' . urlencode($p['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2"><i class="bi bi-eye"></i></a></td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -116,7 +116,7 @@ $recentMsgs = $db->query("SELECT * FROM contact_messages ORDER BY created_at DES
         <div class="admin-card">
             <div class="admin-card-header">
                 <span><i class="bi bi-envelope ms-2"></i> پیام‌های اخیر</span>
-                <a href="<?= siteUrl('admin/messages.php') ?>" class="btn btn-sm btn-outline-primary">همه</a>
+                <a href="<?= siteUrl('admin/messages') ?>" class="btn btn-sm btn-outline-primary">همه</a>
             </div>
             <div class="admin-card-body p-0">
                 <?php if (empty($recentMsgs)): ?>
@@ -127,7 +127,7 @@ $recentMsgs = $db->query("SELECT * FROM contact_messages ORDER BY created_at DES
                     <li class="list-group-item py-3 <?= !$msg['is_read']?'bg-light':'' ?>">
                         <div class="fw-bold small"><?= sanitize($msg['name']) ?> <?php if (!$msg['is_read']): ?><span class="badge bg-danger ms-1">جدید</span><?php endif; ?></div>
                         <div class="text-muted" style="font-size:.78rem"><?= sanitize(mb_strimwidth($msg['subject'] ?? '',0,35,'...')) ?></div>
-                        <a href="<?= siteUrl('admin/messages.php?id=' . $msg['id']) ?>" class="btn btn-sm btn-link p-0 mt-1" style="font-size:.78rem">مشاهده ›</a>
+                        <a href="<?= siteUrl('admin/messages?id=' . $msg['id']) ?>" class="btn btn-sm btn-link p-0 mt-1" style="font-size:.78rem">مشاهده ›</a>
                     </li>
                     <?php endforeach; ?>
                 </ul>

@@ -115,7 +115,7 @@ function timeAgo(string $datetime): string {
 // ─── Upload ───────────────────────────────────────────────────────────────────
 
 function imgUrl(string $path): string {
-    if (!$path) return siteUrl('assets/images/placeholder.svg');
+    if (!$path) return siteUrl('assets/img/placeholder.svg');
     $key = storageKey($path);
     if ($key) return storageUrl($key);
     return siteUrl($path);
@@ -531,12 +531,21 @@ function paginate(int $total, int $limit, int $current, string $urlPattern): str
     $range = 2;
     $start = max(1, $current - $range);
     $end   = min($pages, $current + $range);
+    /**
+     * Only the page placeholder is substituted. sprintf() would throw a
+     * ValueError on percent-encoded query values that callers embed in the
+     * pattern (urlencode('ا') → %D8%A7 → unknown format specifier "D").
+     */
+    $pageUrl = static function (int $number) use ($urlPattern): string {
+        if (str_contains($urlPattern, '%d')) return str_replace('%d', (string)$number, $urlPattern);
+        try { return sprintf($urlPattern, $number); } catch (Throwable) { return $urlPattern; }
+    };
     $html  = '<nav aria-label="صفحه‌بندی"><ul class="pagination justify-content-center flex-wrap">';
-    if ($current > 1) $html .= '<li class="page-item"><a class="page-link" href="' . sprintf($urlPattern, $current - 1) . '">&#8250; قبلی</a></li>';
-    if ($start > 1) { $html .= '<li class="page-item"><a class="page-link" href="' . sprintf($urlPattern, 1) . '">1</a></li>'; if ($start > 2) $html .= '<li class="page-item disabled"><span class="page-link">...</span></li>'; }
-    for ($i=$start;$i<=$end;$i++){ $active=($i===$current)?' active':''; $html.='<li class="page-item'.$active.'"><a class="page-link" href="'.sprintf($urlPattern,$i).'">'.$i.'</a></li>'; }
-    if ($end<$pages){ if($end<$pages-1) $html.='<li class="page-item disabled"><span class="page-link">...</span></li>'; $html.='<li class="page-item"><a class="page-link" href="'.sprintf($urlPattern,$pages).'">'.$pages.'</a></li>'; }
-    if ($current<$pages) $html .= '<li class="page-item"><a class="page-link" href="' . sprintf($urlPattern, $current + 1) . '">بعدی &#8249;</a></li>';
+    if ($current > 1) $html .= '<li class="page-item"><a class="page-link" href="' . $pageUrl($current - 1) . '">&#8250; قبلی</a></li>';
+    if ($start > 1) { $html .= '<li class="page-item"><a class="page-link" href="' . $pageUrl(1) . '">1</a></li>'; if ($start > 2) $html .= '<li class="page-item disabled"><span class="page-link">...</span></li>'; }
+    for ($i=$start;$i<=$end;$i++){ $active=($i===$current)?' active':''; $html.='<li class="page-item'.$active.'"><a class="page-link" href="'.$pageUrl($i).'">'.$i.'</a></li>'; }
+    if ($end<$pages){ if($end<$pages-1) $html.='<li class="page-item disabled"><span class="page-link">...</span></li>'; $html.='<li class="page-item"><a class="page-link" href="'.$pageUrl($pages).'">'.$pages.'</a></li>'; }
+    if ($current<$pages) $html .= '<li class="page-item"><a class="page-link" href="' . $pageUrl($current + 1) . '">بعدی &#8249;</a></li>';
     return $html . '</ul></nav>';
 }
 
@@ -653,7 +662,7 @@ function breadcrumbsJsonLd(array $crumbs): string {
 }
 function articleJsonLd(array $post): string {
     if(!SITE_URL) return '';
-    $data=['@context'=>'https://schema.org','@type'=>'Article','headline'=>$post['title'],'datePublished'=>$post['published_at'] ?? $post['created_at'],'dateModified'=>$post['updated_at'] ?? $post['published_at'],'author'=>['@type'=>'Person','name'=>$post['author_name']??'جامعه‌الهدی'],'publisher'=>['@type'=>'Organization','name'=>getSetting('site_name', SITE_NAME),'logo'=>['@type'=>'ImageObject','url'=>canonicalUrl('assets/images/logo.jpg')]]];
+    $data=['@context'=>'https://schema.org','@type'=>'Article','headline'=>$post['title'],'datePublished'=>$post['published_at'] ?? $post['created_at'],'dateModified'=>$post['updated_at'] ?? $post['published_at'],'author'=>['@type'=>'Person','name'=>$post['author_name']??'جامعه‌الهدی'],'publisher'=>['@type'=>'Organization','name'=>getSetting('site_name', SITE_NAME),'logo'=>['@type'=>'ImageObject','url'=>canonicalUrl('assets/img/logo.jpg')]]];
     if(!empty($post['featured_image'])) $data['image']=imgUrl($post['featured_image']);
     if(!empty($post['summary'])) $data['description']=excerpt($post['summary'],160);
     return json_encode($data, JSON_UNESCAPED_UNICODE|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT);

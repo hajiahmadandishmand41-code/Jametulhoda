@@ -86,7 +86,7 @@ $withAudio  = (int)$db->query("SELECT COUNT(*) FROM lessons WHERE audio_file IS 
 <div class="admin-card mb-4">
   <div class="admin-card-header">
     <span><i class="bi bi-play-circle ms-2"></i>درس‌ها (<?= number_format($total) ?>)</span>
-    <a href="<?= siteUrl('admin/lessons/create.php') ?>" class="btn btn-success btn-sm"><i class="bi bi-plus ms-1"></i>درس جدید</a>
+    <a href="<?= siteUrl('admin/lessons/create') ?>" class="btn btn-success btn-sm"><i class="bi bi-plus ms-1"></i>درس جدید</a>
   </div>
   <div class="admin-card-body">
     <form method="get" class="row g-2 align-items-end">
@@ -120,7 +120,7 @@ $withAudio  = (int)$db->query("SELECT COUNT(*) FROM lessons WHERE audio_file IS 
     <div class="text-center py-5 text-muted">
       <i class="bi bi-play-circle display-4 d-block mb-3 opacity-25"></i>
       <p>درسی یافت نشد.</p>
-      <a href="<?= siteUrl('admin/lessons/create.php') ?>" class="btn btn-success">درس جدید ایجاد کنید</a>
+      <a href="<?= siteUrl('admin/lessons/create') ?>" class="btn btn-success">درس جدید ایجاد کنید</a>
     </div>
     <?php else: ?>
     <div class="table-responsive">
@@ -150,7 +150,7 @@ $withAudio  = (int)$db->query("SELECT COUNT(*) FROM lessons WHERE audio_file IS 
               <?php if ($l['featured_image']): ?>
               <img src="<?= imgUrl($l['featured_image']) ?>" style="width:34px;height:34px;object-fit:cover;border-radius:6px;margin-left:8px" alt="" loading="lazy">
               <?php endif; ?>
-              <a href="<?= siteUrl('admin/lessons/edit.php?id=' . $l['id']) ?>" class="fw-bold text-dark text-decoration-none">
+              <a href="<?= siteUrl('admin/lessons/edit?id=' . $l['id']) ?>" class="fw-bold text-dark text-decoration-none">
                 <?= sanitize(mb_strimwidth($l['title'], 0, 45, '...')) ?>
               </a>
             </td>
@@ -172,9 +172,9 @@ $withAudio  = (int)$db->query("SELECT COUNT(*) FROM lessons WHERE audio_file IS 
             <td class="text-muted small"><?= 0 ?></td>
             <td>
               <div class="d-flex gap-1">
-                <a href="<?= siteUrl('admin/lessons/edit.php?id=' . $l['id']) ?>" class="btn btn-sm btn-outline-primary py-0 px-2" title="ویرایش"><i class="bi bi-pencil"></i></a>
-                <a href="<?= siteUrl('lesson.php?slug=' . urlencode($l['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2" title="مشاهده"><i class="bi bi-eye"></i></a>
-                <a href="<?= siteUrl('admin/lessons/delete.php?id=' . $l['id']) ?>"
+                <a href="<?= siteUrl('admin/lessons/edit?id=' . $l['id']) ?>" class="btn btn-sm btn-outline-primary py-0 px-2" title="ویرایش"><i class="bi bi-pencil"></i></a>
+                <a href="<?= siteUrl('lesson?slug=' . urlencode($l['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2" title="مشاهده"><i class="bi bi-eye"></i></a>
+                <a href="<?= siteUrl('admin/lessons/delete?id=' . $l['id']) ?>"
                    class="btn btn-sm btn-outline-danger py-0 px-2"
                    title="حذف"
                    data-confirm="آیا از حذف درس «<?= sanitize($l['title']) ?>» اطمینان دارید؟">

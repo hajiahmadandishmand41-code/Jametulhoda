@@ -172,7 +172,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $_SESSION['flash_msg']  = 'مطلب با موفقیت بروزرسانی شد.';
                 $_SESSION['flash_type'] = 'success';
-                redirect(siteUrl('admin/posts/edit.php?id=' . $id));
+                redirect(siteUrl('admin/posts/edit?id=' . $id));
             }
         }
     }
@@ -188,7 +188,7 @@ $existingVideo = getMediaFor('post', $id, 'video');
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h5 class="mb-0"><i class="bi bi-pencil-square ms-2"></i>ویرایش: <?= sanitize(mb_strimwidth($post['title'],0,40,'...')) ?></h5>
     <div class="d-flex gap-2">
-        <a href="<?= siteUrl('post.php?slug=' . urlencode($post['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-success"><i class="bi bi-eye ms-1"></i>مشاهده</a>
+        <a href="<?= siteUrl('post?slug=' . urlencode($post['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-success"><i class="bi bi-eye ms-1"></i>مشاهده</a>
         <a href="<?= siteUrl('admin/posts/') ?>" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-right ms-1"></i>بازگشت</a>
     </div>
 </div>
@@ -386,7 +386,7 @@ $existingVideo = getMediaFor('post', $id, 'video');
                     </div>
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-success"><i class="bi bi-save ms-1"></i>ذخیره تغییرات</button>
-                        <a href="<?= siteUrl('admin/posts/delete.php?id=' . $id) ?>"
+                        <a href="<?= siteUrl('admin/posts/delete?id=' . $id) ?>"
                            class="btn btn-outline-danger"
                            data-confirm="آیا از حذف این مطلب اطمینان دارید؟">
                             <i class="bi bi-trash ms-1"></i>حذف مطلب

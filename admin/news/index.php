@@ -38,7 +38,7 @@ $urlBase = '?status=' . urlencode($status) . '&q=' . urlencode($search) . '&page
 ?>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h5 class="mb-0"><i class="bi bi-newspaper ms-2 text-success"></i>اخبار (<?= number_format($total) ?>)</h5>
-    <a href="<?= siteUrl('admin/news/create.php') ?>" class="btn btn-success">
+    <a href="<?= siteUrl('admin/news/create') ?>" class="btn btn-success">
         <i class="bi bi-plus-circle ms-1"></i>خبر جدید
     </a>
 </div>
@@ -69,7 +69,7 @@ $urlBase = '?status=' . urlencode($status) . '&q=' . urlencode($search) . '&page
         <div class="text-center py-5 text-muted">
             <i class="bi bi-newspaper display-4 d-block mb-3 opacity-25"></i>
             <p>خبری یافت نشد.</p>
-            <a href="<?= siteUrl('admin/news/create.php') ?>" class="btn btn-success">خبر جدید ثبت کنید</a>
+            <a href="<?= siteUrl('admin/news/create') ?>" class="btn btn-success">خبر جدید ثبت کنید</a>
         </div>
         <?php else: ?>
         <div class="table-responsive">
@@ -91,7 +91,7 @@ $urlBase = '?status=' . urlencode($status) . '&q=' . urlencode($search) . '&page
                             <?php if ($p['featured_image']): ?>
                             <img src="<?= imgUrl($p['featured_image']) ?>" style="width:36px;height:36px;object-fit:cover;border-radius:6px;margin-left:8px" alt="" loading="lazy">
                             <?php endif; ?>
-                            <a href="<?= siteUrl('admin/news/edit.php?id=' . $p['id']) ?>" class="fw-bold text-dark text-decoration-none">
+                            <a href="<?= siteUrl('admin/news/edit?id=' . $p['id']) ?>" class="fw-bold text-dark text-decoration-none">
                                 <?= sanitize(mb_strimwidth($p['title'], 0, 60, '...')) ?>
                             </a>
                         </td>
@@ -103,9 +103,9 @@ $urlBase = '?status=' . urlencode($status) . '&q=' . urlencode($search) . '&page
                         <td class="text-muted" style="font-size:.78rem;white-space:nowrap"><?= persianDate($p['created_at']) ?></td>
                         <td>
                             <div class="d-flex gap-1">
-                                <a href="<?= siteUrl('admin/news/edit.php?id=' . $p['id']) ?>" class="btn btn-sm btn-outline-primary py-0 px-2" title="ویرایش"><i class="bi bi-pencil"></i></a>
-                                <a href="<?= siteUrl('post.php?slug=' . urlencode($p['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2" title="مشاهده"><i class="bi bi-eye"></i></a>
-                                <a href="<?= siteUrl('admin/news/delete.php?id=' . $p['id']) ?>"
+                                <a href="<?= siteUrl('admin/news/edit?id=' . $p['id']) ?>" class="btn btn-sm btn-outline-primary py-0 px-2" title="ویرایش"><i class="bi bi-pencil"></i></a>
+                                <a href="<?= siteUrl('post?slug=' . urlencode($p['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2" title="مشاهده"><i class="bi bi-eye"></i></a>
+                                <a href="<?= siteUrl('admin/news/delete?id=' . $p['id']) ?>"
                                    class="btn btn-sm btn-outline-danger py-0 px-2"
                                    title="حذف"
                                    data-confirm="آیا از حذف «<?= sanitize($p['title']) ?>» اطمینان دارید؟">
