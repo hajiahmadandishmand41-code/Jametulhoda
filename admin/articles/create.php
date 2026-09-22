@@ -35,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $admin['id'], $status
                 ]);
                 $newId = (int)$stmt->fetchColumn();
+                $stmt->closeCursor(); // release the write lock promptly (shutdown journal writes must never block)
 
                 $_SESSION['flash_msg']  = 'مقاله با موفقیت ذخیره شد.';
                 $_SESSION['flash_type'] = 'success';

@@ -79,7 +79,7 @@ $pages = (int)ceil($total / $limit);
       <div class="col-md-6 col-lg-4">
         <article class="article-card h-100">
           <!-- Featured Image -->
-          <a href="<?= siteUrl('post?slug=' . urlencode($p['slug'])) ?>" class="article-card-img-link">
+          <a href="<?= postUrl($p) ?>" class="article-card-img-link">
             <?php if ($p['featured_image']): ?>
             <img src="<?= imgUrl($p['featured_image']) ?>"
                  alt="<?= sanitize($p['title']) ?>"
@@ -104,7 +104,7 @@ $pages = (int)ceil($total / $limit);
             </div>
             <!-- Title -->
             <h3 class="article-card-title">
-              <a href="<?= siteUrl('post?slug=' . urlencode($p['slug'])) ?>">
+              <a href="<?= postUrl($p) ?>">
                 <?= sanitize($p['title']) ?>
               </a>
             </h3>
@@ -116,7 +116,7 @@ $pages = (int)ceil($total / $limit);
             <?php endif; ?>
             <!-- Footer -->
             <div class="article-card-footer">
-              <a href="<?= siteUrl('post?slug=' . urlencode($p['slug'])) ?>"
+              <a href="<?= postUrl($p) ?>"
                  class="btn-read-more">
                 ادامه مطلب <i class="bi bi-arrow-left ms-1"></i>
               </a>

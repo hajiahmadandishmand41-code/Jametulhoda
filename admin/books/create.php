@@ -72,6 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     );
                     $stmt->execute([$title, $slug, $description ?: null, $author ?: null, $translator ?: null, $publisher ?: null, $publish_year ?: null, $pages ?: null, $toc ?: null, $coverImg ?: null, $pdfFile ?: null, $wordFile ?: null, $is_featured]);
                     $bookId = (int)$stmt->fetchColumn();
+                    $stmt->closeCursor(); // release the write lock promptly (shutdown journal writes must never block)
                     if($topicIds){ $ins=$db->prepare("INSERT INTO book_topics (book_id, topic_id) VALUES (?,?) ON CONFLICT DO NOTHING"); foreach($topicIds as $tid) $ins->execute([$bookId,$tid]); }
 
                     $_SESSION['flash_msg']  = 'کتاب «' . $title . '» با موفقیت افزوده شد.';

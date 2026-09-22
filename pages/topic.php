@@ -24,14 +24,15 @@ if(!$topic || !$topic['is_active']){
 $children=getTopicChildren((int)$topic['id']);
 $parents=getTopicBreadcrumbs((int)$topic['id']);
 $pageTitle=$topic['name'];
+$canonicalOverride=topicUrl($topic);
 $pageDesc=$topic['intro'] ?: $topic['description'] ?: 'مطالب مرتبط با موضوع '. $topic['name'] . ' — مقالات، گزارش‌ها، کتاب‌ها، دروس و رسانه‌ها.';
 
 $breadcrumbs=[['name'=>'صفحه اصلی','url'=>SITE_URL? rtrim(SITE_URL,'/').'/': siteUrl()],['name'=>'موضوعات','url'=>siteUrl('topics')]];
 foreach($parents as $p){
     if($p['id']==$topic['id']) continue;
-    $breadcrumbs[]=['name'=>$p['name'],'url'=>siteUrl('topic?slug='.urlencode($p['slug']))];
+    $breadcrumbs[]=['name'=>$p['name'],'url'=>topicUrl($p)];
 }
-$breadcrumbs[]=['name'=>$topic['name'],'url'=>canonicalUrl('topic.php?slug='.urlencode($topic['slug']))];
+$breadcrumbs[]=['name'=>$topic['name'],'url'=>canonicalUrl(topicUrl($topic))];
 $breadcrumbsJsonLd=breadcrumbsJsonLd($breadcrumbs);
 
 // Fetch contents by topic
@@ -53,9 +54,9 @@ $lessons=getLessonsByTopic((int)$topic['id'],6);
 // Videos/Audios: posts linked to topic that have media
 $videos=[]; $audios=[];
 try{
-    $stmt=getDB()->prepare("SELECT m.* FROM media_files m JOIN post_topics pt ON pt.post_id=m.ref_id AND m.ref_type='post' WHERE pt.topic_id=? AND m.kind='video' ORDER BY m.id DESC LIMIT 4");
+    $stmt=getDB()->prepare("SELECT m.*, p.slug AS post_slug, p.status AS post_status FROM media_files m JOIN post_topics pt ON pt.post_id=m.ref_id AND m.ref_type='post' LEFT JOIN posts p ON p.id=m.ref_id WHERE pt.topic_id=? AND m.kind='video' ORDER BY m.id DESC LIMIT 4");
     $stmt->execute([(int)$topic['id']]); $videos=$stmt->fetchAll();
-    $stmt=getDB()->prepare("SELECT m.* FROM media_files m JOIN lesson_topics lt ON lt.lesson_id=m.ref_id AND m.ref_type='lesson' WHERE lt.topic_id=? AND m.kind='audio' ORDER BY m.id DESC LIMIT 4");
+    $stmt=getDB()->prepare("SELECT m.*, l.slug AS lesson_slug, l.status AS lesson_status FROM media_files m JOIN lesson_topics lt ON lt.lesson_id=m.ref_id AND m.ref_type='lesson' LEFT JOIN lessons l ON l.id=m.ref_id WHERE lt.topic_id=? AND m.kind='audio' ORDER BY m.id DESC LIMIT 4");
     $stmt->execute([(int)$topic['id']]); $audios=$stmt->fetchAll();
 }catch(PDOException $e){}
 
@@ -80,7 +81,7 @@ require_once __DIR__.'/../includes/header.php';
 <h2 class="h6 fw-bold mt-4"><i class="bi bi-diagram-3 ms-1"></i> موضوعات فرعی</h2>
 <div class="d-flex flex-wrap gap-2">
 <?php foreach($children as $ch): ?>
-<a href="<?= siteUrl('topic?slug='.urlencode($ch['slug'])) ?>" class="btn btn-sm" style="background:var(--jhd-surface);border:1px solid var(--jhd-border)"><?= sanitize($ch['name']) ?> <i class="bi bi-arrow-left ms-1"></i></a>
+<a href="<?= topicUrl($ch) ?>" class="btn btn-sm" style="background:var(--jhd-surface);border:1px solid var(--jhd-border)"><?= sanitize($ch['name']) ?> <i class="bi bi-arrow-left ms-1"></i></a>
 <?php endforeach; ?>
 </div>
 <?php endif; ?>
@@ -105,7 +106,7 @@ require_once __DIR__.'/../includes/header.php';
 <div class="row g-4"><?php foreach($reports as $r): ?>
 <div class="col-md-6 col-lg-4"><article class="news-card h-100">
 <div class="news-card-img-wrap"><?php if($r['featured_image']): ?><img src="<?= imgUrl($r['featured_image']) ?>" alt="<?= sanitize($r['title']) ?>" class="news-card-img" loading="lazy"><?php else: ?><div class="news-card-img-placeholder"><i class="bi bi-newspaper"></i></div><?php endif; ?><div class="news-card-badge"><?= postTypeBadge($r['post_type']) ?></div></div>
-<div class="news-card-body"><h3 class="news-card-title"><a href="<?= siteUrl('post?slug='.urlencode($r['slug'])) ?>"><?= sanitize($r['title']) ?></a></h3><p class="news-card-summary"><?= sanitize(excerpt($r['summary'] ?? '',90)) ?></p><a href="<?= siteUrl('post?slug='.urlencode($r['slug'])) ?>" class="btn-read-more">ادامه مطلب <i class="bi bi-arrow-left"></i></a></div>
+<div class="news-card-body"><h3 class="news-card-title"><a href="<?= postUrl($r) ?>"><?= sanitize($r['title']) ?></a></h3><p class="news-card-summary"><?= sanitize(excerpt($r['summary'] ?? '',90)) ?></p><a href="<?= postUrl($r) ?>" class="btn-read-more">ادامه مطلب <i class="bi bi-arrow-left"></i></a></div>
 </article></div>
 <?php endforeach; ?></div></section>
 <?php endif; ?>
@@ -115,8 +116,8 @@ require_once __DIR__.'/../includes/header.php';
 <div class="row g-4">
 <?php foreach(array_merge($articles,$researches) as $a): ?>
 <div class="col-md-6 col-lg-4"><article class="article-card h-100">
-<?php if($a['featured_image']): ?><a href="<?= siteUrl('post?slug='.urlencode($a['slug'])) ?>"><img src="<?= imgUrl($a['featured_image']) ?>" alt="<?= sanitize($a['title']) ?>" class="article-card-img" loading="lazy"></a><?php else: ?><div class="article-card-img-placeholder"><i class="bi bi-file-text"></i></div><?php endif; ?>
-<div class="article-card-body"><span class="article-date small text-muted"><i class="bi bi-calendar3 ms-1"></i><?= persianDate($a['published_at'] ?? $a['created_at']) ?></span><h3 class="article-card-title"><a href="<?= siteUrl('post?slug='.urlencode($a['slug'])) ?>"><?= sanitize($a['title']) ?></a></h3><p class="article-card-summary"><?= sanitize(excerpt($a['summary'] ?? '',100)) ?></p><a href="<?= siteUrl('post?slug='.urlencode($a['slug'])) ?>" class="btn-read-more">مطالعه <i class="bi bi-arrow-left"></i></a></div>
+<?php if($a['featured_image']): ?><a href="<?= postUrl($a) ?>"><img src="<?= imgUrl($a['featured_image']) ?>" alt="<?= sanitize($a['title']) ?>" class="article-card-img" loading="lazy"></a><?php else: ?><div class="article-card-img-placeholder"><i class="bi bi-file-text"></i></div><?php endif; ?>
+<div class="article-card-body"><span class="article-date small text-muted"><i class="bi bi-calendar3 ms-1"></i><?= persianDate($a['published_at'] ?? $a['created_at']) ?></span><h3 class="article-card-title"><a href="<?= postUrl($a) ?>"><?= sanitize($a['title']) ?></a></h3><p class="article-card-summary"><?= sanitize(excerpt($a['summary'] ?? '',100)) ?></p><a href="<?= postUrl($a) ?>" class="btn-read-more">مطالعه <i class="bi bi-arrow-left"></i></a></div>
 </article></div>
 <?php endforeach; ?>
 </div></section>
@@ -124,20 +125,20 @@ require_once __DIR__.'/../includes/header.php';
 
 <?php if(!empty($books)): ?>
 <section class="mb-5"><h2 class="h5 fw-bold mb-3"><i class="bi bi-book ms-2 text-warning"></i> کتاب‌های مرتبط</h2><div class="row g-4"><?php foreach($books as $b): ?>
-<div class="col-6 col-md-3"><div class="book-card h-100"><div class="book-card-cover"><?php if($b['cover_image']): ?><img src="<?= imgUrl($b['cover_image']) ?>" alt="<?= sanitize($b['title']) ?>" class="book-cover-img" loading="lazy"><?php else: ?><div class="book-cover-placeholder"><i class="bi bi-book"></i></div><?php endif; ?></div><div class="book-card-body"><h3 class="book-title"><a href="<?= siteUrl('book?id='.(int)$b['id']) ?>"><?= sanitize($b['title']) ?></a></h3><a href="<?= siteUrl('book?id='.(int)$b['id']) ?>" class="btn btn-sm btn-outline-primary w-100 mt-2">معرفی کتاب</a></div></div></div>
+<div class="col-6 col-md-3"><div class="book-card h-100"><div class="book-card-cover"><?php if($b['cover_image']): ?><img src="<?= imgUrl($b['cover_image']) ?>" alt="<?= sanitize($b['title']) ?>" class="book-cover-img" loading="lazy"><?php else: ?><div class="book-cover-placeholder"><i class="bi bi-book"></i></div><?php endif; ?></div><div class="book-card-body"><h3 class="book-title"><a href="<?= bookUrl($b) ?>"><?= sanitize($b['title']) ?></a></h3><a href="<?= bookUrl($b) ?>" class="btn btn-sm btn-outline-primary w-100 mt-2">معرفی کتاب</a></div></div></div>
 <?php endforeach; ?></div></section>
 <?php endif; ?>
 
 <?php if(!empty($lessons)): ?>
 <section class="mb-5"><h2 class="h5 fw-bold mb-3"><i class="bi bi-mortarboard ms-2 text-success"></i> درس‌های مرتبط</h2><div class="row g-4"><?php foreach($lessons as $ls): ?>
-<div class="col-md-6 col-lg-3"><div class="lesson-card h-100"><div class="lesson-card-img"><?php if($ls['featured_image']): ?><img src="<?= imgUrl($ls['featured_image']) ?>" alt="<?= sanitize($ls['title']) ?>" loading="lazy"><?php else: ?><div class="lesson-img-placeholder"><i class="bi bi-mortarboard"></i></div><?php endif; ?></div><div class="lesson-card-body"><h3 class="lesson-card-title"><a href="<?= siteUrl('lesson?slug='.urlencode($ls['slug'])) ?>"><?= sanitize($ls['title']) ?></a></h3><?php if($ls['teacher']): ?><p class="lesson-teacher"><?= sanitize($ls['teacher']) ?></p><?php endif; ?><a href="<?= siteUrl('lesson?slug='.urlencode($ls['slug'])) ?>" class="btn btn-sm btn-primary w-100 mt-auto">ورود به درس</a></div></div></div>
+<div class="col-md-6 col-lg-3"><div class="lesson-card h-100"><div class="lesson-card-img"><?php if($ls['featured_image']): ?><img src="<?= imgUrl($ls['featured_image']) ?>" alt="<?= sanitize($ls['title']) ?>" loading="lazy"><?php else: ?><div class="lesson-img-placeholder"><i class="bi bi-mortarboard"></i></div><?php endif; ?></div><div class="lesson-card-body"><h3 class="lesson-card-title"><a href="<?= lessonUrl($ls) ?>"><?= sanitize($ls['title']) ?></a></h3><?php if($ls['teacher']): ?><p class="lesson-teacher"><?= sanitize($ls['teacher']) ?></p><?php endif; ?><a href="<?= lessonUrl($ls) ?>" class="btn btn-sm btn-primary w-100 mt-auto">ورود به درس</a></div></div></div>
 <?php endforeach; ?></div></section>
 <?php endif; ?>
 
 <?php if(!empty($videos) || !empty($audios)): ?>
 <section class="mb-5"><div class="row g-4">
-<div class="col-md-6"><h3 class="h6 fw-bold"><i class="bi bi-camera-video ms-1 text-danger"></i> ویدیوها</h3><?php if(empty($videos)): ?><p class="text-muted small">ویدیویی یافت نشد.</p><?php else: ?><div class="row g-3"><?php foreach($videos as $v): ?><div class="col-6"><div class="news-card"><div class="news-card-img-wrap" style="height:130px"><div class="video-thumb h-100" data-video="<?= siteUrl($v['file_path']) ?>"><div class="video-thumb__placeholder"><i class="bi bi-camera-video"></i></div><div class="video-play-overlay"><div class="play-btn-circle play-btn-circle--sm"><i class="bi bi-play-fill"></i></div></div></div></div></div></div><?php endforeach; ?></div><?php endif; ?></div>
-<div class="col-md-6"><h3 class="h6 fw-bold"><i class="bi bi-headphones ms-1 text-success"></i> صوت‌ها</h3><?php if(empty($audios)): ?><p class="text-muted small">صوتی یافت نشد.</p><?php else: ?><div class="list-group"><?php foreach($audios as $a): ?><a href="#" class="list-group-item d-flex gap-2 small"><i class="bi bi-music-note text-success"></i> <?= sanitize($a['title'] ?: 'صوت') ?></a><?php endforeach; ?></div><?php endif; ?></div>
+<div class="col-md-6"><h3 class="h6 fw-bold"><i class="bi bi-camera-video ms-1 text-danger"></i> ویدیوها</h3><?php if(empty($videos)): ?><p class="text-muted small">ویدیویی یافت نشد.</p><?php else: ?><div class="row g-3"><?php foreach($videos as $v): $pvSlug=($v['post_status'] ?? '')==='published' ? ($v['post_slug'] ?? '') : ''; $vMediaUrl=$pvSlug && !empty($v['id']) ? mediaUrl('video', (int)$v['id']) : ($pvSlug ? postUrl($pvSlug) : ''); ?><div class="col-6"><div class="news-card"><div class="news-card-img-wrap" style="height:130px"><div class="video-thumb h-100" data-video="<?= siteUrl($v['file_path']) ?>"><div class="video-thumb__placeholder"><i class="bi bi-camera-video"></i></div><div class="video-play-overlay"><div class="play-btn-circle play-btn-circle--sm"><i class="bi bi-play-fill"></i></div></div></div></div><?php if($vMediaUrl): ?><div class="p-2 small"><a href="<?= $vMediaUrl ?>"><?= sanitize($v['title'] ?: 'ویدیو') ?></a></div><?php endif; ?></div></div><?php endforeach; ?></div><?php endif; ?></div>
+<div class="col-md-6"><h3 class="h6 fw-bold"><i class="bi bi-headphones ms-1 text-success"></i> صوت‌ها</h3><?php if(empty($audios)): ?><p class="text-muted small">صوتی یافت نشد.</p><?php else: ?><div class="list-group"><?php foreach($audios as $a): $laSlug=($a['lesson_status'] ?? '')==='published' ? ($a['lesson_slug'] ?? '') : ''; $aMediaUrl=$laSlug && !empty($a['id']) ? mediaUrl('audio', (int)$a['id']) : ($laSlug ? lessonUrl($laSlug) : ''); ?><?php if($aMediaUrl): ?><a href="<?= $aMediaUrl ?>" class="list-group-item d-flex gap-2 small"><i class="bi bi-music-note text-success"></i> <?= sanitize($a['title'] ?: 'صوت') ?></a><?php else: ?><span class="list-group-item d-flex gap-2 small"><i class="bi bi-music-note text-success"></i> <?= sanitize($a['title'] ?: 'صوت') ?></span><?php endif; ?><?php endforeach; ?></div><?php endif; ?></div>
 </div></section>
 <?php endif; ?>
 

@@ -26,9 +26,9 @@ $pages = (int)ceil($total / $limit);
                 </div>
                 <div class="news-card-body">
                     <div class="news-card-meta"><span class="text-muted small"><i class="bi bi-calendar3 ms-1"></i><?= persianDate($p['published_at'] ?? $p['created_at']) ?></span></div>
-                    <h3 class="news-card-title"><a href="<?= siteUrl('post?slug=' . urlencode($p['slug'])) ?>"><?= sanitize($p['title']) ?></a></h3>
+                    <h3 class="news-card-title"><a href="<?= postUrl($p) ?>"><?= sanitize($p['title']) ?></a></h3>
                     <?php if ($p['summary']): ?><p class="news-card-summary"><?= sanitize(excerpt($p['summary'], 120)) ?></p><?php endif; ?>
-                    <div class="news-card-footer"><a href="<?= siteUrl('post?slug=' . urlencode($p['slug'])) ?>" class="btn-read-more">ادامه مطلب <i class="bi bi-arrow-left"></i></a></div>
+                    <div class="news-card-footer"><a href="<?= postUrl($p) ?>" class="btn-read-more">ادامه مطلب <i class="bi bi-arrow-left"></i></a></div>
                 </div>
             </article>
         </div>

@@ -30,7 +30,7 @@ $pages=(int)ceil($total/$limit);
 <div class="col-md-6 col-lg-4">
 <article class="article-card h-100">
 <?php if($p['featured_image']): ?><img src="<?= imgUrl($p['featured_image']) ?>" class="article-card-img" loading="lazy" alt="<?= sanitize($p['title']) ?>"><?php else: ?><div class="article-card-img-placeholder"><i class="bi bi-journal-richtext"></i></div><?php endif; ?>
-<div class="article-card-body"><div class="article-card-meta"><span class="article-date"><?= persianDate($p['published_at'] ?? $p['created_at']) ?></span></div><h2 class="article-card-title h5"><a href="<?= siteUrl('post?slug='.urlencode($p['slug'])) ?>"><?= sanitize($p['title']) ?></a></h2><?php if($p['summary']): ?><p class="article-card-summary"><?= sanitize(excerpt($p['summary'],120)) ?></p><?php endif; ?><a href="<?= siteUrl('post?slug='.urlencode($p['slug'])) ?>" class="btn-read-more">مطالعه <i class="bi bi-arrow-left"></i></a></div>
+<div class="article-card-body"><div class="article-card-meta"><span class="article-date"><?= persianDate($p['published_at'] ?? $p['created_at']) ?></span></div><h2 class="article-card-title h5"><a href="<?= postUrl($p) ?>"><?= sanitize($p['title']) ?></a></h2><?php if($p['summary']): ?><p class="article-card-summary"><?= sanitize(excerpt($p['summary'],120)) ?></p><?php endif; ?><a href="<?= postUrl($p) ?>" class="btn-read-more">مطالعه <i class="bi bi-arrow-left"></i></a></div>
 </article>
 </div>
 <?php endforeach; ?></div>

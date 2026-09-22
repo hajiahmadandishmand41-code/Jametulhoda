@@ -8,12 +8,11 @@ require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/auth.php';
 startSecureSession();
 
-$slug = trim($_GET['slug'] ?? '');
+$slug = $_GET['slug'] ?? '';
+$slug = is_string($slug) ? trim($slug) : '';
 if (!$slug) redirect(siteUrl('lessons'));
 
-$stmt=getDB()->prepare("SELECT l.*, lc.title AS collection_title, lc.slug AS collection_slug, lv.title AS volume_title, lv.slug AS volume_slug FROM lessons l LEFT JOIN lesson_collections lc ON lc.id=l.collection_id LEFT JOIN lesson_volumes lv ON lv.id=l.volume_id WHERE l.slug=? AND l.status='published' LIMIT 1");
-$stmt->execute([$slug]);
-$lesson=$stmt->fetch();
+$lesson=getLessonBySlug($slug);
 if(!$lesson){
     http_response_code(404);
     $pageTitle='درس یافت نشد';
@@ -23,6 +22,7 @@ if(!$lesson){
     require_once __DIR__.'/../includes/footer.php'; exit;
 }
 $pageTitle=$lesson['title'];
+$canonicalOverride=lessonUrl($lesson);
 $pageDesc=$lesson['summary'] ? excerpt($lesson['summary'],160) : excerpt(strip_tags($lesson['content'] ?? ''),160);
 
 $audioUrl = $lesson['audio_file'] ? siteUrl(ltrim($lesson['audio_file'],'/')) : '';
@@ -50,12 +50,12 @@ $breadcrumbs=[
     ['name'=>'دروس','url'=>siteUrl('lessons')],
 ];
 if($lesson['collection_title']){
-    $breadcrumbs[]=['name'=>$lesson['collection_title'],'url'=>siteUrl('lessons?collection='.urlencode($lesson['collection_slug']))];
-    if($lesson['volume_title']) $breadcrumbs[]=['name'=>$lesson['volume_title'],'url'=>siteUrl('lessons?collection='.urlencode($lesson['collection_slug']).'&volume='.urlencode($lesson['volume_slug']))];
+    $breadcrumbs[]=['name'=>$lesson['collection_title'],'url'=>collectionUrl($lesson['collection_slug'])];
+    if($lesson['volume_title']) $breadcrumbs[]=['name'=>$lesson['volume_title'],'url'=>collectionUrl($lesson['collection_slug'], $lesson['volume_slug'])];
 } elseif($lesson['subject']){
     $breadcrumbs[]=['name'=>sanitize($lesson['subject']),'url'=>siteUrl('lessons?q='.urlencode($lesson['subject']))];
 }
-$breadcrumbs[]=['name'=>$lesson['title'],'url'=>canonicalUrl('lesson.php?slug='.urlencode($lesson['slug']))];
+$breadcrumbs[]=['name'=>$lesson['title'],'url'=>canonicalUrl(lessonUrl($lesson))];
 $breadcrumbsJsonLd=breadcrumbsJsonLd($breadcrumbs);
 
 require_once __DIR__.'/../includes/header.php';
@@ -71,7 +71,7 @@ require_once __DIR__.'/../includes/header.php';
 <article class="single-post lesson-single" itemscope itemtype="https://schema.org/LearningResource">
 <header class="single-post-header">
 <div class="d-flex flex-wrap gap-2 mb-2">
-<?php if($lesson['collection_title']): ?><a href="<?= siteUrl('lessons?collection='.urlencode($lesson['collection_slug'])) ?>" class="badge bg-primary"><?= sanitize($lesson['collection_title']) ?></a><?php endif; ?>
+<?php if($lesson['collection_title']): ?><a href="<?= collectionUrl($lesson['collection_slug']) ?>" class="badge bg-primary"><?= sanitize($lesson['collection_title']) ?></a><?php endif; ?>
 <?php if($lesson['volume_title']): ?><span class="badge bg-secondary"><?= sanitize($lesson['volume_title']) ?></span><?php endif; ?>
 <?php if($lesson['subject'] && !$lesson['collection_title']): ?><span class="badge bg-primary"><?= sanitize($lesson['subject']) ?></span><?php endif; ?>
 <?php if(!empty($lesson['lesson_number'])): ?><span class="badge bg-warning text-dark">درس <?= (int)$lesson['lesson_number'] ?></span><?php endif; ?>
@@ -85,7 +85,7 @@ require_once __DIR__.'/../includes/header.php';
 <?php if($pdfUrl): ?><span><i class="bi bi-file-pdf ms-1"></i> PDF</span><?php endif; ?>
 </div>
 <?php if($lessonTopics): ?>
-<div class="d-flex flex-wrap gap-1 mt-3"><?php foreach($lessonTopics as $t): ?><a href="<?= siteUrl('topic?slug='.urlencode($t['slug'])) ?>" class="badge bg-light text-dark border"><i class="bi bi-tag ms-1"></i><?= sanitize($t['name']) ?></a><?php endforeach; ?></div>
+<div class="d-flex flex-wrap gap-1 mt-3"><?php foreach($lessonTopics as $t): ?><a href="<?= topicUrl($t) ?>" class="badge bg-light text-dark border"><i class="bi bi-tag ms-1"></i><?= sanitize($t['name']) ?></a><?php endforeach; ?></div>
 <?php endif; ?>
 </header>
 
@@ -126,21 +126,21 @@ require_once __DIR__.'/../includes/header.php';
 <!-- ناوبری درس قبلی/بعدی -->
 <?php if($adjacent['prev'] || $adjacent['next']): ?>
 <div class="d-flex justify-content-between gap-3 mt-5 p-3" style="background:#f8f7f2;border:1px solid #e9e2c9;border-radius:12px">
-<?php if($adjacent['prev']): ?><a href="<?= siteUrl('lesson?slug='.urlencode($adjacent['prev']['slug'])) ?>" class="btn btn-outline-secondary"><i class="bi bi-arrow-right ms-1"></i> درس قبلی: <?= sanitize(mb_strimwidth($adjacent['prev']['title'],0,25,'...')) ?></a><?php else: ?><span></span><?php endif; ?>
-<?php if($adjacent['next']): ?><a href="<?= siteUrl('lesson?slug='.urlencode($adjacent['next']['slug'])) ?>" class="btn btn-primary">درس بعدی: <?= sanitize(mb_strimwidth($adjacent['next']['title'],0,25,'...')) ?> <i class="bi bi-arrow-left ms-1"></i></a><?php endif; ?>
+<?php if($adjacent['prev']): ?><a href="<?= lessonUrl($adjacent['prev']) ?>" class="btn btn-outline-secondary"><i class="bi bi-arrow-right ms-1"></i> درس قبلی: <?= sanitize(mb_strimwidth($adjacent['prev']['title'],0,25,'...')) ?></a><?php else: ?><span></span><?php endif; ?>
+<?php if($adjacent['next']): ?><a href="<?= lessonUrl($adjacent['next']) ?>" class="btn btn-primary">درس بعدی: <?= sanitize(mb_strimwidth($adjacent['next']['title'],0,25,'...')) ?> <i class="bi bi-arrow-left ms-1"></i></a><?php endif; ?>
 </div>
 <?php endif; ?>
 
 <?php if($lessonTopics): ?>
 <div class="mt-4 p-3" style="background:#fdf6e3;border:1px solid #e8d5a3;border-radius:10px">
 <h3 class="h6 fw-bold">موضوعات مرتبط با این درس</h3>
-<div class="d-flex flex-wrap gap-2"><?php foreach($lessonTopics as $t): ?><a href="<?= siteUrl('topic?slug='.urlencode($t['slug'])) ?>" class="badge bg-white text-dark border"><i class="bi bi-tag ms-1"></i><?= sanitize($t['name']) ?></a><?php endforeach; ?></div>
+<div class="d-flex flex-wrap gap-2"><?php foreach($lessonTopics as $t): ?><a href="<?= topicUrl($t) ?>" class="badge bg-white text-dark border"><i class="bi bi-tag ms-1"></i><?= sanitize($t['name']) ?></a><?php endforeach; ?></div>
 </div>
 <?php endif; ?>
 
 <div class="single-post-share mt-5 p-4 bg-soft rounded-xl">
 <h2 class="h5 mb-3"><i class="bi bi-share ms-2 text-gold"></i> اشتراک‌گذاری</h2>
-<?php $lessonUrl=canonicalUrl('lesson.php?slug='.urlencode($lesson['slug'])); ?>
+<?php $lessonUrl=canonicalUrl(lessonUrl($lesson)); ?>
 <div class="d-flex gap-2 flex-wrap"><a href="https://t.me/share/url?url=<?= urlencode($lessonUrl) ?>&text=<?= urlencode($lesson['title']) ?>" target="_blank" class="btn btn-sm" style="background:#2ca5e0;color:#fff"><i class="bi bi-telegram ms-1"></i> تلگرام</a><a href="https://wa.me/?text=<?= urlencode($lesson['title'].' - '.$lessonUrl) ?>" target="_blank" class="btn btn-sm" style="background:#25d366;color:#fff"><i class="bi bi-whatsapp ms-1"></i> واتساپ</a><button class="btn btn-sm btn-outline-secondary" onclick="navigator.clipboard.writeText('<?= htmlspecialchars($lessonUrl,ENT_QUOTES) ?>').then(()=>showToast('لینک کپی شد!','success'))"><i class="bi bi-link-45deg ms-1"></i> کپی لینک</button></div>
 </div>
 
@@ -155,7 +155,7 @@ require_once __DIR__.'/../includes/header.php';
 <h3 class="h6 fw-bold mt-3"><?= sanitize($vol['title']) ?></h3>
 <ul class="sidebar-list">
 <?php foreach($vLessons as $vl): $isCurrent=$vl['id']==$lesson['id']; ?>
-<li <?= $isCurrent?'style="background:#eaf3ec;border-radius:6px;padding:4px 6px"':'' ?>><a href="<?= siteUrl('lesson?slug='.urlencode($vl['slug'])) ?>" style="<?= $isCurrent?'color:#0d5a2b;font-weight:700':'' ?>"><?= sanitize($vl['title']) ?> <?php if($vl['lesson_number']): ?><small class="text-muted">— درس <?= (int)$vl['lesson_number'] ?></small><?php endif; ?></a></li>
+<li <?= $isCurrent?'style="background:#eaf3ec;border-radius:6px;padding:4px 6px"':'' ?>><a href="<?= lessonUrl($vl) ?>" style="<?= $isCurrent?'color:#0d5a2b;font-weight:700':'' ?>"><?= sanitize($vl['title']) ?> <?php if($vl['lesson_number']): ?><small class="text-muted">— درس <?= (int)$vl['lesson_number'] ?></small><?php endif; ?></a></li>
 <?php endforeach; ?>
 </ul>
 <?php endforeach; ?>
@@ -163,7 +163,7 @@ require_once __DIR__.'/../includes/header.php';
 <?php endif; endif; ?>
 
 <?php if(!empty($relatedLessons)): ?>
-<div class="sidebar-widget"><h2 class="sidebar-title"><i class="bi bi-collection-play ms-2"></i> درس‌های مرتبط</h2><ul class="sidebar-list"><?php foreach($relatedLessons as $rl): ?><li><a href="<?= siteUrl('lesson?slug='.urlencode($rl['slug'])) ?>"><?= sanitize(mb_strimwidth($rl['title'],0,55,'...')) ?></a></li><?php endforeach; ?></ul></div>
+<div class="sidebar-widget"><h2 class="sidebar-title"><i class="bi bi-collection-play ms-2"></i> درس‌های مرتبط</h2><ul class="sidebar-list"><?php foreach($relatedLessons as $rl): ?><li><a href="<?= lessonUrl($rl) ?>"><?= sanitize(mb_strimwidth($rl['title'],0,55,'...')) ?></a></li><?php endforeach; ?></ul></div>
 <?php endif; ?>
 
 <div class="sidebar-widget text-center"><a href="<?= siteUrl('lessons') ?>" class="btn btn-outline-primary w-100"><i class="bi bi-collection ms-1"></i> همه دروس</a></div>

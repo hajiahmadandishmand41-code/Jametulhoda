@@ -204,7 +204,7 @@ $currentSections = !empty($lesson['page_section'])
     <h5 class="mb-0"><i class="bi bi-pencil-square ms-2"></i>ویرایش: <?= sanitize(mb_strimwidth($lesson['title'],0,40,'...')) ?></h5>
     <div class="d-flex gap-2">
         <?php if (!empty($lesson['slug'])): ?>
-        <a href="<?= siteUrl('lesson?slug=' . urlencode($lesson['slug'])) ?>" target="_blank"
+        <a href="<?= lessonUrl($lesson) ?>" target="_blank"
            class="btn btn-sm btn-outline-success">
             <i class="bi bi-eye ms-1"></i>مشاهده
         </a>

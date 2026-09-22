@@ -53,10 +53,10 @@ $breadcrumbsJsonLd=breadcrumbsJsonLd($breadcrumbs);
 </div>
 <div class="news-card-body">
 <div class="news-card-meta"><span class="text-muted small"><i class="bi bi-calendar3 ms-1"></i><?= persianDate($p['published_at'] ?? $p['created_at']) ?></span></div>
-<h2 class="news-card-title h5"><a href="<?= siteUrl('post?slug='.urlencode($p['slug'])) ?>"><?= sanitize($p['title']) ?></a></h2>
+<h2 class="news-card-title h5"><a href="<?= postUrl($p) ?>"><?= sanitize($p['title']) ?></a></h2>
 <?php if($p['summary']): ?><p class="news-card-summary"><?= sanitize(excerpt($p['summary'],110)) ?></p><?php endif; ?>
-<?php $pt=getTopicsForPost((int)$p['id']); if($pt): ?><div class="d-flex flex-wrap gap-1 mt-2"><?php foreach(array_slice($pt,0,2) as $tp): ?><a href="<?= siteUrl('topic?slug='.urlencode($tp['slug'])) ?>" class="badge bg-light text-dark border" style="font-size:.70rem"><?= sanitize($tp['name']) ?></a><?php endforeach; ?></div><?php endif; ?>
-<div class="news-card-footer"><a href="<?= siteUrl('post?slug='.urlencode($p['slug'])) ?>" class="btn-read-more">مشاهده گزارش <i class="bi bi-arrow-left ms-1"></i></a></div>
+<?php $pt=getTopicsForPost((int)$p['id']); if($pt): ?><div class="d-flex flex-wrap gap-1 mt-2"><?php foreach(array_slice($pt,0,2) as $tp): ?><a href="<?= topicUrl($tp) ?>" class="badge bg-light text-dark border" style="font-size:.70rem"><?= sanitize($tp['name']) ?></a><?php endforeach; ?></div><?php endif; ?>
+<div class="news-card-footer"><a href="<?= postUrl($p) ?>" class="btn-read-more">مشاهده گزارش <i class="bi bi-arrow-left ms-1"></i></a></div>
 </div>
 </article>
 </div>

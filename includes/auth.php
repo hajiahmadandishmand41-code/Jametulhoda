@@ -74,6 +74,11 @@ function recordLoginAttempt(PDO $db, string $key): int {
         $stmt->execute([$key]);
         return (int)$stmt->fetchColumn();
     }
+    if (databaseDriver() === 'sqlite') {
+        $limit = $db->prepare("INSERT INTO login_limits (limit_key,attempts,expires_at) VALUES (?,1,datetime('now','+15 minutes')) ON CONFLICT (limit_key) DO UPDATE SET attempts=CASE WHEN login_limits.expires_at<datetime('now') THEN 1 ELSE login_limits.attempts+1 END, expires_at=CASE WHEN login_limits.expires_at<datetime('now') THEN datetime('now','+15 minutes') ELSE login_limits.expires_at END RETURNING attempts");
+        $limit->execute([$key]);
+        return (int)$limit->fetchColumn();
+    }
     $limit = $db->prepare("INSERT INTO login_limits (limit_key,attempts,expires_at) VALUES (?,1,NOW()+INTERVAL '15 minutes') ON CONFLICT (limit_key) DO UPDATE SET attempts=CASE WHEN login_limits.expires_at<NOW() THEN 1 ELSE login_limits.attempts+1 END, expires_at=CASE WHEN login_limits.expires_at<NOW() THEN NOW()+INTERVAL '15 minutes' ELSE login_limits.expires_at END RETURNING attempts");
     $limit->execute([$key]);
     return (int)$limit->fetchColumn();

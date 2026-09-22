@@ -51,6 +51,71 @@ function currentUrl(): string {
     return rtrim(SITE_URL, '/') . '/' . ltrim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/', '/');
 }
 
+// ─── Canonical detail URLs ──────────────────────────────────────────────
+// Single source for link generation. Every helper returns a pretty URL that
+// is registered in config/routes.php. Legacy query-style URLs
+// (/post?slug=X, /book?id=N, ...) keep working forever for bookmarks and
+// indexed links, but new links must use these helpers.
+/** Detail URL for a post row (typed: /article/X, /news/X, /research/X, /speech/X, else /post/X). */
+function postUrl(array|string $post, string $fallbackType = 'post'): string {
+    if (is_string($post)) {
+        if ($post === '') return siteUrl('articles');
+        return siteUrl($fallbackType . '/' . rawurlencode($post));
+    }
+    $slug = $post['slug'] ?? '';
+    if ($slug === '') return siteUrl('articles');
+    $prefix = match ($post['post_type'] ?? '') {
+        'article' => 'article', 'news' => 'news', 'research' => 'research',
+        'speech' => 'speech', default => 'post',
+    };
+    return siteUrl($prefix . '/' . rawurlencode($slug));
+}
+/** Detail URL for a speech row (/speech/X). */
+function speechUrl(array|string $speech): string {
+    $slug = is_array($speech) ? ($speech['slug'] ?? '') : $speech;
+    if ($slug === '') return siteUrl('speeches');
+    return siteUrl('speech/' . rawurlencode($slug));
+}
+/** Detail URL for a book row (/book/slug, or /book/id when it has no slug). */
+function bookUrl(array $book): string {
+    $slug = trim($book['slug'] ?? '');
+    if ($slug !== '') return siteUrl('book/' . rawurlencode($slug));
+    return siteUrl('book/' . (int)($book['id'] ?? 0));
+}
+/** Detail URL for a lesson row (/lesson/X). */
+function lessonUrl(array|string $lesson): string {
+    $slug = is_array($lesson) ? ($lesson['slug'] ?? '') : $lesson;
+    if ($slug === '') return siteUrl('lessons');
+    return siteUrl('lesson/' . rawurlencode($slug));
+}
+/** Detail URL for a topic row (/topic/X). */
+function topicUrl(array|string $topic): string {
+    $slug = is_array($topic) ? ($topic['slug'] ?? '') : $topic;
+    if ($slug === '') return siteUrl('topics');
+    return siteUrl('topic/' . rawurlencode($slug));
+}
+/** Detail URL for a category row (/category/X). */
+function categoryUrl(array|string $category): string {
+    $slug = is_array($category) ? ($category['slug'] ?? '') : $category;
+    if ($slug === '') return siteUrl();
+    return siteUrl('category/' . rawurlencode($slug));
+}
+/** URL for a lesson collection, optionally with a volume (/lessons/X[/Y]). */
+function collectionUrl(array|string $collection, array|string|null $volume = null): string {
+    $slug = is_array($collection) ? ($collection['slug'] ?? '') : $collection;
+    if ($slug === '') return siteUrl('lessons');
+    $url = 'lessons/' . rawurlencode($slug);
+    $volumeSlug = $volume === null ? '' : (is_array($volume) ? ($volume['slug'] ?? '') : $volume);
+    if ($volumeSlug !== '') $url .= '/' . rawurlencode($volumeSlug);
+    return siteUrl($url);
+}
+/** Detail URL for a media_files record (/video/{id} or /audio/{id}). */
+function mediaUrl(string $kind, int $id): string {
+    $kind = $kind === 'audio' ? 'audio' : 'video';
+    if ($id < 1) return siteUrl($kind === 'audio' ? 'audios' : 'videos');
+    return siteUrl($kind . '/' . $id);
+}
+
 // ─── Slug ─────────────────────────────────────────────────────────────────────
 
 function makeSlug(string $text): string {
@@ -428,6 +493,16 @@ function getLesson(int $id): ?array {
     return $row ?: null;
 }
 
+/** Published lesson with its collection/volume titles (detail-page resolver). */
+function getLessonBySlug(string $slug): ?array {
+    if($slug==='') return null;
+    try{
+        $stmt=getDB()->prepare("SELECT l.*, lc.title AS collection_title, lc.slug AS collection_slug, lv.title AS volume_title, lv.slug AS volume_slug FROM lessons l LEFT JOIN lesson_collections lc ON lc.id=l.collection_id LEFT JOIN lesson_volumes lv ON lv.id=l.volume_id WHERE l.slug=? AND l.status='published' LIMIT 1");
+        $stmt->execute([$slug]);
+        $row=$stmt->fetch(); return $row ?: null;
+    }catch(PDOException $e){ return null; }
+}
+
 function getLessonCollections(array $opts=[]): array {
     try{
         $db=getDB();
@@ -610,6 +685,23 @@ function countBooks(array $opts = []): int {
 }
 function getBookById(int $id): ?array {
     try{ $stmt=getDB()->prepare("SELECT * FROM books WHERE id=? LIMIT 1"); $stmt->execute([$id]); $row=$stmt->fetch(); return $row?:null; }catch(PDOException $e){ return null; }
+}
+function getBookBySlug(string $slug): ?array {
+    if($slug==='') return null;
+    try{ $stmt=getDB()->prepare("SELECT * FROM books WHERE slug=? LIMIT 1"); $stmt->execute([$slug]); $row=$stmt->fetch(); return $row?:null; }catch(PDOException $e){ return null; }
+}
+/** Published books sharing any topic with the given book (newest first). */
+function getRelatedBooks(int $bookId, int $limit=6): array {
+    if($bookId<1 || $limit<1) return [];
+    try{
+        $topics=getTopicsForBook($bookId);
+        if(!$topics) return [];
+        $ids=array_column($topics,'id');
+        $in=implode(',', array_fill(0,count($ids),'?'));
+        $stmt=getDB()->prepare("SELECT b.* FROM books b JOIN book_topics bt ON bt.book_id=b.id WHERE bt.topic_id IN ($in) AND b.id<>? AND b.status='published' GROUP BY b.id ORDER BY b.created_at DESC LIMIT $limit");
+        $stmt->execute(array_merge($ids,[$bookId]));
+        return $stmt->fetchAll();
+    }catch(PDOException $e){ return []; }
 }
 function uploadBookFile(array $file, string $type = 'pdf'): string {
     return uploadFile($file, $type === 'pdf' ? 'pdf' : 'word', UPLOAD_DOCUMENTS);

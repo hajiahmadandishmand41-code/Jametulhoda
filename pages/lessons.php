@@ -2,9 +2,6 @@
 /**
  * lessons.php — فهرست دروس با ساختار مجموعه → جلد → درس
  */
-$pageTitle='دروس حوزوی';
-$pageDesc='مجموعه دروس حوزوی به‌صورت درس‌به‌درس با جلد و بخش‌ها، همراه با صوت، ویدیو و PDF و موضوعات مرتبط.';
-require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/functions.php';
 
 $collectionSlug = trim($_GET['collection'] ?? '');
@@ -22,6 +19,20 @@ if($activeCollection && $volumeSlug){
         if($v['slug']===$volumeSlug){ $activeVolume=$v; break; }
     }
 }
+// Unknown collection/volume slugs are not-found resources (never a silent fallback).
+if(($collectionSlug !== '' && !$activeCollection) || ($activeCollection && $volumeSlug !== '' && !$activeVolume)){
+    http_response_code(404);
+    $pageTitle='مجموعه یافت نشد';
+    $pageDesc='مجموعه یا بخش درسی مورد نظر یافت نشد';
+    require_once __DIR__ . '/../includes/header.php';
+    echo '<div class="container py-5 text-center"><h1>مجموعه یا بخش درسی یافت نشد</h1><p class="text-muted">ممکن است حذف شده یا آدرس نادرست باشد.</p><a href="'.siteUrl('lessons').'" class="btn btn-primary mt-3">همه دروس</a></div>';
+    require_once __DIR__ . '/../includes/footer.php'; exit;
+}
+
+$pageTitle=$activeCollection ? $activeCollection['title'] : 'دروس حوزوی';
+$pageDesc=$activeCollection && $activeCollection['description'] ? excerpt($activeCollection['description'],160) : 'مجموعه دروس حوزوی به‌صورت درس‌به‌درس با جلد و بخش‌ها، همراه با صوت، ویدیو و PDF و موضوعات مرتبط.';
+if($activeCollection) $canonicalOverride=collectionUrl($activeCollection, $activeVolume ?: null);
+require_once __DIR__ . '/../includes/header.php';
 
 // Breadcrumbs
 $breadcrumbs=[
@@ -29,8 +40,8 @@ $breadcrumbs=[
     ['name'=>'دروس','url'=>siteUrl('lessons')],
 ];
 if($activeCollection){
-    $breadcrumbs[]=['name'=>$activeCollection['title'],'url'=>siteUrl('lessons?collection='.urlencode($activeCollection['slug']))];
-    if($activeVolume) $breadcrumbs[]=['name'=>$activeVolume['title'],'url'=>siteUrl('lessons?collection='.urlencode($activeCollection['slug']).'&volume='.urlencode($activeVolume['slug']))];
+    $breadcrumbs[]=['name'=>$activeCollection['title'],'url'=>collectionUrl($activeCollection)];
+    if($activeVolume) $breadcrumbs[]=['name'=>$activeVolume['title'],'url'=>collectionUrl($activeCollection, $activeVolume)];
 }
 $breadcrumbsJsonLd=breadcrumbsJsonLd($breadcrumbs);
 ?>
@@ -62,11 +73,11 @@ $breadcrumbsJsonLd=breadcrumbsJsonLd($breadcrumbs);
 <div class="card h-100">
 <?php if($col['cover_image']): ?><img src="<?= imgUrl($col['cover_image']) ?>" alt="<?= sanitize($col['title']) ?>" style="height:180px;object-fit:cover" class="card-img-top" loading="lazy"><?php endif; ?>
 <div class="card-body">
-<h3 class="h5"><a href="<?= siteUrl('lessons?collection='.urlencode($col['slug'])) ?>"><?= sanitize($col['title']) ?></a></h3>
+<h3 class="h5"><a href="<?= collectionUrl($col) ?>"><?= sanitize($col['title']) ?></a></h3>
 <?php if($col['description']): ?><p class="text-muted small"><?= sanitize(excerpt($col['description'],120)) ?></p><?php endif; ?>
-<?php if($vols): ?><div class="d-flex flex-wrap gap-1 mb-2"><?php foreach($vols as $v): ?><a href="<?= siteUrl('lessons?collection='.urlencode($col['slug']).'&volume='.urlencode($v['slug'])) ?>" class="badge bg-light text-dark border"><?= sanitize($v['title']) ?></a><?php endforeach; ?></div><?php endif; ?>
+<?php if($vols): ?><div class="d-flex flex-wrap gap-1 mb-2"><?php foreach($vols as $v): ?><a href="<?= collectionUrl($col, $v) ?>" class="badge bg-light text-dark border"><?= sanitize($v['title']) ?></a><?php endforeach; ?></div><?php endif; ?>
 <span class="text-muted small"><i class="bi bi-collection-play ms-1"></i><?= number_format($cnt) ?> درس</span>
-<div class="mt-3"><a href="<?= siteUrl('lessons?collection='.urlencode($col['slug'])) ?>" class="btn btn-primary btn-sm w-100">مشاهده دروس <i class="bi bi-arrow-left ms-1"></i></a></div>
+<div class="mt-3"><a href="<?= collectionUrl($col) ?>" class="btn btn-primary btn-sm w-100">مشاهده دروس <i class="bi bi-arrow-left ms-1"></i></a></div>
 </div>
 </div>
 </div>
@@ -106,9 +117,9 @@ try{
 <div class="lesson-card-img"><?php if($ls['featured_image']): ?><img src="<?= imgUrl($ls['featured_image']) ?>" alt="<?= sanitize($ls['title']) ?>" loading="lazy"><?php else: ?><div class="lesson-img-placeholder"><i class="bi bi-play-circle"></i></div><?php endif; ?><?php if($ls['audio_file']): ?><span class="lesson-audio-badge"><i class="bi bi-headphones"></i> صوت</span><?php endif; ?></div>
 <div class="lesson-card-body">
 <?php if($ls['collection_title']): ?><span class="lesson-subject"><?= sanitize($ls['collection_title']) ?><?= $ls['volume_title'] ? ' · '.sanitize($ls['volume_title']) : '' ?></span><?php endif; ?>
-<h3 class="lesson-card-title"><a href="<?= siteUrl('lesson?slug='.urlencode($ls['slug'])) ?>"><?= sanitize($ls['title']) ?></a></h3>
+<h3 class="lesson-card-title"><a href="<?= lessonUrl($ls) ?>"><?= sanitize($ls['title']) ?></a></h3>
 <?php if($ls['teacher']): ?><p class="lesson-teacher"><i class="bi bi-person ms-1"></i><?= sanitize($ls['teacher']) ?> <?php if($ls['lesson_number']): ?>· درس <?= (int)$ls['lesson_number'] ?><?php endif; ?></p><?php endif; ?>
-<a href="<?= siteUrl('lesson?slug='.urlencode($ls['slug'])) ?>" class="btn btn-sm btn-primary w-100 mt-auto">ورود به درس <i class="bi bi-arrow-left ms-1"></i></a>
+<a href="<?= lessonUrl($ls) ?>" class="btn btn-sm btn-primary w-100 mt-auto">ورود به درس <i class="bi bi-arrow-left ms-1"></i></a>
 </div>
 </div>
 </div>
@@ -127,10 +138,10 @@ try{
 <div class="col-md-6 col-lg-4">
 <div class="card">
 <div class="card-body">
-<h3 class="h6"><a href="<?= siteUrl('lessons?collection='.urlencode($activeCollection['slug']).'&volume='.urlencode($vol['slug'])) ?>"><?= sanitize($vol['title']) ?></a></h3>
+<h3 class="h6"><a href="<?= collectionUrl($activeCollection, $vol) ?>"><?= sanitize($vol['title']) ?></a></h3>
 <?php if($vol['description']): ?><p class="text-muted small"><?= sanitize(excerpt($vol['description'],100)) ?></p><?php endif; ?>
 <span class="text-muted small"><?= $vcount ?> درس</span>
-<a href="<?= siteUrl('lessons?collection='.urlencode($activeCollection['slug']).'&volume='.urlencode($vol['slug'])) ?>" class="btn btn-sm btn-outline-primary w-100 mt-2">مشاهده درس‌های این بخش</a>
+<a href="<?= collectionUrl($activeCollection, $vol) ?>" class="btn btn-sm btn-outline-primary w-100 mt-2">مشاهده درس‌های این بخش</a>
 </div>
 </div>
 </div>
@@ -161,16 +172,16 @@ try{
 <div class="lesson-card h-100">
 <div class="lesson-card-img"><?php if($ls['featured_image']): ?><img src="<?= imgUrl($ls['featured_image']) ?>" alt="<?= sanitize($ls['title']) ?>" loading="lazy"><?php else: ?><div class="lesson-img-placeholder"><i class="bi bi-mortarboard"></i></div><?php endif; ?><?php if($ls['lesson_number']): ?><span class="lesson-level-badge badge bg-dark">درس <?= (int)$ls['lesson_number'] ?></span><?php endif; ?></div>
 <div class="lesson-card-body">
-<h3 class="lesson-card-title"><a href="<?= siteUrl('lesson?slug='.urlencode($ls['slug'])) ?>"><?= sanitize($ls['title']) ?></a></h3>
+<h3 class="lesson-card-title"><a href="<?= lessonUrl($ls) ?>"><?= sanitize($ls['title']) ?></a></h3>
 <?php if($ls['teacher']): ?><p class="lesson-teacher"><i class="bi bi-person ms-1"></i><?= sanitize($ls['teacher']) ?></p><?php endif; ?>
 <?php if($ls['summary']): ?><p class="lesson-desc"><?= sanitize(excerpt($ls['summary'],90)) ?></p><?php endif; ?>
-<a href="<?= siteUrl('lesson?slug='.urlencode($ls['slug'])) ?>" class="btn btn-primary btn-sm w-100 mt-auto">ورود به درس <i class="bi bi-arrow-left ms-1"></i></a>
+<a href="<?= lessonUrl($ls) ?>" class="btn btn-primary btn-sm w-100 mt-auto">ورود به درس <i class="bi bi-arrow-left ms-1"></i></a>
 </div>
 </div>
 </div>
 <?php endforeach; ?>
 </div>
-<?php if($pages>1): ?><div class="mt-4"><?= paginate($total,$limit,$page, siteUrl('lessons?collection='.urlencode($activeCollection['slug']).($activeVolume?'&volume='.urlencode($activeVolume['slug']):'').'&page=%d')) ?></div><?php endif; ?>
+<?php if($pages>1): ?><div class="mt-4"><?= paginate($total,$limit,$page, collectionUrl($activeCollection, $activeVolume ?: null).'?page=%d') ?></div><?php endif; ?>
 <?php endif; ?>
 
 <div class="mt-4"><a href="<?= siteUrl('lessons') ?>" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-right ms-1"></i> بازگشت به همه مجموعه‌ها</a></div>

@@ -25,11 +25,11 @@ $pages = (int)ceil($total / $limit);
             <div class="announcement-icon"><i class="bi bi-megaphone-fill"></i></div>
             <div class="flex-grow-1">
                 <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-                    <h4 class="announcement-title mb-1"><a href="<?= siteUrl('post?slug=' . urlencode($p['slug'])) ?>"><?= sanitize($p['title']) ?></a></h4>
+                    <h4 class="announcement-title mb-1"><a href="<?= postUrl($p) ?>"><?= sanitize($p['title']) ?></a></h4>
                     <span class="text-muted small"><i class="bi bi-calendar3 ms-1"></i><?= persianDate($p['published_at'] ?? $p['created_at']) ?></span>
                 </div>
                 <?php if ($p['summary']): ?><p class="text-mid mb-2"><?= sanitize(excerpt($p['summary'], 200)) ?></p><?php endif; ?>
-                <a href="<?= siteUrl('post?slug=' . urlencode($p['slug'])) ?>" class="btn btn-sm btn-outline-warning">ادامه مطلب <i class="bi bi-arrow-left ms-1"></i></a>
+                <a href="<?= postUrl($p) ?>" class="btn btn-sm btn-outline-warning">ادامه مطلب <i class="bi bi-arrow-left ms-1"></i></a>
             </div>
         </div></div>
         <?php endforeach; ?>

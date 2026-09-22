@@ -15,7 +15,13 @@ $stmt->execute([$slug]);
 $cat  = $stmt->fetch();
 
 if (!$cat) {
-    header('Location: ' . siteUrl());
+    if ($slug === '') { header('Location: ' . siteUrl('topics')); exit; }
+    http_response_code(404);
+    $pageTitle = 'دسته‌بندی یافت نشد';
+    $pageDesc = 'دسته‌بندی مورد نظر یافت نشد';
+    require_once __DIR__ . '/../includes/header.php';
+    echo '<div class="container py-5 text-center"><h1>دسته‌بندی مورد نظر یافت نشد.</h1><a href="'.siteUrl('topics').'" class="btn btn-primary mt-3">مشاهده موضوعات</a></div>';
+    require_once __DIR__ . '/../includes/footer.php';
     exit;
 }
 
@@ -54,15 +60,15 @@ require_once __DIR__ . '/../includes/header.php';
                 </div>
                 <div class="news-card-body">
                     <div class="news-card-meta"><span class="text-muted small"><i class="bi bi-calendar3 ms-1"></i><?= persianDate($p['published_at'] ?? $p['created_at']) ?></span></div>
-                    <h3 class="news-card-title"><a href="<?= siteUrl('post?slug=' . urlencode($p['slug'])) ?>"><?= sanitize($p['title']) ?></a></h3>
+                    <h3 class="news-card-title"><a href="<?= postUrl($p) ?>"><?= sanitize($p['title']) ?></a></h3>
                     <?php if ($p['summary']): ?><p class="news-card-summary"><?= sanitize(excerpt($p['summary'], 120)) ?></p><?php endif; ?>
-                    <div class="news-card-footer"><a href="<?= siteUrl('post?slug=' . urlencode($p['slug'])) ?>" class="btn-read-more">ادامه مطلب <i class="bi bi-arrow-left"></i></a></div>
+                    <div class="news-card-footer"><a href="<?= postUrl($p) ?>" class="btn-read-more">ادامه مطلب <i class="bi bi-arrow-left"></i></a></div>
                 </div>
             </article>
         </div>
         <?php endforeach; ?>
     </div>
-    <?php if ($pages > 1): ?><div class="mt-5"><?= paginate($total, $limit, $page, siteUrl('category?slug=' . urlencode($slug) . '&page=%d')) ?></div><?php endif; ?>
+    <?php if ($pages > 1): ?><div class="mt-5"><?= paginate($total, $limit, $page, categoryUrl($slug) . '?page=%d') ?></div><?php endif; ?>
     <?php endif; ?>
 </div></div>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

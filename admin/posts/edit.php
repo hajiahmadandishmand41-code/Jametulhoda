@@ -188,7 +188,7 @@ $existingVideo = getMediaFor('post', $id, 'video');
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h5 class="mb-0"><i class="bi bi-pencil-square ms-2"></i>ویرایش: <?= sanitize(mb_strimwidth($post['title'],0,40,'...')) ?></h5>
     <div class="d-flex gap-2">
-        <a href="<?= siteUrl('post?slug=' . urlencode($post['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-success"><i class="bi bi-eye ms-1"></i>مشاهده</a>
+        <a href="<?= postUrl($post) ?>" target="_blank" class="btn btn-sm btn-outline-success"><i class="bi bi-eye ms-1"></i>مشاهده</a>
         <a href="<?= siteUrl('admin/posts/') ?>" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-right ms-1"></i>بازگشت</a>
     </div>
 </div>

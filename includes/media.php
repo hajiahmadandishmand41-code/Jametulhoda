@@ -35,6 +35,22 @@ function getMediaFor(string $refType, int $refId, string $kind): array {
 }
 
 /**
+ * Detail-page resolver: one media row by id, only when its kind matches
+ * the route (/video/{id} vs /audio/{id}). Parent visibility is checked
+ * by the caller (draft parents must not leak media).
+ */
+function getMediaById(int $id, string $kind): ?array {
+    if ($id < 1 || ($kind !== 'video' && $kind !== 'audio')) return null;
+    try {
+        $stmt = getDB()->prepare('SELECT * FROM media_files WHERE id=? LIMIT 1');
+        $stmt->execute([$id]);
+        $row = $stmt->fetch();
+        if (!$row || ($row['kind'] ?? '') !== $kind) return null;
+        return $row;
+    } catch (PDOException $e) { return null; }
+}
+
+/**
  * آپلود چند فایل صوتی یا ویدیویی و ذخیره در دیتابیس
  */
 function handleMediaUploads(string $refType, int $refId, array $files, string $kind): void {

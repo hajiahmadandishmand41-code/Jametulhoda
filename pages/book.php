@@ -4,11 +4,12 @@
  */
 require_once __DIR__.'/../includes/functions.php';
 
-$slug = trim($_GET['slug'] ?? '');
+$slug = $_GET['slug'] ?? '';
+$slug = is_string($slug) ? trim($slug) : '';
 $id   = (int)($_GET['id'] ?? 0);
 $book = null;
 if($slug){
-    try{ $stmt=getDB()->prepare("SELECT * FROM books WHERE slug=? LIMIT 1"); $stmt->execute([$slug]); $book=$stmt->fetch(); }catch(PDOException $e){}
+    $book=getBookBySlug($slug);
 }
 if(!$book && $id){
     $book=getBookById($id);
@@ -32,8 +33,9 @@ if(isset($_GET['download'])){
 }
 
 $pageTitle = $book['title'];
+$canonicalOverride = bookUrl($book);
 $pageDesc  = excerpt($book['description'] ?? $book['toc'] ?? '', 160);
-$canonicalUrl = $book['slug'] ? siteUrl('book?slug='.urlencode($book['slug'])) : siteUrl('book?id='.$book['id']);
+$canonicalUrl = bookUrl($book);
 $ogImage   = !empty($book['cover_image']) ? imgUrl($book['cover_image']) : null;
 $ogType    = 'book';
 $breadcrumbs = [
@@ -61,16 +63,7 @@ $bookJsonLd = json_encode([
 ], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
 
 $topics = getTopicsForBook((int)$book['id']);
-$related = [];
-if($topics){
-    try{
-        $ids=array_column($topics,'id');
-        $in=implode(',', array_fill(0,count($ids),'?'));
-        $stmt=getDB()->prepare("SELECT b.* FROM books b JOIN book_topics bt ON bt.book_id=b.id WHERE bt.topic_id IN ($in) AND b.id<>? AND b.status='published' GROUP BY b.id ORDER BY b.created_at DESC LIMIT 6");
-        $stmt->execute(array_merge($ids,[(int)$book['id']]));
-        $related=$stmt->fetchAll();
-    }catch(PDOException $e){ $related=[]; }
-}
+$related = getRelatedBooks((int)$book['id'], 6);
 require __DIR__.'/../includes/header.php';
 ?>
 <script type="application/ld+json"><?= $breadcrumbsJsonLd ?></script>
@@ -92,14 +85,14 @@ require __DIR__.'/../includes/header.php';
 <div style="aspect-ratio:3/4;display:grid;place-items:center;background:#ede8d8;border-radius:14px"><i class="bi bi-book" style="font-size:4rem;color:#b9ad8e"></i></div>
 <?php endif; ?>
 <div class="mt-4 d-grid gap-2">
-<?php if(!empty($book['pdf_file'])): ?><a href="<?= siteUrl('book?'.($book['slug']?'slug='.urlencode($book['slug']):'id='.$book['id']).'&download=pdf') ?>" class="btn btn-primary"><i class="bi bi-file-pdf ms-2"></i> دانلود PDF</a><?php endif; ?>
-<?php if(!empty($book['word_file'])): ?><a href="<?= siteUrl('book?'.($book['slug']?'slug='.urlencode($book['slug']):'id='.$book['id']).'&download=word') ?>" class="btn btn-outline-primary"><i class="bi bi-file-word ms-2"></i> دانلود Word</a><?php endif; ?>
+<?php if(!empty($book['pdf_file'])): ?><a href="<?= bookUrl($book).'?download=pdf' ?>" class="btn btn-primary"><i class="bi bi-file-pdf ms-2"></i> دانلود PDF</a><?php endif; ?>
+<?php if(!empty($book['word_file'])): ?><a href="<?= bookUrl($book).'?download=word' ?>" class="btn btn-outline-primary"><i class="bi bi-file-word ms-2"></i> دانلود Word</a><?php endif; ?>
 </div>
 <?php if($topics): ?>
 <div class="text-start mt-4">
 <div class="small fw-bold mb-2" style="color:var(--jhd-primary)"><i class="bi bi-tags ms-1"></i> موضوعات</div>
 <div class="d-flex flex-wrap gap-2">
-<?php foreach($topics as $tp): ?><a href="<?= siteUrl('topic?slug='.urlencode($tp['slug'])) ?>" class="badge rounded-pill" style="background:#f0ece3;color:#5b4a1a;border:1px solid #e8e6dc"><?= sanitize($tp['name']) ?></a><?php endforeach; ?>
+<?php foreach($topics as $tp): ?><a href="<?= topicUrl($tp) ?>" class="badge rounded-pill" style="background:#f0ece3;color:#5b4a1a;border:1px solid #e8e6dc"><?= sanitize($tp['name']) ?></a><?php endforeach; ?>
 </div>
 </div>
 <?php endif; ?>
@@ -139,14 +132,14 @@ require __DIR__.'/../includes/header.php';
 <section class="mb-4">
 <h2 class="h6 fw-bold" style="color:var(--jhd-primary)"><i class="bi bi-diagram-3 ms-2"></i> پیوندهای داخلی</h2>
 <div class="d-flex flex-wrap gap-2">
-<?php foreach($topics as $tp): ?><a href="<?= siteUrl('topic?slug='.urlencode($tp['slug'])) ?>" class="btn btn-sm btn-outline-secondary rounded-pill"><?= sanitize($tp['name']) ?></a><?php endforeach; ?>
+<?php foreach($topics as $tp): ?><a href="<?= topicUrl($tp) ?>" class="btn btn-sm btn-outline-secondary rounded-pill"><?= sanitize($tp['name']) ?></a><?php endforeach; ?>
 </div>
 </section>
 <?php endif; ?>
 
 <div class="d-flex flex-wrap gap-2 mt-4">
 <a href="<?= siteUrl('books') ?>" class="btn btn-outline-secondary"><i class="bi bi-arrow-right ms-1"></i> بازگشت به کتابخانه</a>
-<?php if($topics): $firstTopic=$topics[0]; ?><a href="<?= siteUrl('topic?slug='.urlencode($firstTopic['slug'])) ?>" class="btn btn-outline-primary">مشاهده در موضوع <?= sanitize($firstTopic['name']) ?></a><?php endif; ?>
+<?php if($topics): $firstTopic=$topics[0]; ?><a href="<?= topicUrl($firstTopic) ?>" class="btn btn-outline-primary">مشاهده در موضوع <?= sanitize($firstTopic['name']) ?></a><?php endif; ?>
 </div>
 </div>
 </div>
@@ -156,7 +149,7 @@ require __DIR__.'/../includes/header.php';
 <h2 class="h5 fw-bold mb-3" style="color:var(--jhd-primary)"><i class="bi bi-collection ms-2"></i> کتاب‌های مرتبط</h2>
 <div class="row g-3">
 <?php foreach($related as $rb):
-  $rbUrl=$rb['slug']?siteUrl('book?slug='.urlencode($rb['slug'])):siteUrl('book?id='.$rb['id']);
+  $rbUrl=bookUrl($rb);
 ?>
 <div class="col-6 col-md-4 col-lg-2">
 <a href="<?= $rbUrl ?>" style="text-decoration:none;color:inherit">

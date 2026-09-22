@@ -119,6 +119,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $status, $page_section, $level, $collection_id, $volume_id, $lesson_number
                     ]);
                     $newId = (int)$stmt->fetchColumn();
+                    $stmt->closeCursor(); // release the write lock promptly (shutdown journal writes must never block)
                     if($topicIds){ $ins=$db->prepare("INSERT INTO lesson_topics (lesson_id, topic_id) VALUES (?,?) ON CONFLICT DO NOTHING"); foreach($topicIds as $tid) $ins->execute([$newId,$tid]); }
 
                     $_SESSION['flash_msg']  = 'درس با موفقیت ذخیره شد.';

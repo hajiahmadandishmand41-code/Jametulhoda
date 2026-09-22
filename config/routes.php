@@ -110,6 +110,11 @@ return [
     'patterns' => [
         ['~^/book/(\d+)/?$~D',                       'pages/book.php',    ['id' => 1]],
         ['~^/book/([^/]+)/?$~uD',                     'pages/book.php',    ['slug' => 1]],
+        // Typed post URLs: /article/X, /news/X, /research/X — post.php renders
+        // them and answers 404 when the slug belongs to another post type.
+        ['~^/(article|news|research)/([^/]+)/?$~uD', 'pages/post.php',    ['expected_type' => 1, 'slug' => 2]],
+        // Media detail pages: /video/{id}, /audio/{id} (media_files record).
+        ['~^/(video|audio)/(\d+)/?$~D',               'pages/media.php',   ['kind' => 1, 'id' => 2]],
         ['~^/(post|lesson|speech|category|topic)/([^/]+)/?$~uD', 'pages/$1.php', ['slug' => 2]],
         ['~^/lessons/([^/]+)/([^/]+)/?$~uD',         'pages/lessons.php', ['collection' => 1, 'volume' => 2]],
         ['~^/lessons/([^/]+)/?$~uD',                 'pages/lessons.php', ['collection' => 1]],

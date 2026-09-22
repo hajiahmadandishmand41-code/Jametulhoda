@@ -34,7 +34,7 @@ $breadcrumbsJsonLd=breadcrumbsJsonLd($breadcrumbs);
 <div class="d-flex gap-3">
 <?php if($top['cover_image']): ?><img src="<?= imgUrl($top['cover_image']) ?>" alt="<?= sanitize($top['name']) ?>" style="width:84px;height:84px;object-fit:cover;border-radius:8px" loading="lazy"><?php else: ?><div style="width:84px;height:84px;background:#f8f7f2;border:1px solid #e9e2c9;border-radius:8px;display:flex;align-items:center;justify-content:center"><i class="bi bi-folder" style="font-size:1.8rem;color:#b39250"></i></div><?php endif; ?>
 <div class="flex-grow-1">
-<h2 class="h5 mb-1"><a href="<?= siteUrl('topic?slug='.urlencode($top['slug'])) ?>"><?= sanitize($top['name']) ?></a></h2>
+<h2 class="h5 mb-1"><a href="<?= topicUrl($top) ?>"><?= sanitize($top['name']) ?></a></h2>
 <?php if($top['intro'] ?: $top['description']): ?><p class="text-muted small mb-1"><?= sanitize(excerpt($top['intro'] ?: $top['description'],120)) ?></p><?php endif; ?>
 <span class="text-muted small"><i class="bi bi-collection ms-1"></i><?= number_format($cnt) ?> مطلب · <?= number_format($lessonCnt) ?> درس · <?= number_format($bookCnt) ?> کتاب</span>
 </div>
@@ -42,11 +42,11 @@ $breadcrumbsJsonLd=breadcrumbsJsonLd($breadcrumbs);
 <?php if($children): ?>
 <div class="d-flex flex-wrap gap-1 mt-3">
 <?php foreach($children as $ch): $subcnt=countPostsByTopic((int)$ch['id']); ?>
-<a href="<?= siteUrl('topic?slug='.urlencode($ch['slug'])) ?>" class="badge bg-light text-dark border"><?= sanitize($ch['name']) ?> <span class="text-muted">(<?= $subcnt ?>)</span></a>
+<a href="<?= topicUrl($ch) ?>" class="badge bg-light text-dark border"><?= sanitize($ch['name']) ?> <span class="text-muted">(<?= $subcnt ?>)</span></a>
 <?php endforeach; ?>
 </div>
 <?php endif; ?>
-<a href="<?= siteUrl('topic?slug='.urlencode($top['slug'])) ?>" class="btn btn-primary btn-sm w-100 mt-3">ورود به صفحه موضوع <i class="bi bi-arrow-left ms-1"></i></a>
+<a href="<?= topicUrl($top) ?>" class="btn btn-primary btn-sm w-100 mt-3">ورود به صفحه موضوع <i class="bi bi-arrow-left ms-1"></i></a>
 </div>
 </div>
 </div>

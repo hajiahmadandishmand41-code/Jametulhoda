@@ -46,16 +46,16 @@ if($q){
     <div class="row g-4">
         <?php foreach ($results as $p):
             if($p['target']==='topic'){
-                $resultUrl = siteUrl('topic?slug='.urlencode($p['slug']));
+                $resultUrl = topicUrl($p);
                 $badge = '<span class="badge" style="background:#fdf6e3;color:#7a5a1a;border:1px solid #e8d5a3">موضوع</span>';
             } elseif($p['target']==='book'){
-                $resultUrl = siteUrl('book?id='.(int)$p['id']);
+                $resultUrl = bookUrl($p);
                 $badge = '<span class="badge bg-warning text-dark">کتاب</span>';
             } elseif($p['target']==='lesson'){
-                $resultUrl = siteUrl('lesson?slug='.urlencode($p['slug']));
+                $resultUrl = lessonUrl($p);
                 $badge = '<span class="badge bg-success">درس</span>';
             } else {
-                $resultUrl = siteUrl('post?slug='.urlencode($p['slug']));
+                $resultUrl = postUrl($p);
                 $badge = postTypeBadge($p['post_type']);
             }
         ?>

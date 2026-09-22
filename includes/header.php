@@ -18,11 +18,39 @@ $metaDesc = $pageDesc ?? $siteSlogan;
 if(mb_strlen($metaDesc,'UTF-8')>160) $metaDesc = mb_substr($metaDesc,0,157,'UTF-8').'...';
 // router.php reports the public URL it matched; SCRIPT_NAME is the internal
 // script path (pages/about.php) and must never appear in a canonical link.
+// Pretty detail URLs already carry their slug (/post/X, /topic/Y, ...), so a
+// slug/id is appended only for query-style routes — never doubled.
 $canonicalPath = $_SERVER['JHD_ROUTE_PATH'] ?? ($_SERVER['SCRIPT_NAME'] ?? '/');
+// Detail pages pass their pretty canonical (postUrl/bookUrl/...) so legacy
+// query-style URLs cross-canonicalize to the pretty form instead of doubling.
+if (!empty($canonicalOverride)) $canonicalPath = $canonicalOverride;
 if (basename($canonicalPath)==='index.php') $canonicalPath=rtrim(dirname($canonicalPath), '/').'/';
-if ($currentPage==='book.php' && !empty($_GET['id'])) $canonicalPath .= '?id='.(int)$_GET['id'];
-if (!empty($_GET['slug'])) $canonicalPath .= '?slug='.rawurlencode($_GET['slug']);
-if (!empty($_GET['q'])) $canonicalPath .= '?q='.rawurlencode(mb_substr($_GET['q'],0,80));
+// Normalize to decoded form for comparison: router paths arrive decoded
+// (rawurldecode in router.php) while page overrides arrive encoded.
+$canonicalPath = rawurldecode($canonicalPath);
+$canonicalQuery = [];
+// A page-level canonical override is authoritative (pretty detail URL):
+// never append raw route params (slug/id/q/...) to it.
+if (empty($canonicalOverride)):
+$routeSlug = trim($_GET['slug'] ?? '');
+if ($routeSlug !== '' && !str_ends_with(rtrim($canonicalPath, '/'), '/' . $routeSlug)) {
+    $canonicalQuery['slug'] = $routeSlug;
+}
+if (($currentPage ?? '')==='book.php' && !empty($_GET['id']) && !str_contains($canonicalPath, '/' . (int)$_GET['id'])) {
+    $canonicalQuery['id'] = (int)$_GET['id'];
+}
+foreach (['collection', 'volume'] as $collectionKey) {
+    $collectionValue = trim($_GET[$collectionKey] ?? '');
+    if ($collectionValue !== '' && !str_contains($canonicalPath, '/' . $collectionValue)) {
+        $canonicalQuery[$collectionKey] = $collectionValue;
+    }
+}
+if (!empty($_GET['q'])) $canonicalQuery['q'] = mb_substr($_GET['q'], 0, 80);
+endif;
+// Encode path segments: pretty slugs may be non-ASCII (router decodes them).
+$canonicalSegments = array_map(static fn($s) => $s === '' ? '' : rawurlencode($s), explode('/', $canonicalPath));
+$canonicalPath = implode('/', $canonicalSegments);
+if ($canonicalQuery) $canonicalPath .= '?' . http_build_query($canonicalQuery);
 $canonical = SITE_URL ? rtrim(SITE_URL,'/') . '/' . ltrim(substr($canonicalPath, strlen(BASE_PATH)),'/') : '';
 $ogType = isset($post) || isset($book) || isset($lesson) ? 'article' : 'website';
 ?>
@@ -102,7 +130,7 @@ function renderDrawerTopics($parentId, $byParent, $depth=0){
     $html='';
     foreach($byParent[$pid] as $tp){
         $hasChildren = !empty($byParent[(int)$tp['id']]);
-        $html.='<a href="'.siteUrl('topic?slug='.urlencode($tp['slug'])).'" class="drawer-link drawer-topic depth-'.$depth.'"><i class="bi bi-'.($depth===0?'folder':'tag').'"></i>'.sanitize($tp['name']);
+        $html.='<a href="'.topicUrl($tp).'" class="drawer-link drawer-topic depth-'.$depth.'"><i class="bi bi-'.($depth===0?'folder':'tag').'"></i>'.sanitize($tp['name']);
         if($hasChildren) $html.=' <i class="bi bi-chevron-down ms-auto" style="font-size:.7rem"></i>';
         $html.='</a>';
         if($hasChildren && $depth<2){
@@ -124,9 +152,9 @@ echo renderDrawerTopics(null,$byParent);
 <?php $cols = getLessonCollections(['active'=>1]); foreach($cols as $col): 
   $cVols = getLessonVolumes((int)$col['id']);
 ?>
-<a href="<?= siteUrl('lessons?collection='.urlencode($col['slug'])) ?>" class="drawer-link"><i class="bi bi-mortarboard"></i> <?= sanitize($col['title']) ?></a>
+<a href="<?= collectionUrl($col) ?>" class="drawer-link"><i class="bi bi-mortarboard"></i> <?= sanitize($col['title']) ?></a>
 <?php if($cVols): foreach($cVols as $cv): ?>
-<a href="<?= siteUrl('lessons?collection='.urlencode($col['slug']).'&volume='.urlencode($cv['slug'])) ?>" class="drawer-link drawer-subtle" style="padding-inline-start:22px"><i class="bi bi-journals"></i> <?= sanitize($cv['title']) ?></a>
+<a href="<?= collectionUrl($col, $cv) ?>" class="drawer-link drawer-subtle" style="padding-inline-start:22px"><i class="bi bi-journals"></i> <?= sanitize($cv['title']) ?></a>
 <?php endforeach; endif; ?>
 <?php endforeach; ?>
 <a href="<?= siteUrl('lessons') ?>" class="drawer-link"><i class="bi bi-play-circle"></i> همه دروس</a>

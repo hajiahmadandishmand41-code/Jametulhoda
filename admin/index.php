@@ -102,7 +102,7 @@ $recentMsgs = $db->query("SELECT * FROM contact_messages ORDER BY created_at DES
                                 <td><?= postTypeBadge($p['post_type']) ?></td>
                                 <td><span class="badge <?= $p['status']==='published'?'bg-success':'bg-secondary' ?>"><?= $p['status']==='published'?'منتشر':'پیش‌نویس' ?></span></td>
                                 <td class="text-muted" style="font-size:.8rem"><?= persianDate($p['created_at']) ?></td>
-                                <td><a href="<?= siteUrl('admin/posts/edit?id=' . $p['id']) ?>" class="btn btn-sm btn-outline-primary py-0 px-2"><i class="bi bi-pencil"></i></a><a href="<?= siteUrl('post?slug=' . urlencode($p['slug'])) ?>" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2"><i class="bi bi-eye"></i></a></td>
+                                <td><a href="<?= siteUrl('admin/posts/edit?id=' . $p['id']) ?>" class="btn btn-sm btn-outline-primary py-0 px-2"><i class="bi bi-pencil"></i></a><a href="<?= postUrl($p) ?>" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2"><i class="bi bi-eye"></i></a></td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>
