@@ -1,26 +1,30 @@
-# Jametulhoda — Apache configuration (InfinityFree / cPanel / Shared Host / Apache 2.4+)
-# All requests are directed to router.php (front controller) except existing static assets.
+# Jametulhoda — Apache configuration (InfinityFree / cPanel / Docker, Apache 2.4+)
+# router.php owns the route table: every request that is not a real file inside
+# assets/ or uploads/ is handed to it, and it answers a uniform 404 for anything
+# that is not a public route (including config/, includes/, pages/, bin/, tests/,
+# database/, storage/ and repository files such as *.sql, *.md, *.json or .env).
+# Nothing else may be served directly — a "serve any existing static file" rule
+# here would publish those repository files again.
 Options -Indexes -MultiViews
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # 1. Real static files inside assets/ or uploads/ are served directly by Apache
+    # 1. Real static files inside assets/ or uploads/ are served by Apache itself
+    #    (no PHP process needed). The extra path segments keep this working when
+    #    the site lives in a subdirectory of the document root.
     RewriteCond %{REQUEST_URI} ^/(?:[^/]+/)*(assets|uploads)/ [NC]
     RewriteCond %{REQUEST_FILENAME} -f
-    RewriteRule ^ - [L]
+    RewriteRule ^ - [END]
 
-    # 2. Allow direct access to router.php without looping
-    RewriteRule ^router\.php$ - [L]
+    # 2. The front controller itself is never rewritten again.
+    RewriteRule ^router\.php$ - [END]
 
-    # 3. Existing static non-PHP files (e.g. favicon.svg, robots.txt if physical) served directly
-    RewriteCond %{REQUEST_FILENAME} -f
-    RewriteCond %{REQUEST_FILENAME} !\.php$
-    RewriteRule ^ - [L]
-
-    # 4. Route everything else (including real directories like admin/ and physical .php files)
-    # to router.php so front controller and security gates are never bypassed.
-    RewriteRule ^ router.php [L,QSA]
+    # 3. Everything else (including real directories such as admin/ and any
+    #    physical .php file) goes through router.php, so the route allowlist and
+    #    the security gates can never be bypassed. [END] stops the per-directory
+    #    rewrite loop without a second pass.
+    RewriteRule ^ router.php [END,QSA]
 </IfModule>
 
 <IfModule mod_headers.c>

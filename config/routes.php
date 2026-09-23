@@ -52,8 +52,9 @@ return [
         '/robots.php'           => 'robots.php',
 
         // ─── نصب ────────────────────────────────────────────────────────
-        '/install'              => 'php/install.php',
-        '/install.php'          => 'php/install.php',
+        // تنها نشانی مجاز نصاب `/php/install` است. ریشهٔ `/install.php` عمداً
+        // ۴۰۴ می‌ماند (docs/FILE_ROUTE_MAP.md و tests/http.mjs همین را می‌سنجند)
+        // تا مسیر قدیمی نصاب روی میزبان‌های اشتراکی قابل اجرا نباشد.
         '/php/install'          => 'php/install.php',
         '/php/install.php'      => 'php/install.php',
 
@@ -108,6 +109,9 @@ return [
         '/login'     => '/admin/login',
         '/logout'    => '/admin/logout',
         '/event'     => '/events',
+        // نشانی کوتاه نصاب. aliasها فقط با همان نوشتار (به‌علاوهٔ اسلش پایانی)
+        // پاسخ می‌دهند، پس `/install.php` همچنان ۴۰۴ می‌ماند.
+        '/install'   => '/php/install',
     ],
 
     // مسیرهای پویا: [الگو, اسکریپت (با جای‌گیری $n), نگاشت پارامترها]

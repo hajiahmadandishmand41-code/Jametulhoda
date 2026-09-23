@@ -1,4 +1,12 @@
-<?php if (($currentPage ?? '') === 'index.php'): ?>
+<?php
+// `$currentPage` was never set by any controller, so this invitation band never
+// rendered. The homepage is now detected from the resolved route ('/' and the
+// legacy '/index.php' spelling both count).
+$jhdCurrentPath = function_exists('current_path') ? rtrim(current_path(), '/') : '';
+$isHomePage = (($currentPage ?? '') === 'index.php')
+    || in_array($jhdCurrentPath === '' ? '/' : $jhdCurrentPath, ['/', '/index.php'], true);
+?>
+<?php if ($isHomePage): ?>
 <div class="container"><section class="jhd-invitation"><div><h2>آغاز یک مسیر روشن علمی و معرفتی</h2><p>برای آشنایی با برنامه‌های آموزشی و شرایط پذیرش در مدرسه علمیه جامعه‌الهدی، با ما در ارتباط باشید.</p></div><a class="jhd-button" href="<?= url('contact') ?>">گفت‌وگو با مدرسه <i class="bi bi-arrow-left"></i></a></section></div>
 <?php endif; ?>
 </main>

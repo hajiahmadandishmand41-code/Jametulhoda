@@ -44,6 +44,14 @@ jobs:
           composer validate --no-check-publish
           composer install --no-interaction --prefer-dist --no-dev 2>&1 | tee /tmp/composer-install.log
       - run: find . -name '*.php' -not -path './vendor/*' -not -path './node_modules/*' -print0 | xargs -0 -n1 php -l
+      # Static route/link audit: resolves every URL in config/routes.php (routes,
+      # aliases, patterns) and every internal link found in the templates without
+      # needing a server. It fails fast when a route is added for a path that the
+      # HTTP tests require to stay 404 (for example the legacy root /install.php).
+      - name: Static route and link audit
+        run: |
+          python3 tests/verify_routes.py
+          python3 tests/crawl_links.py
       - run: php tests/security.php && php bin/migrate.php && php bin/migrate.php
       - name: Upload rollback and durable cleanup
         run: ALLOW_DESTRUCTIVE_TESTS=1 php tests/storage-recovery.php

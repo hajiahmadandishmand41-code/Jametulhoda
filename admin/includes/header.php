@@ -45,6 +45,10 @@ $isAdminRole = in_array($admin['role'] ?? '', ['superadmin', 'admin'], true);
 }
 *, *::before, *::after { box-sizing: border-box; }
 body { font-family: 'Vazirmatn', sans-serif; background: var(--admin-bg); color: var(--admin-text); margin: 0; }
+/* Guard: the panel must never scroll sideways on phones. `clip` (not `hidden`)
+   keeps the fixed sidebar and sticky topbar working. */
+html, body { max-width: 100%; }
+body { overflow-x: clip; }
 
 /* Sidebar */
 .admin-sidebar {

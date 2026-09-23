@@ -907,3 +907,346 @@ html[data-theme="dark"] .list-group-item {
   .jhd-hero-title { font-size: 1.35rem; }
   .section-title { font-size: 1.25rem !important; }
 }
+
+/* ─── 10. Header, Drawer & Component Completion ───────────────────────── */
+
+/* Guard: no page may scroll horizontally. `clip` (not `hidden`) is used so
+ * sticky headers and the off-canvas drawer keep working. */
+html, body { max-width: 100%; }
+body { overflow-x: clip; }
+
+/* The public header (includes/header.php) and footer markup use these class
+ * names; they are defined here so the layout matches the design tokens in both
+ * light and dark themes. */
+
+/* Accessibility: skip link */
+.skip-link {
+  position: absolute;
+  top: -60px;
+  right: 12px;
+  z-index: 2000;
+  background: var(--jhd-green);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 0 0 10px 10px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  transition: top 0.2s ease;
+}
+.skip-link:focus {
+  top: 0;
+  color: #fff;
+}
+
+/* Header shell */
+.jhd-header {
+  background-color: var(--jhd-surface);
+  border-bottom: 1px solid var(--jhd-border);
+  position: relative;
+  z-index: 1030;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+.jhd-header-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+.jhd-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--jhd-ink);
+  text-decoration: none;
+  /* May shrink (but never grow past its content) so the header row cannot push
+   * the page wider than the viewport on small phones. */
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.jhd-brand:hover { color: var(--jhd-green); }
+.jhd-brand img {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--jhd-gold);
+  background-color: var(--jhd-soft);
+}
+.jhd-brand span { display: flex; flex-direction: column; line-height: 1.5; min-width: 0; }
+.jhd-brand strong { font-size: 1.02rem; font-weight: 800; overflow-wrap: break-word; }
+.jhd-brand small { font-size: 0.74rem; color: var(--jhd-muted); overflow-wrap: break-word; }
+.jhd-brand img { flex: 0 0 auto; }
+
+/* Desktop search field */
+.jhd-search {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 520px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--jhd-soft);
+  border: 1px solid var(--jhd-border);
+  border-radius: 999px;
+  padding: 5px 6px 5px 14px;
+}
+.jhd-search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--jhd-ink);
+  font-size: 0.9rem;
+  padding: 6px 0;
+}
+.jhd-search input:focus { outline: none; }
+.jhd-search button {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background-color: var(--jhd-green);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.18s ease;
+}
+.jhd-search button:hover { background-color: var(--jhd-green-hover); }
+
+.jhd-header-actions {
+  margin-inline-start: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.jhd-menu-toggle { display: inline-flex; }
+@media (min-width: 992px) {
+  .jhd-menu-toggle { display: none; }
+}
+
+/* Desktop navigation list */
+.jhd-nav-list {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.jhd-nav-list::-webkit-scrollbar { display: none; }
+.jhd-nav-list li { flex: 0 0 auto; }
+
+/* Mobile drawer overlay (id=drawerOverlay, toggled with .show by interface.js) */
+.jhd-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1040;
+  background: rgba(8, 18, 14, 0.55);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.jhd-drawer-overlay.show { opacity: 1; }
+.jhd-drawer-overlay[hidden] { display: none; }
+
+.jhd-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--jhd-border);
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--jhd-ink);
+}
+.jhd-drawer-search { padding: 12px 16px 0; }
+.jhd-drawer-search form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--jhd-soft);
+  border: 1px solid var(--jhd-border);
+  border-radius: 10px;
+  padding: 5px;
+}
+.jhd-drawer-search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--jhd-ink);
+  padding: 7px 10px;
+  font-size: 0.9rem;
+}
+.jhd-drawer-search input:focus { outline: none; }
+.jhd-drawer-search button {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background-color: var(--jhd-green);
+  color: #fff;
+  cursor: pointer;
+}
+
+.drawer-section {
+  padding: 16px 16px 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--jhd-muted);
+}
+.drawer-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 2px;
+  border-radius: 8px;
+  color: var(--jhd-ink);
+  font-size: 0.93rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.drawer-link i {
+  font-size: 1.05rem;
+  color: var(--jhd-green);
+  width: 22px;
+  text-align: center;
+  flex: 0 0 auto;
+}
+.drawer-link:hover,
+.drawer-link:focus,
+.drawer-link.active {
+  background-color: var(--jhd-soft);
+  color: var(--jhd-green);
+}
+.drawer-topic.depth-0 { padding-inline-start: 20px; font-weight: 500; }
+.drawer-all {
+  color: var(--jhd-gold);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+.drawer-all:hover { color: var(--jhd-gold-hover); }
+
+/* Footer widget wrapper */
+.footer-widget { height: 100%; }
+
+/* Homepage invitation band (includes/footer.php) */
+.jhd-invitation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 18px;
+  background: var(--jhd-banner-bg);
+  color: rgba(255, 255, 255, 0.9);
+  border-radius: 16px;
+  padding: 26px 28px;
+  margin: 8px 0 34px;
+}
+.jhd-invitation h2 {
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+.jhd-invitation p { margin: 0; font-size: 0.92rem; opacity: 0.86; }
+.jhd-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--jhd-gold);
+  color: #1c1a12;
+  border-radius: 10px;
+  padding: 11px 22px;
+  font-weight: 800;
+  font-size: 0.92rem;
+  white-space: nowrap;
+  transition: background-color 0.18s ease, transform 0.18s ease;
+}
+.jhd-button:hover {
+  background-color: var(--jhd-gold-hover);
+  color: #1c1a12;
+  transform: translateY(-2px);
+}
+@media (max-width: 575.98px) {
+  .jhd-invitation { padding: 20px; text-align: center; justify-content: center; }
+}
+
+/* Video thumbnails (homepage + topic pages) */
+.video-thumb {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: inherit;
+  background-color: #101815;
+  cursor: pointer;
+}
+.video-thumb__placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 96px;
+  background-color: #101815;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1.6rem;
+}
+.play-btn-circle {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--jhd-green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.35);
+  transition: transform 0.2s ease;
+}
+.play-btn-circle--sm { width: 42px; height: 42px; font-size: 1.1rem; }
+.video-thumb:hover .play-btn-circle { transform: scale(1.08); }
+
+/* Contact page rows and sticky sidebars */
+.contact-item {
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--jhd-border-subtle);
+}
+.contact-item:last-child { border-bottom: 0; }
+.sidebar { position: relative; }
+@media (min-width: 992px) {
+  .sidebar { position: sticky; top: 86px; }
+}
+
+/* Text clamping utility */
+.line-clamp-2,
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.line-clamp-2 { -webkit-line-clamp: 2; line-clamp: 2; }
+.line-clamp-3 { -webkit-line-clamp: 3; line-clamp: 3; }
+
+/* Mobile search shortcut + about page sidebar (same sticky behaviour) */
+.jhd-mobile-search { display: inline-flex; }
+.about-sidebar { position: relative; }
+@media (min-width: 992px) {
+  .about-sidebar { position: sticky; top: 86px; }
+}

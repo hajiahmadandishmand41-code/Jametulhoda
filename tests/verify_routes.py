@@ -135,7 +135,11 @@ if __name__ == '__main__':
         ('/sitemap.xml', 200),
         ('/robots.txt', 200),
         ('/install', 200),
-        ('/install.php', 200),
+        ('/install/', 200),
+        ('/php/install', 200),
+        ('/php/install.php', 200),
+        # The legacy root installer path must stay unreachable (docs/FILE_ROUTE_MAP.md).
+        ('/install.php', 404),
         ('/news/new-school-year', 200),
         ('/article/aql-in-religion', 200),
         ('/articles/aql-in-religion', 200),
@@ -163,6 +167,10 @@ if __name__ == '__main__':
         ('/config/database.php', 404),
         ('/.env', 404),
         ('/bin/migrate.php', 404),
+        ('/database/database.postgres.sql', 404),
+        ('/storage/logs/.gitkeep', 404),
+        ('/includes/functions.php', 404),
+        ('/admin/includes/header.php', 404),
     ]
 
     all_passed = True
@@ -185,7 +193,7 @@ if __name__ == '__main__':
 
     print("="*80)
     if all_passed:
-        print("SUCCESS: ALL 44 ROUTE RESOLUTION TESTS PASSED! ALL FILES EXIST!")
+        print(f"SUCCESS: ALL {len(test_cases)} ROUTE RESOLUTION TESTS PASSED! ALL FILES EXIST!")
         sys.exit(0)
     else:
         print("FAILURE: ONE OR MORE TESTS FAILED!")
