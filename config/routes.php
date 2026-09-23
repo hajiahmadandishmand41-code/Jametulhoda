@@ -2,19 +2,15 @@
 /**
  * config/routes.php — تنها مرجع مسیردهی سایت (single source of truth)
  *
- * `.htaccess` هر درخواستی را به `router.php` می‌فرستد و `router.php` فقط همین
- * جدول را می‌خواند؛ بنابراین هیچ فایل PHP دیگری از بیرون قابل اجرا نیست.
+ * `.htaccess` همه درخواست‌ها را به `router.php` می‌فرستد و `router.php` فقط همین
+ * جدول را می‌خواند؛ بنابراین هیچ فایل PHP دیگری از بیرون مستقیماً قابل اجرا نیست.
  *
  * ساختار:
  *   routes   → نشانی اصلی (canonical) ⇒ اسکریپت
  *              مقدار می‌تواند رشته (مسیر فایل) یا آرایه
  *              ['file' => …, 'get' => [پارامترهای پیش‌فرض]] باشد.
- *   aliases  → نشانی قدیمی ⇒ نشانی اصلی (همان اسکریپت، بدون ۳۰۱ اجباری)
- *   patterns → مسیرهای پویا (slug / id) با الگوی منظم
- *
- * هر نشانی اصلی به‌صورت خودکار سه شکل دیگر را هم پاسخ می‌دهد (توسط router.php):
- *   /about   /about/   /about.php    و برای پوشه‌ها:  /admin/users/index.php
- * پس نیازی به نوشتن دستی هر چهار شکل نیست.
+ *   aliases  → نشانی قدیمی یا جایگزین ⇒ نشانی اصلی
+ *   patterns → مسیرهای پویا (slug / id / actions) با الگوهای منظم
  */
 
 return [
@@ -29,8 +25,10 @@ return [
         '/books'                => 'pages/books.php',
         '/category'             => 'pages/category.php',
         '/contact'              => 'pages/contact.php',
+        '/events'               => 'pages/events.php',
         '/lesson'               => 'pages/lesson.php',
         '/lessons'              => 'pages/lessons.php',
+        '/media'                => 'pages/media-library.php',
         '/media-library'        => 'pages/media-library.php',
         '/audio'                => ['file' => 'pages/media-library.php', 'get' => ['kind' => 'audio']],
         '/audios'               => ['file' => 'pages/media-library.php', 'get' => ['kind' => 'audio']],
@@ -54,7 +52,10 @@ return [
         '/robots.php'           => 'robots.php',
 
         // ─── نصب ────────────────────────────────────────────────────────
+        '/install'              => 'php/install.php',
+        '/install.php'          => 'php/install.php',
         '/php/install'          => 'php/install.php',
+        '/php/install.php'      => 'php/install.php',
 
         // ─── پنل مدیریت ─────────────────────────────────────────────────
         '/admin'                     => 'admin/index.php',
@@ -62,7 +63,9 @@ return [
         '/admin/logout'              => 'admin/logout.php',
         '/admin/change-password'     => 'admin/change-password.php',
         '/admin/settings'            => 'admin/settings.php',
+        '/admin/content'             => 'admin/posts/index.php',
         '/admin/users'               => 'admin/users/index.php',
+        '/admin/users/new'           => 'admin/users/index.php',
         '/admin/messages'            => 'admin/messages/index.php',
         '/admin/media'               => 'admin/media/index.php',
         '/admin/categories'          => 'admin/categories/index.php',
@@ -97,27 +100,49 @@ return [
         '/admin/banners'             => 'admin/banners/index.php',
     ],
 
-    // نشانی‌های قدیمی که باید کار کنند
+    // نشانی‌های قدیمی و مترادف
     'aliases' => [
         '/library'   => '/books',
         '/files'     => '/books',
         '/dashboard' => '/admin',
         '/login'     => '/admin/login',
         '/logout'    => '/admin/logout',
+        '/event'     => '/events',
     ],
 
     // مسیرهای پویا: [الگو, اسکریپت (با جای‌گیری $n), نگاشت پارامترها]
     'patterns' => [
-        ['~^/book/(\d+)/?$~D',                       'pages/book.php',    ['id' => 1]],
-        ['~^/book/([^/]+)/?$~uD',                     'pages/book.php',    ['slug' => 1]],
-        // Typed post URLs: /article/X, /news/X, /research/X — post.php renders
-        // them and answers 404 when the slug belongs to another post type.
-        ['~^/(article|news|research)/([^/]+)/?$~uD', 'pages/post.php',    ['expected_type' => 1, 'slug' => 2]],
-        // Media detail pages: /video/{id}, /audio/{id} (media_files record).
-        ['~^/(video|audio)/(\d+)/?$~D',               'pages/media.php',   ['kind' => 1, 'id' => 2]],
-        ['~^/(post|lesson|speech|category|topic)/([^/]+)/?$~uD', 'pages/$1.php', ['slug' => 2]],
-        ['~^/lessons/([^/]+)/([^/]+)/?$~uD',         'pages/lessons.php', ['collection' => 1, 'volume' => 2]],
-        ['~^/lessons/([^/]+)/?$~uD',                 'pages/lessons.php', ['collection' => 1]],
-        ['~^/search/([^/]+)/?$~uD',                  'pages/search.php',  ['q' => 1]],
+        // ─── پنل مدیریت: روت‌های پویا و عملیات محتوا ───────────────────
+        ['~^/admin/users/edit/(\d+)/?$~D',                                 'admin/users/index.php',     ['edit' => 1]],
+        ['~^/admin/topics/(\d+)/edit/?$~D',                                'admin/topics/edit.php',      ['id' => 1]],
+        ['~^/admin/topics/edit/(\d+)/?$~D',                                'admin/topics/edit.php',      ['id' => 1]],
+        ['~^/admin/content/(\d+)/(publish|unpublish|archive|delete)/?$~D', 'admin/posts/action.php',     ['id' => 1, 'action' => 2]],
+
+        // ─── کتاب‌ها (شناسه عددی یا اسلاگ / مفرد و جمع) ───────────────
+        ['~^/books?/(\d+)/?$~D',                                           'pages/book.php',            ['id' => 1]],
+        ['~^/books?/([^/]+)/?$~uD',                                        'pages/book.php',            ['slug' => 1]],
+
+        // ─── انواع مطالب با پیشوند نوع (مفرد و جمع) ────────────────────
+        // typed post URLs: news, article(s), research(es), report(s), event(s), announcement(s), program(s)
+        ['~^/(article|articles|news|research|researches|report|reports|event|events|announcement|announcements|program|programs)/([^/]+)/?$~uD', 'pages/post.php', ['expected_type' => 1, 'slug' => 2]],
+
+        // ─── رسانه (شناسه عددی ویدیو / صوت / مدیا) ─────────────────────
+        ['~^/(video|audio|media)/(\d+)/?$~D',                              'pages/media.php',           ['kind' => 1, 'id' => 2]],
+
+        // ─── موضوعات (مفرد و جمع) ──────────────────────────────────────
+        ['~^/topics?/([^/]+)/?$~uD',                                       'pages/topic.php',           ['slug' => 1]],
+
+        // ─── جزئیات درس، سخنرانی، دسته‌بندی و پست متفرقه ───────────────
+        ['~^/lesson/([^/]+)/?$~uD',                                        'pages/lesson.php',          ['slug' => 1]],
+        ['~^/speech/([^/]+)/?$~uD',                                        'pages/speech.php',          ['slug' => 1]],
+        ['~^/category/([^/]+)/?$~uD',                                      'pages/category.php',        ['slug' => 1]],
+        ['~^/post/([^/]+)/?$~uD',                                          'pages/post.php',            ['slug' => 1]],
+
+        // ─── مجموعه‌ها و جلدهای درسی ──────────────────────────────────
+        ['~^/lessons/([^/]+)/([^/]+)/?$~uD',                               'pages/lessons.php',         ['collection' => 1, 'volume' => 2]],
+        ['~^/lessons/([^/]+)/?$~uD',                                       'pages/lessons.php',         ['collection' => 1]],
+
+        // ─── جستجو ─────────────────────────────────────────────────────
+        ['~^/search/([^/]+)/?$~uD',                                        'pages/search.php',          ['q' => 1]],
     ],
 ];

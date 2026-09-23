@@ -1,3 +1,8 @@
-# admin/ — controllers are reached through router.php only; authentication and
-# CSRF are enforced in PHP (includes/auth.php), not by Apache.
-Options -Indexes
+# admin/ — controllers are reached through router.php only;
+# Direct access to PHP files in admin/ is disallowed or forwarded to parent router.php.
+Options -Indexes -MultiViews
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^ ../router.php [L,QSA]
+</IfModule>

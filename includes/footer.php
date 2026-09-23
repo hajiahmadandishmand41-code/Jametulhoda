@@ -1,10 +1,10 @@
 <?php if (($currentPage ?? '') === 'index.php'): ?>
-<div class="container"><section class="jhd-invitation"><div><h2>آغاز یک مسیر روشن</h2><p>برای آشنایی با برنامه‌های آموزشی و شرایط پذیرش، با ما در ارتباط باشید.</p></div><a class="jhd-button" href="<?= siteUrl('contact') ?>">گفت‌وگو با مدرسه <i class="bi bi-arrow-left"></i></a></section></div>
+<div class="container"><section class="jhd-invitation"><div><h2>آغاز یک مسیر روشن علمی و معرفتی</h2><p>برای آشنایی با برنامه‌های آموزشی و شرایط پذیرش در مدرسه علمیه جامعه‌الهدی، با ما در ارتباط باشید.</p></div><a class="jhd-button" href="<?= url('contact') ?>">گفت‌وگو با مدرسه <i class="bi bi-arrow-left"></i></a></section></div>
 <?php endif; ?>
 </main>
 <?php
 /**
- * footer.php - فوتر عمومی سایت — نسخه ۲.۱ (+ Plyr.js)
+ * footer.php - فوتر عمومی سایت جامع جامعه‌الهدی
  */
 $footerCats    = getCategories();
 $recentPosts   = getPosts(['limit' => 4]);
@@ -13,7 +13,7 @@ $siteAddress   = getSetting('address', SITE_ADDRESS);
 $sitePhone     = getSetting('phone', SITE_PHONE);
 $siteEmail     = getSetting('email', SITE_EMAIL);
 ?>
-<footer class="main-footer">
+<footer class="main-footer" role="contentinfo">
     <div class="footer-top">
         <div class="container">
             <div class="row g-4">
@@ -21,11 +21,11 @@ $siteEmail     = getSetting('email', SITE_EMAIL);
                 <div class="col-lg-4 col-md-6">
                     <div class="footer-widget">
                         <div class="d-flex align-items-center mb-3 gap-3">
-                            <img src="<?= imgUrl(getSetting('site_logo', 'assets/img/logo.jpg')) ?>" alt="لوگو" class="footer-logo" onerror="this.src='<?= siteUrl('assets/img/placeholder.svg') ?>'">
+                            <img src="<?= imgUrl(getSetting('site_logo', 'assets/img/logo.jpg')) ?>" alt="نشان <?= sanitize($siteName) ?>" class="footer-logo" onerror="this.src='<?= asset('img/placeholder.svg') ?>'">
                             <h5 class="footer-title mb-0"><?= sanitize($siteName) ?></h5>
                         </div>
                         <p class="footer-text"><?= sanitize(getSetting('site_slogan', SITE_SLOGAN)) ?></p>
-                        <p class="footer-text small"><?= sanitize(getSetting('about_short', 'مدرسه علمیه جامعه‌الهدی یکی از مراکز علوم دینی در افغانستان است.')) ?></p>
+                        <p class="footer-text small"><?= sanitize(getSetting('about_short', 'مدرسه علمیه جامعه‌الهدی یکی از مراکز علوم و معارف اسلامی در کابل، افغانستان است.')) ?></p>
                         <p class="footer-text small mt-2">
                             <i class="bi bi-person-fill ms-1 text-gold"></i>
                             مؤسس: آیت‌الله محمدحسین حلیمی
@@ -38,21 +38,23 @@ $siteEmail     = getSetting('email', SITE_EMAIL);
                     </div>
                 </div>
 
-                <!-- Quick Links — ساختار جدید مرجع -->
+                <!-- Quick Links -->
                 <div class="col-lg-2 col-md-6">
                     <div class="footer-widget">
                         <h5 class="footer-title">دسترسی سریع</h5>
                         <ul class="footer-links">
-                            <li><a href="<?= siteUrl() ?>"><i class="bi bi-chevron-left"></i>صفحه اصلی</a></li>
-                            <li><a href="<?= siteUrl('topics') ?>"><i class="bi bi-chevron-left"></i>موضوعات</a></li>
-                            <li><a href="<?= siteUrl('reports') ?>"><i class="bi bi-chevron-left"></i>گزارش‌ها</a></li>
-                            <li><a href="<?= siteUrl('articles') ?>"><i class="bi bi-chevron-left"></i>مقالات و پژوهش‌ها</a></li>
-                            <li><a href="<?= siteUrl('books') ?>"><i class="bi bi-chevron-left"></i>کتابخانه</a></li>
-                            <li><a href="<?= siteUrl('lessons') ?>"><i class="bi bi-chevron-left"></i>درس‌ها</a></li>
-                            <li><a href="<?= siteUrl('videos') ?>"><i class="bi bi-chevron-left"></i>ویدیو</a> / <a href="<?= siteUrl('audios') ?>">صوت</a></li>
-                            <li><a href="<?= siteUrl('qa') ?>"><i class="bi bi-chevron-left"></i>پرسش و پاسخ</a></li>
-                            <li><a href="<?= siteUrl('about') ?>"><i class="bi bi-chevron-left"></i>درباره ما</a></li>
-                            <li><a href="<?= siteUrl('contact') ?>"><i class="bi bi-chevron-left"></i>تماس با ما</a></li>
+                            <li><a href="<?= url() ?>"><i class="bi bi-chevron-left"></i>صفحه اصلی</a></li>
+                            <li><a href="<?= url('news') ?>"><i class="bi bi-chevron-left"></i>اخبار مدرسه</a></li>
+                            <li><a href="<?= url('articles') ?>"><i class="bi bi-chevron-left"></i>مقالات علمی</a></li>
+                            <li><a href="<?= url('reports') ?>"><i class="bi bi-chevron-left"></i>گزارش‌ها</a></li>
+                            <li><a href="<?= url('events') ?>"><i class="bi bi-chevron-left"></i>رویدادها</a></li>
+                            <li><a href="<?= url('books') ?>"><i class="bi bi-chevron-left"></i>کتابخانه</a></li>
+                            <li><a href="<?= url('lessons') ?>"><i class="bi bi-chevron-left"></i>دروس حوزوی</a></li>
+                            <li><a href="<?= url('research') ?>"><i class="bi bi-chevron-left"></i>پژوهش‌ها</a></li>
+                            <li><a href="<?= url('media') ?>"><i class="bi bi-chevron-left"></i>رسانه (صوت و ویدیو)</a></li>
+                            <li><a href="<?= url('topics') ?>"><i class="bi bi-chevron-left"></i>موضوعات دینی</a></li>
+                            <li><a href="<?= url('about') ?>"><i class="bi bi-chevron-left"></i>درباره ما</a></li>
+                            <li><a href="<?= url('contact') ?>"><i class="bi bi-chevron-left"></i>تماس با ما</a></li>
                         </ul>
                     </div>
                 </div>
@@ -93,7 +95,7 @@ $siteEmail     = getSetting('email', SITE_EMAIL);
                             </li>
                             <li>
                                 <i class="bi bi-clock-fill"></i>
-                                <span>شنبه تا چهارشنبه: ۸ تا ۵</span>
+                                <span>شنبه تا چهارشنبه: ۸:۰۰ الی ۱۶:۳۰</span>
                             </li>
                         </ul>
                     </div>
@@ -115,15 +117,14 @@ $siteEmail     = getSetting('email', SITE_EMAIL);
                 </div>
                 <div class="col-md-3 text-center text-md-end">
                     <p class="mb-0 footer-builder">
-                        سازنده: <strong>حاجی احمد صالحی</strong>
-                        <span class="d-block" style="font-size:.72rem">فعالیت کننده</span>
+                        پورتال جامع: <strong><?= sanitize($siteName) ?></strong>
                     </p>
-                    <p class="mb-0 mt-1 d-flex gap-2 justify-content-center justify-content-md-end" style="font-size:.75rem;opacity:.75">
-                        <a href="<?= siteUrl('sitemap.xml') ?>" style="color:inherit;text-decoration:none">نقشه سایت</a>
+                    <p class="mb-0 mt-1 d-flex gap-2 justify-content-center justify-content-md-end" style="font-size:.78rem;opacity:.85">
+                        <a href="<?= url('sitemap.xml') ?>" style="color:inherit;text-decoration:none">نقشه سایت</a>
                         <span>·</span>
-                        <a href="<?= siteUrl('search') ?>" style="color:inherit;text-decoration:none">جستجو</a>
+                        <a href="<?= url('search') ?>" style="color:inherit;text-decoration:none">جستجو</a>
                         <span>·</span>
-                        <a href="<?= siteUrl('admin/login') ?>" style="color:inherit;text-decoration:none"><i class="bi bi-shield-lock ms-1"></i>مدیریت</a>
+                        <a href="<?= url('login') ?>" style="color:inherit;text-decoration:none"><i class="bi bi-shield-lock ms-1"></i>ورود مدیریت</a>
                     </p>
                 </div>
             </div>
@@ -132,13 +133,12 @@ $siteEmail     = getSetting('email', SITE_EMAIL);
 </footer>
 
 <!-- Scroll To Top -->
-<button id="scrollTop" title="بازگشت به بالا"><i class="bi bi-chevron-up"></i></button>
+<button id="scrollTop" title="بازگشت به بالا" aria-label="بازگشت به بالای صفحه"><i class="bi bi-chevron-up"></i></button>
 
 <!-- Scripts -->
-<script src="<?= siteUrl('assets/vendor/bootstrap.bundle.min.js') ?>"></script>
-<!-- Plyr Video Player JS -->
-<script src="<?= siteUrl('assets/vendor/plyr.js') ?>"></script>
-<script src="<?= siteUrl('assets/js/main.js') ?>"></script>
-<script src="<?= siteUrl('assets/js/media-player.js') ?>" defer></script>
+<script src="<?= asset('vendor/bootstrap.bundle.min.js') ?>"></script>
+<script src="<?= asset('vendor/plyr.js') ?>"></script>
+<script src="<?= asset('js/main.js') ?>"></script>
+<script src="<?= asset('js/media-player.js') ?>" defer></script>
 </body>
 </html>

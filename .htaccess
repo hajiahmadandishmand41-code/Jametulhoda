@@ -1,19 +1,27 @@
-# Jametulhoda — Apache configuration (InfinityFree / cPanel / Docker)
-# router.php owns the route table: every request that is not a real file inside
-# assets/ or uploads/ is handed to it, and it answers a uniform 404 for anything
-# that is not a public route (including config/, includes/, pages/, bin/, tests/,
-# database/, storage/ and repository files such as *.sql or .env).
-Options -Indexes
+# Jametulhoda — Apache configuration (InfinityFree / cPanel / Shared Host / Apache 2.4+)
+# All requests are directed to router.php (front controller) except existing static assets.
+Options -Indexes -MultiViews
 
-RewriteEngine On
+<IfModule mod_rewrite.c>
+    RewriteEngine On
 
-# Real static files are served by Apache directly (no PHP process needed).
-RewriteCond %{REQUEST_URI} /(assets|uploads)/ [NC]
-RewriteCond %{REQUEST_FILENAME} -f
-RewriteRule ^ - [L]
+    # 1. Real static files inside assets/ or uploads/ are served directly by Apache
+    RewriteCond %{REQUEST_URI} ^/(?:[^/]+/)*(assets|uploads)/ [NC]
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
 
-RewriteRule ^router\.php$ - [L]
-RewriteRule ^ router.php [END,QSA]
+    # 2. Allow direct access to router.php without looping
+    RewriteRule ^router\.php$ - [L]
+
+    # 3. Existing static non-PHP files (e.g. favicon.svg, robots.txt if physical) served directly
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteCond %{REQUEST_FILENAME} !\.php$
+    RewriteRule ^ - [L]
+
+    # 4. Route everything else (including real directories like admin/ and physical .php files)
+    # to router.php so front controller and security gates are never bypassed.
+    RewriteRule ^ router.php [L,QSA]
+</IfModule>
 
 <IfModule mod_headers.c>
     Header always set X-Content-Type-Options "nosniff"

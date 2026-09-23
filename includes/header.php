@@ -3,56 +3,61 @@ require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/functions.php';
 require_once __DIR__ . '/auth.php';
 startSecureSession();
+
 $siteName = getSetting('site_name', SITE_NAME);
 $siteSlogan = getSetting('site_slogan', SITE_SLOGAN);
-$currentPage = basename($_SERVER['PHP_SELF']);
-$currentSlug = $_GET['slug'] ?? '';
+$currentPath = current_path();
 $isLoggedIn = isLoggedIn();
-$topicsTree = getTopics(['active'=>1, 'parent'=>null]);
-// fallback: ensure at least root topics for menu
-if(empty($topicsTree)){
-    try{ $topicsTree = getTopics(['active'=>1]); }catch(Exception $e){ $topicsTree=[]; }
-}
+
 $metaTitle = !empty($pageTitle) ? $pageTitle . ' | ' . $siteName : $siteName . ' | ' . $siteSlogan;
 $metaDesc = $pageDesc ?? $siteSlogan;
-if(mb_strlen($metaDesc,'UTF-8')>160) $metaDesc = mb_substr($metaDesc,0,157,'UTF-8').'...';
-// router.php reports the public URL it matched; SCRIPT_NAME is the internal
-// script path (pages/about.php) and must never appear in a canonical link.
-// Pretty detail URLs already carry their slug (/post/X, /topic/Y, ...), so a
-// slug/id is appended only for query-style routes — never doubled.
+if (mb_strlen($metaDesc, 'UTF-8') > 160) {
+    $metaDesc = mb_substr($metaDesc, 0, 157, 'UTF-8') . '...';
+}
+
 $canonicalPath = $_SERVER['JHD_ROUTE_PATH'] ?? ($_SERVER['SCRIPT_NAME'] ?? '/');
-// Detail pages pass their pretty canonical (postUrl/bookUrl/...) so legacy
-// query-style URLs cross-canonicalize to the pretty form instead of doubling.
-if (!empty($canonicalOverride)) $canonicalPath = $canonicalOverride;
-if (basename($canonicalPath)==='index.php') $canonicalPath=rtrim(dirname($canonicalPath), '/').'/';
-// Normalize to decoded form for comparison: router paths arrive decoded
-// (rawurldecode in router.php) while page overrides arrive encoded.
+if (!empty($canonicalOverride)) {
+    $canonicalPath = $canonicalOverride;
+}
+if (basename($canonicalPath) === 'index.php') {
+    $canonicalPath = rtrim(dirname($canonicalPath), '/') . '/';
+}
 $canonicalPath = rawurldecode($canonicalPath);
 $canonicalQuery = [];
-// A page-level canonical override is authoritative (pretty detail URL):
-// never append raw route params (slug/id/q/...) to it.
-if (empty($canonicalOverride)):
-$routeSlug = trim($_GET['slug'] ?? '');
-if ($routeSlug !== '' && !str_ends_with(rtrim($canonicalPath, '/'), '/' . $routeSlug)) {
-    $canonicalQuery['slug'] = $routeSlug;
-}
-if (($currentPage ?? '')==='book.php' && !empty($_GET['id']) && !str_contains($canonicalPath, '/' . (int)$_GET['id'])) {
-    $canonicalQuery['id'] = (int)$_GET['id'];
-}
-foreach (['collection', 'volume'] as $collectionKey) {
-    $collectionValue = trim($_GET[$collectionKey] ?? '');
-    if ($collectionValue !== '' && !str_contains($canonicalPath, '/' . $collectionValue)) {
-        $canonicalQuery[$collectionKey] = $collectionValue;
+
+if (empty($canonicalOverride)) {
+    $routeSlug = trim($_GET['slug'] ?? '');
+    if ($routeSlug !== '' && !str_ends_with(rtrim($canonicalPath, '/'), '/' . $routeSlug)) {
+        $canonicalQuery['slug'] = $routeSlug;
+    }
+    if ((basename($_SERVER['PHP_SELF'] ?? '') === 'book.php') && !empty($_GET['id']) && !str_contains($canonicalPath, '/' . (int)$_GET['id'])) {
+        $canonicalQuery['id'] = (int)$_GET['id'];
+    }
+    foreach (['collection', 'volume'] as $collectionKey) {
+        $collectionValue = trim($_GET[$collectionKey] ?? '');
+        if ($collectionValue !== '' && !str_contains($canonicalPath, '/' . $collectionValue)) {
+            $canonicalQuery[$collectionKey] = $collectionValue;
+        }
+    }
+    if (!empty($_GET['q'])) {
+        $canonicalQuery['q'] = mb_substr($_GET['q'], 0, 80);
     }
 }
-if (!empty($_GET['q'])) $canonicalQuery['q'] = mb_substr($_GET['q'], 0, 80);
-endif;
-// Encode path segments: pretty slugs may be non-ASCII (router decodes them).
+
+// Encode path segments
 $canonicalSegments = array_map(static fn($s) => $s === '' ? '' : rawurlencode($s), explode('/', $canonicalPath));
 $canonicalPath = implode('/', $canonicalSegments);
-if ($canonicalQuery) $canonicalPath .= '?' . http_build_query($canonicalQuery);
-$canonical = SITE_URL ? rtrim(SITE_URL,'/') . '/' . ltrim(substr($canonicalPath, strlen(BASE_PATH)),'/') : '';
+if ($canonicalQuery) {
+    $canonicalPath .= '?' . http_build_query($canonicalQuery);
+}
+$canonical = SITE_URL ? absolute_url(ltrim(substr($canonicalPath, strlen(BASE_PATH)), '/')) : '';
 $ogType = isset($post) || isset($book) || isset($lesson) ? 'article' : 'website';
+
+// Helper for active navigation link
+$isActiveNav = function(string $route) use ($currentPath): bool {
+    if ($route === '/') return $currentPath === '/' || $currentPath === '';
+    return str_starts_with($currentPath, '/' . trim($route, '/'));
+};
 ?>
 <!doctype html>
 <html lang="fa" dir="rtl">
@@ -60,137 +65,159 @@ $ogType = isset($post) || isset($book) || isset($lesson) ? 'article' : 'website'
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#163b37">
-<meta name="plyr-sprite" content="<?= siteUrl('assets/vendor/plyr.svg') ?>">
+<meta name="plyr-sprite" content="<?= asset('vendor/plyr.svg') ?>">
 <meta name="csrf-token" content="<?= sanitize(generateCsrfToken()) ?>">
 <title><?= sanitize($metaTitle) ?></title>
 <meta name="description" content="<?= sanitize($metaDesc) ?>">
-<?php if ($canonical): ?><link rel="canonical" href="<?= sanitize($canonical) ?>"><meta property="og:url" content="<?= sanitize($canonical) ?>"><?php endif; ?>
-<meta property="og:locale" content="fa_AF"><meta property="og:type" content="<?= $ogType ?>">
-<meta property="og:title" content="<?= sanitize($metaTitle) ?>"><meta property="og:description" content="<?= sanitize($metaDesc) ?>">
+<?php if ($canonical): ?>
+<link rel="canonical" href="<?= sanitize($canonical) ?>">
+<meta property="og:url" content="<?= sanitize($canonical) ?>">
+<?php endif; ?>
+<meta property="og:locale" content="fa_AF">
+<meta property="og:type" content="<?= $ogType ?>">
+<meta property="og:title" content="<?= sanitize($metaTitle) ?>">
+<meta property="og:description" content="<?= sanitize($metaDesc) ?>">
 <meta property="og:site_name" content="<?= sanitize($siteName) ?>">
-<?php if(!empty($post['featured_image']) || !empty($book['cover_image']) || !empty($lesson['featured_image'])): $ogImg = imgUrl($post['featured_image'] ?? $book['cover_image'] ?? $lesson['featured_image'] ?? ''); if($ogImg): ?><meta property="og:image" content="<?= sanitize($ogImg) ?>"><?php endif; endif; ?>
-<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="<?= sanitize($metaTitle) ?>"><meta name="twitter:description" content="<?= sanitize($metaDesc) ?>">
+<?php if (!empty($post['featured_image']) || !empty($book['cover_image']) || !empty($lesson['featured_image'])):
+    $ogImg = imgUrl($post['featured_image'] ?? $book['cover_image'] ?? $lesson['featured_image'] ?? '');
+    if ($ogImg): ?><meta property="og:image" content="<?= sanitize($ogImg) ?>"><?php endif;
+endif; ?>
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="<?= sanitize($metaTitle) ?>">
+<meta name="twitter:description" content="<?= sanitize($metaDesc) ?>">
 <?php if (SITE_URL): ?>
-<script type="application/ld+json"><?= json_encode(['@context'=>'https://schema.org','@type'=>'EducationalOrganization','name'=>$siteName,'url'=>SITE_URL, 'description'=>$siteSlogan], JSON_UNESCAPED_UNICODE|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?></script>
+<script type="application/ld+json"><?= json_encode(['@context'=>'https://schema.org','@type'=>'EducationalOrganization','name'=>$siteName,'url'=>SITE_URL,'description'=>$siteSlogan], JSON_UNESCAPED_UNICODE|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?></script>
 <script type="application/ld+json"><?= json_encode(['@context'=>'https://schema.org','@type'=>'WebSite','name'=>$siteName,'url'=>SITE_URL,'potentialAction'=>['@type'=>'SearchAction','target'=> SITE_URL.'/search?q={search_term_string}','query-input'=>'required name=search_term_string']], JSON_UNESCAPED_UNICODE|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?></script>
 <?php endif; ?>
-<?php if(!empty($breadcrumbsJsonLd)): ?><script type="application/ld+json"><?= $breadcrumbsJsonLd ?></script><?php endif; ?>
-<?php if(!empty($articleJsonLd)): ?><script type="application/ld+json"><?= $articleJsonLd ?></script><?php endif; ?>
-<?php if(!empty($bookJsonLd)): ?><script type="application/ld+json"><?= $bookJsonLd ?></script><?php endif; ?>
-<link rel="icon" href="<?= siteUrl('assets/img/favicon.svg') ?>" type="image/svg+xml">
-<script src="<?= siteUrl('assets/js/theme.js') ?>"></script>
-<link rel="preload" href="<?= siteUrl('assets/fonts/Vazirmatn-Regular.woff2') ?>" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="<?= siteUrl('assets/vendor/bootstrap.rtl.min.css') ?>">
-<link rel="stylesheet" href="<?= siteUrl('assets/vendor/icons/bootstrap-icons.min.css') ?>">
-<link rel="stylesheet" href="<?= siteUrl('assets/vendor/plyr.css') ?>">
-<link rel="stylesheet" href="<?= siteUrl('assets/css/style.css') ?>">
-<link rel="stylesheet" href="<?= siteUrl('assets/css/extra.css') ?>">
-<link rel="stylesheet" href="<?= siteUrl('assets/css/legacy-components.css') ?>">
-<link rel="stylesheet" href="<?= siteUrl('assets/css/design-system.css') ?>">
-<script src="<?= siteUrl('assets/js/interface.js') ?>" defer></script>
+<?php if (!empty($breadcrumbsJsonLd)): ?><script type="application/ld+json"><?= $breadcrumbsJsonLd ?></script><?php endif; ?>
+<?php if (!empty($articleJsonLd)): ?><script type="application/ld+json"><?= $articleJsonLd ?></script><?php endif; ?>
+<?php if (!empty($bookJsonLd)): ?><script type="application/ld+json"><?= $bookJsonLd ?></script><?php endif; ?>
+<link rel="icon" href="<?= asset('img/favicon.svg') ?>" type="image/svg+xml">
+<script src="<?= asset('js/theme.js') ?>"></script>
+<link rel="preload" href="<?= asset('fonts/Vazirmatn-Regular.woff2') ?>" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="<?= asset('vendor/bootstrap.rtl.min.css') ?>">
+<link rel="stylesheet" href="<?= asset('vendor/icons/bootstrap-icons.min.css') ?>">
+<link rel="stylesheet" href="<?= asset('vendor/plyr.css') ?>">
+<link rel="stylesheet" href="<?= asset('css/style.css') ?>">
+<link rel="stylesheet" href="<?= asset('css/extra.css') ?>">
+<link rel="stylesheet" href="<?= asset('css/legacy-components.css') ?>">
+<link rel="stylesheet" href="<?= asset('css/design-system.css') ?>">
+<script src="<?= asset('js/interface.js') ?>" defer></script>
 </head>
 <body>
 <a class="skip-link" href="#main-content">رفتن به محتوای اصلی</a>
-</div>
-<header class="jhd-header">
-<div class="container jhd-header-row">
-<a class="jhd-brand" href="<?= siteUrl() ?>" aria-label="جامعه‌الهدی، صفحه اصلی"><img src="<?= imgUrl(getSetting('site_logo','assets/img/logo.jpg')) ?>" width="56" height="56" alt="نشان مدرسه"><span><strong>جامعه‌الهدی</strong><small>مدرسه علمیه · کابل، افغانستان</small></span></a>
-<form class="jhd-search d-none d-md-flex" action="<?= siteUrl('search') ?>" role="search"><label class="visually-hidden" for="header-search">جستجو در منابع</label><input id="header-search" name="q" type="search" placeholder="جستجو در مقالات، گزارش‌ها، کتاب‌ها و دروس..." maxlength="200" value="<?= sanitize($_GET['q'] ?? '') ?>"><button aria-label="جستجو"><i class="bi bi-search"></i></button></form>
-<div class="jhd-header-actions">
-<a class="jhd-icon-btn jhd-mobile-search d-md-none" href="<?= siteUrl('search') ?>" aria-label="جستجو"><i class="bi bi-search"></i></a>
 
-<button class="jhd-icon-btn" data-theme-toggle aria-label="تغییر پوسته روشن و تیره" aria-pressed="false"><i class="bi bi-moon"></i></button>
-<button id="menuToggle" class="jhd-icon-btn jhd-menu-toggle" aria-label="باز کردن منو" aria-expanded="false" aria-controls="siteDrawer"><i class="bi bi-list"></i></button>
-</div>
-</div>
+<!-- Header اصلی -->
+<header class="jhd-header" role="banner">
+    <!-- ردیف بالای برند، جستجو و حساب کاربری -->
+    <div class="container jhd-header-row">
+        <a class="jhd-brand" href="<?= url() ?>" aria-label="<?= sanitize($siteName) ?>، صفحه اصلی">
+            <img src="<?= imgUrl(getSetting('site_logo', 'assets/img/logo.jpg')) ?>" width="52" height="52" alt="نشان <?= sanitize($siteName) ?>">
+            <span>
+                <strong><?= sanitize($siteName) ?></strong>
+                <small>مدرسه علمیه · کابل، افغانستان</small>
+            </span>
+        </a>
+
+        <!-- فرم جستجوی دسکتاپ -->
+        <form class="jhd-search d-none d-lg-flex" action="<?= url('search') ?>" method="get" role="search">
+            <label class="visually-hidden" for="header-search">جستجو در مقالات، اخبار، دروس و کتاب‌ها</label>
+            <input id="header-search" name="q" type="search" placeholder="جستجو در اخبار، مقالات، کتاب‌ها، دروس..." maxlength="200" value="<?= sanitize($_GET['q'] ?? '') ?>">
+            <button type="submit" aria-label="جستجو"><i class="bi bi-search"></i></button>
+        </form>
+
+        <!-- دکمه‌ها و اکشن‌ها -->
+        <div class="jhd-header-actions">
+            <a class="jhd-icon-btn jhd-mobile-search d-lg-none" href="<?= url('search') ?>" aria-label="جستجو"><i class="bi bi-search"></i></a>
+
+            <button class="jhd-icon-btn" data-theme-toggle aria-label="تغییر پوسته روشن و تیره" aria-pressed="false"><i class="bi bi-moon"></i></button>
+
+            <?php if ($isLoggedIn): ?>
+            <a class="btn btn-sm btn-outline-primary d-none d-md-inline-flex align-items-center gap-1" href="<?= url('admin') ?>">
+                <i class="bi bi-speedometer2"></i>
+                <span>پنل مدیریت</span>
+            </a>
+            <?php else: ?>
+            <a class="btn btn-sm btn-outline-secondary d-none d-md-inline-flex align-items-center gap-1" href="<?= url('login') ?>">
+                <i class="bi bi-box-arrow-in-left"></i>
+                <span>ورود</span>
+            </a>
+            <?php endif; ?>
+
+            <button id="menuToggle" class="jhd-icon-btn jhd-menu-toggle" aria-label="باز کردن منو" aria-expanded="false" aria-controls="siteDrawer"><i class="bi bi-list"></i></button>
+        </div>
+    </div>
+
+    <!-- نوار ناوبری اصلی دسکتاپ -->
+    <nav class="jhd-navbar-desktop d-none d-lg-block" aria-label="ناوبری اصلی دسکتاپ">
+        <div class="container">
+            <ul class="jhd-nav-list mb-0">
+                <li><a href="<?= url() ?>" class="jhd-nav-link <?= $isActiveNav('/') ? 'active' : '' ?>" <?= $isActiveNav('/') ? 'aria-current="page"' : '' ?>><i class="bi bi-house-door ms-1"></i>خانه</a></li>
+                <li><a href="<?= url('news') ?>" class="jhd-nav-link <?= $isActiveNav('news') ? 'active' : '' ?>" <?= $isActiveNav('news') ? 'aria-current="page"' : '' ?>><i class="bi bi-newspaper ms-1"></i>اخبار</a></li>
+                <li><a href="<?= url('articles') ?>" class="jhd-nav-link <?= $isActiveNav('articles') || $isActiveNav('article') ? 'active' : '' ?>" <?= ($isActiveNav('articles') || $isActiveNav('article')) ? 'aria-current="page"' : '' ?>><i class="bi bi-file-text ms-1"></i>مقالات</a></li>
+                <li><a href="<?= url('reports') ?>" class="jhd-nav-link <?= $isActiveNav('reports') || $isActiveNav('report') ? 'active' : '' ?>" <?= ($isActiveNav('reports') || $isActiveNav('report')) ? 'aria-current="page"' : '' ?>><i class="bi bi-card-text ms-1"></i>گزارش‌ها</a></li>
+                <li><a href="<?= url('events') ?>" class="jhd-nav-link <?= $isActiveNav('events') || $isActiveNav('programs') ? 'active' : '' ?>" <?= ($isActiveNav('events') || $isActiveNav('programs')) ? 'aria-current="page"' : '' ?>><i class="bi bi-calendar-event ms-1"></i>رویدادها</a></li>
+                <li><a href="<?= url('books') ?>" class="jhd-nav-link <?= $isActiveNav('books') || $isActiveNav('book') ? 'active' : '' ?>" <?= ($isActiveNav('books') || $isActiveNav('book')) ? 'aria-current="page"' : '' ?>><i class="bi bi-book ms-1"></i>کتاب‌ها</a></li>
+                <li><a href="<?= url('lessons') ?>" class="jhd-nav-link <?= $isActiveNav('lessons') || $isActiveNav('lesson') ? 'active' : '' ?>" <?= ($isActiveNav('lessons') || $isActiveNav('lesson')) ? 'aria-current="page"' : '' ?>><i class="bi bi-mortarboard ms-1"></i>درس‌ها</a></li>
+                <li><a href="<?= url('research') ?>" class="jhd-nav-link <?= $isActiveNav('research') ? 'active' : '' ?>" <?= $isActiveNav('research') ? 'aria-current="page"' : '' ?>><i class="bi bi-journal-richtext ms-1"></i>پژوهش</a></li>
+                <li><a href="<?= url('media') ?>" class="jhd-nav-link <?= $isActiveNav('media') || $isActiveNav('videos') || $isActiveNav('audios') ? 'active' : '' ?>" <?= ($isActiveNav('media') || $isActiveNav('videos') || $isActiveNav('audios')) ? 'aria-current="page"' : '' ?>><i class="bi bi-play-circle ms-1"></i>رسانه</a></li>
+                <li><a href="<?= url('topics') ?>" class="jhd-nav-link <?= $isActiveNav('topics') || $isActiveNav('topic') ? 'active' : '' ?>" <?= ($isActiveNav('topics') || $isActiveNav('topic')) ? 'aria-current="page"' : '' ?>><i class="bi bi-diagram-3 ms-1"></i>موضوعات</a></li>
+            </ul>
+        </div>
+    </nav>
 </header>
-<!-- Drawer Overlay -->
+
+<!-- پس‌زمینه نیمه‌شفاف منوی همبرگر -->
 <div id="drawerOverlay" class="jhd-drawer-overlay" hidden></div>
-<!-- Hamburger Drawer (spec 12) -->
-<nav id="siteDrawer" class="jhd-drawer" aria-label="منوی اصلی" aria-hidden="true" inert>
-<div class="jhd-drawer-head">
-<span><i class="bi bi-grid ms-2"></i> فهرست</span>
-<button id="drawerClose" class="jhd-icon-btn" aria-label="بستن منو"><i class="bi bi-x-lg"></i></button>
-</div>
-<div class="jhd-drawer-search">
-<form action="<?= siteUrl('search') ?>" role="search"><input name="q" type="search" placeholder="جستجو..." maxlength="200" value="<?= sanitize($_GET['q'] ?? '') ?>"><button aria-label="جستجو"><i class="bi bi-search"></i></button></form>
-</div>
-<div class="jhd-drawer-body">
-<a href="<?= siteUrl() ?>" class="drawer-link <?= $currentPage==='index.php'?'active':'' ?>"><i class="bi bi-house"></i> خانه</a>
 
-<div class="drawer-section">موضوعات</div>
-<?php
-// Build hierarchical menu from topicsTree (max 3 levels)
-$allTopics = getTopics(['active'=>1]);
-$byParent = [];
-foreach($allTopics as $t){ $pid = $t['parent_id']===null?0:(int)$t['parent_id']; $byParent[$pid][]=$t; }
-function renderDrawerTopics($parentId, $byParent, $depth=0){
-    $pid = $parentId===null?0:$parentId;
-    if(empty($byParent[$pid])) return '';
-    $html='';
-    foreach($byParent[$pid] as $tp){
-        $hasChildren = !empty($byParent[(int)$tp['id']]);
-        $html.='<a href="'.topicUrl($tp).'" class="drawer-link drawer-topic depth-'.$depth.'"><i class="bi bi-'.($depth===0?'folder':'tag').'"></i>'.sanitize($tp['name']);
-        if($hasChildren) $html.=' <i class="bi bi-chevron-down ms-auto" style="font-size:.7rem"></i>';
-        $html.='</a>';
-        if($hasChildren && $depth<2){
-            $html.='<div class="drawer-sub">'.renderDrawerTopics((int)$tp['id'],$byParent,$depth+1).'</div>';
-        }
-    }
-    return $html;
-}
-echo renderDrawerTopics(null,$byParent);
-?>
-<a href="<?= siteUrl('topics') ?>" class="drawer-link drawer-all"><i class="bi bi-grid-3x3-gap"></i> همه موضوعات</a>
+<!-- منوی کشویی موبایل (Hamburger Drawer) -->
+<aside id="siteDrawer" class="jhd-drawer" aria-label="منوی اصلی موبایل" aria-hidden="true" inert>
+    <div class="jhd-drawer-head">
+        <span><i class="bi bi-grid ms-2"></i> فهرست بخش‌ها</span>
+        <button id="drawerClose" class="jhd-icon-btn" aria-label="بستن منو"><i class="bi bi-x-lg"></i></button>
+    </div>
 
-<div class="drawer-section">محتوا</div>
-<a href="<?= siteUrl('reports') ?>" class="drawer-link"><i class="bi bi-newspaper"></i> گزارش‌ها</a>
-<a href="<?= siteUrl('articles') ?>" class="drawer-link"><i class="bi bi-file-text"></i> مقالات و پژوهش‌ها</a>
-<a href="<?= siteUrl('books') ?>" class="drawer-link"><i class="bi bi-book"></i> کتابخانه</a>
+    <div class="jhd-drawer-search">
+        <form action="<?= url('search') ?>" method="get" role="search">
+            <input name="q" type="search" placeholder="جستجو در محتوا..." maxlength="200" value="<?= sanitize($_GET['q'] ?? '') ?>">
+            <button aria-label="جستجو"><i class="bi bi-search"></i></button>
+        </form>
+    </div>
 
-<div class="drawer-section">دروس حوزه</div>
-<?php $cols = getLessonCollections(['active'=>1]); foreach($cols as $col): 
-  $cVols = getLessonVolumes((int)$col['id']);
-?>
-<a href="<?= collectionUrl($col) ?>" class="drawer-link"><i class="bi bi-mortarboard"></i> <?= sanitize($col['title']) ?></a>
-<?php if($cVols): foreach($cVols as $cv): ?>
-<a href="<?= collectionUrl($col, $cv) ?>" class="drawer-link drawer-subtle" style="padding-inline-start:22px"><i class="bi bi-journals"></i> <?= sanitize($cv['title']) ?></a>
-<?php endforeach; endif; ?>
-<?php endforeach; ?>
-<a href="<?= siteUrl('lessons') ?>" class="drawer-link"><i class="bi bi-play-circle"></i> همه دروس</a>
+    <div class="jhd-drawer-body">
+        <div class="drawer-section">ناوبری اصلی</div>
+        <a href="<?= url() ?>" class="drawer-link <?= $isActiveNav('/') ? 'active' : '' ?>"><i class="bi bi-house"></i> خانه</a>
+        <a href="<?= url('news') ?>" class="drawer-link <?= $isActiveNav('news') ? 'active' : '' ?>"><i class="bi bi-newspaper"></i> اخبار مدرسه</a>
+        <a href="<?= url('articles') ?>" class="drawer-link <?= $isActiveNav('articles') ? 'active' : '' ?>"><i class="bi bi-file-text"></i> مقالات علمی</a>
+        <a href="<?= url('reports') ?>" class="drawer-link <?= $isActiveNav('reports') ? 'active' : '' ?>"><i class="bi bi-card-text"></i> گزارش‌ها و مناسبت‌ها</a>
+        <a href="<?= url('events') ?>" class="drawer-link <?= $isActiveNav('events') ? 'active' : '' ?>"><i class="bi bi-calendar-event"></i> رویدادها و برنامه‌ها</a>
+        <a href="<?= url('books') ?>" class="drawer-link <?= $isActiveNav('books') ? 'active' : '' ?>"><i class="bi bi-book"></i> کتابخانه دیجیتال</a>
+        <a href="<?= url('lessons') ?>" class="drawer-link <?= $isActiveNav('lessons') ? 'active' : '' ?>"><i class="bi bi-mortarboard"></i> درس‌های حوزوی</a>
+        <a href="<?= url('research') ?>" class="drawer-link <?= $isActiveNav('research') ? 'active' : '' ?>"><i class="bi bi-journal-richtext"></i> پژوهش‌ها</a>
+        <a href="<?= url('media') ?>" class="drawer-link <?= $isActiveNav('media') ? 'active' : '' ?>"><i class="bi bi-play-circle"></i> رسانه (ویدیو و صوت)</a>
+        <a href="<?= url('topics') ?>" class="drawer-link <?= $isActiveNav('topics') ? 'active' : '' ?>"><i class="bi bi-diagram-3"></i> موضوعات دینی</a>
 
-<div class="drawer-section">رسانه</div>
-<a href="<?= siteUrl('videos') ?>" class="drawer-link"><i class="bi bi-camera-video"></i> ویدیو</a>
-<a href="<?= siteUrl('audios') ?>" class="drawer-link"><i class="bi bi-headphones"></i> صوت</a>
-<a href="<?= siteUrl('speeches') ?>" class="drawer-link"><i class="bi bi-mic"></i> سخنرانی</a>
+        <div class="drawer-section">موضوعات منتخب</div>
+        <?php
+        $drawerTopics = getTopics(['active' => 1, 'limit' => 6]);
+        foreach ($drawerTopics as $dt): ?>
+        <a href="<?= topicUrl($dt) ?>" class="drawer-link drawer-topic depth-0"><i class="bi bi-tag"></i> <?= sanitize($dt['name']) ?></a>
+        <?php endforeach; ?>
+        <a href="<?= url('topics') ?>" class="drawer-link drawer-all"><i class="bi bi-grid-3x3-gap"></i> همه موضوعات</a>
 
-<a href="<?= siteUrl('qa') ?>" class="drawer-link mt-2"><i class="bi bi-question-circle"></i> پرسش و پاسخ</a>
-<a href="<?= siteUrl('about') ?>" class="drawer-link"><i class="bi bi-info-circle"></i> درباره مدرسه</a>
-<a href="<?= siteUrl('contact') ?>" class="drawer-link"><i class="bi bi-envelope"></i> تماس با ما</a>
-<a href="<?= siteUrl('search') ?>" class="drawer-link"><i class="bi bi-search"></i> جستجو</a>
+        <div class="drawer-section">اطلاعات و تماس</div>
+        <a href="<?= url('qa') ?>" class="drawer-link"><i class="bi bi-question-circle"></i> پرسش و پاسخ</a>
+        <a href="<?= url('about') ?>" class="drawer-link"><i class="bi bi-info-circle"></i> درباره جامعه‌الهدی</a>
+        <a href="<?= url('contact') ?>" class="drawer-link"><i class="bi bi-envelope"></i> ارتباط با ما</a>
 
-<div class="drawer-section">حساب</div>
-<?php if($isLoggedIn): ?>
-<a href="<?= siteUrl('admin/') ?>" class="drawer-link"><i class="bi bi-speedometer2"></i> ورود به پنل مدیریت</a>
-<a href="<?= siteUrl('admin/logout') ?>" class="drawer-link" data-confirm="خروج؟"><i class="bi bi-box-arrow-right"></i> خروج</a>
-<?php else: ?>
-<a href="<?= siteUrl('admin/login') ?>" class="drawer-link"><i class="bi bi-box-arrow-in-left"></i> ورود</a>
-<?php endif; ?>
-</div>
-</nav>
-<script>
-// Drawer logic — accessible, no profile display per spec 2
-document.addEventListener('DOMContentLoaded', function(){
-  const toggle = document.getElementById('menuToggle');
-  const drawer = document.getElementById('siteDrawer');
-  const overlay = document.getElementById('drawerOverlay');
-  const closeBtn = document.getElementById('drawerClose');
-  function open(){ drawer.removeAttribute('inert'); drawer.setAttribute('aria-hidden','false'); drawer.classList.add('open'); overlay.hidden=false; overlay.classList.add('show'); toggle.setAttribute('aria-expanded','true'); document.body.style.overflow='hidden'; }
-  function close(){ drawer.setAttribute('aria-hidden','true'); drawer.classList.remove('open'); overlay.classList.remove('show'); setTimeout(()=>{overlay.hidden=true; drawer.setAttribute('inert','');},250); toggle.setAttribute('aria-expanded','false'); document.body.style.overflow=''; toggle.focus(); }
-  toggle?.addEventListener('click', ()=> drawer.classList.contains('open')?close():open());
-  closeBtn?.addEventListener('click', close);
-  overlay?.addEventListener('click', close);
-  document.addEventListener('keydown', e=>{ if(e.key==='Escape' && drawer.classList.contains('open')) close(); });
-});
-</script>
+        <div class="drawer-section">حساب کاربری</div>
+        <?php if ($isLoggedIn): ?>
+        <a href="<?= url('admin') ?>" class="drawer-link"><i class="bi bi-speedometer2"></i> پنل مدیریت</a>
+        <a href="<?= url('admin/logout') ?>" class="drawer-link text-danger" data-confirm="آیا از خروج از سیستم اطمینان دارید؟"><i class="bi bi-box-arrow-right"></i> خروج از حساب</a>
+        <?php else: ?>
+        <a href="<?= url('login') ?>" class="drawer-link"><i class="bi bi-box-arrow-in-left"></i> ورود به پنل</a>
+        <?php endif; ?>
+    </div>
+</aside>
+
 <main id="main-content" tabindex="-1">

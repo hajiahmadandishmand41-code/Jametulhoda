@@ -2,9 +2,16 @@
 require_once __DIR__ . '/includes/functions.php';
 header('Content-Type: text/plain; charset=utf-8');
 echo "User-agent: *\n";
-if (APP_ENV !== 'production' || !SITE_URL) { echo "Disallow: /\n"; }
-else {
-    echo 'Disallow: '.BASE_PATH."/admin/\n";
-    echo 'Allow: '.BASE_PATH."/\n";
-    echo 'Sitemap: '.rtrim(SITE_URL,'/')."/sitemap.xml\n";
+if (APP_ENV !== 'production' && APP_ENV !== 'local') {
+    echo "Disallow: /\n";
+} else {
+    $adminBase = rtrim(BASE_PATH, '/') . '/admin/';
+    $siteBase = rtrim(BASE_PATH, '/') . '/';
+    $sitemapUrl = SITE_URL ? rtrim(SITE_URL, '/') . '/sitemap.xml' : absolute_url('sitemap.xml');
+
+    echo "Disallow: {$adminBase}\n";
+    echo "Disallow: " . rtrim(BASE_PATH, '/') . "/bin/\n";
+    echo "Disallow: " . rtrim(BASE_PATH, '/') . "/config/\n";
+    echo "Allow: {$siteBase}\n";
+    echo "Sitemap: {$sitemapUrl}\n";
 }

@@ -33,22 +33,106 @@ function csrfField(): string {
 
 // ─── URL ─────────────────────────────────────────────────────────────────────
 
+/**
+ * Central URL helper for the entire application.
+ * Safely resolves root or subdirectory paths and handles query strings.
+ */
+function url(string $path = '', array $query = []): string {
+    if (preg_match('~^https?://~i', $path)) {
+        if (filter_var($path, FILTER_VALIDATE_URL)) {
+            if (!empty($query)) {
+                $separator = str_contains($path, '?') ? '&' : '?';
+                return $path . $separator . http_build_query($query);
+            }
+            return $path;
+        }
+        return '';
+    }
+    if (preg_match('~^(?:[a-z][a-z0-9+.-]*:|//)~i', $path) || str_contains($path, "\r") || str_contains($path, "\n")) {
+        return '';
+    }
+    $cleanPath = ltrim(str_replace(['"', "'", '<', '>'], ['%22','%27','%3C','%3E'], $path), '/');
+    $base = defined('BASE_PATH') ? rtrim(BASE_PATH, '/') : '';
+    $result = $base . '/' . $cleanPath;
+    if ($cleanPath === '' && $base === '') {
+        $result = '/';
+    }
+    if (!empty($query)) {
+        $separator = str_contains($result, '?') ? '&' : '?';
+        $result .= $separator . http_build_query($query);
+    }
+    return $result;
+}
+
+/**
+ * Backward-compatible alias for url().
+ */
 function siteUrl(string $path = ''): string {
-    $path = str_replace(['"', "'", '<', '>'], ['%22','%27','%3C','%3E'], $path);
-    if (preg_match('~^https://~i', $path)) return filter_var($path, FILTER_VALIDATE_URL) ? $path : '';
-    if (preg_match('~^(?:[a-z][a-z0-9+.-]*:|//)~i', $path) || str_contains($path, "\r") || str_contains($path, "\n")) return '';
-    return BASE_PATH . '/' . ltrim($path, '/');
+    return url($path);
+}
+
+/**
+ * Central asset helper for styles, scripts, fonts, and images.
+ */
+function asset(string $path): string {
+    $clean = ltrim($path, '/');
+    if (!str_starts_with($clean, 'assets/') && !str_starts_with($clean, 'uploads/')) {
+        $clean = 'assets/' . $clean;
+    }
+    return url($clean);
+}
+
+/**
+ * Generate full absolute canonical URL including protocol and host.
+ */
+function absolute_url(string $path = '', array $query = []): string {
+    $relative = url($path, $query);
+    if (preg_match('~^https?://~i', $relative)) {
+        return $relative;
+    }
+    $host = '';
+    if (defined('SITE_URL') && SITE_URL) {
+        $host = rtrim(SITE_URL, '/');
+        if (defined('BASE_PATH') && BASE_PATH !== '' && str_ends_with($host, BASE_PATH)) {
+            $host = substr($host, 0, -strlen(BASE_PATH));
+        }
+    } else {
+        $proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['SERVER_PORT'] ?? '') == 443) ? 'https://' : 'http://';
+        $httpHost = $_SERVER['HTTP_HOST'] ?? 'jametulhoda.gt.tc';
+        $host = $proto . $httpHost;
+    }
+    return $host . '/' . ltrim($relative, '/');
+}
+
+/**
+ * Return current normalized route path without query string and without BASE_PATH.
+ */
+function current_path(): string {
+    $path = rawurldecode(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/');
+    if (defined('BASE_PATH') && BASE_PATH !== '') {
+        if ($path === BASE_PATH) return '/';
+        if (str_starts_with($path, BASE_PATH . '/')) {
+            $path = substr($path, strlen(BASE_PATH));
+        }
+    }
+    return '/' . ltrim($path, '/');
 }
 
 function redirect(string $url): void {
-    if ((!str_starts_with($url, BASE_PATH . '/') || str_starts_with($url, '//')) && !(SITE_URL && str_starts_with($url, rtrim(SITE_URL, '/') . '/'))) throw new InvalidArgumentException('Unsafe redirect');
     if (strpbrk($url, "\r\n") !== false) throw new InvalidArgumentException('Unsafe redirect');
+    $base = defined('BASE_PATH') ? rtrim(BASE_PATH, '/') : '';
+    $siteUrl = defined('SITE_URL') ? rtrim(SITE_URL, '/') : '';
+    $isRelative = str_starts_with($url, $base . '/') || $url === ($base ?: '/');
+    $isSite = $siteUrl !== '' && (str_starts_with($url, $siteUrl . '/') || $url === $siteUrl);
+    if ((!$isRelative && !$isSite) || str_starts_with($url, '//')) {
+        throw new InvalidArgumentException('Unsafe redirect');
+    }
     header('Location: ' . $url, true, ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' ? 303 : 302);
     exit;
 }
 
 function currentUrl(): string {
-    return rtrim(SITE_URL, '/') . '/' . ltrim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/', '/');
+    return absolute_url(ltrim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/', '/'));
 }
 
 // ─── Canonical detail URLs ──────────────────────────────────────────────
@@ -56,64 +140,69 @@ function currentUrl(): string {
 // is registered in config/routes.php. Legacy query-style URLs
 // (/post?slug=X, /book?id=N, ...) keep working forever for bookmarks and
 // indexed links, but new links must use these helpers.
-/** Detail URL for a post row (typed: /article/X, /news/X, /research/X, /speech/X, else /post/X). */
+/** Detail URL for a post row (typed: /article/X, /news/X, /research/X, /report/X, /speech/X, else /post/X). */
 function postUrl(array|string $post, string $fallbackType = 'post'): string {
     if (is_string($post)) {
-        if ($post === '') return siteUrl('articles');
-        return siteUrl($fallbackType . '/' . rawurlencode($post));
+        if ($post === '') return url('articles');
+        return url($fallbackType . '/' . rawurlencode($post));
     }
     $slug = $post['slug'] ?? '';
-    if ($slug === '') return siteUrl('articles');
+    if ($slug === '') return url('articles');
     $prefix = match ($post['post_type'] ?? '') {
-        'article' => 'article', 'news' => 'news', 'research' => 'research',
-        'speech' => 'speech', default => 'post',
+        'article' => 'article',
+        'news' => 'news',
+        'research' => 'research',
+        'report' => 'report',
+        'speech' => 'speech',
+        'program', 'religious', 'announcement' => 'event',
+        default => 'post',
     };
-    return siteUrl($prefix . '/' . rawurlencode($slug));
+    return url($prefix . '/' . rawurlencode($slug));
 }
 /** Detail URL for a speech row (/speech/X). */
 function speechUrl(array|string $speech): string {
     $slug = is_array($speech) ? ($speech['slug'] ?? '') : $speech;
-    if ($slug === '') return siteUrl('speeches');
-    return siteUrl('speech/' . rawurlencode($slug));
+    if ($slug === '') return url('speeches');
+    return url('speech/' . rawurlencode($slug));
 }
 /** Detail URL for a book row (/book/slug, or /book/id when it has no slug). */
 function bookUrl(array $book): string {
     $slug = trim($book['slug'] ?? '');
-    if ($slug !== '') return siteUrl('book/' . rawurlencode($slug));
-    return siteUrl('book/' . (int)($book['id'] ?? 0));
+    if ($slug !== '') return url('book/' . rawurlencode($slug));
+    return url('book/' . (int)($book['id'] ?? 0));
 }
 /** Detail URL for a lesson row (/lesson/X). */
 function lessonUrl(array|string $lesson): string {
     $slug = is_array($lesson) ? ($lesson['slug'] ?? '') : $lesson;
-    if ($slug === '') return siteUrl('lessons');
-    return siteUrl('lesson/' . rawurlencode($slug));
+    if ($slug === '') return url('lessons');
+    return url('lesson/' . rawurlencode($slug));
 }
 /** Detail URL for a topic row (/topic/X). */
 function topicUrl(array|string $topic): string {
     $slug = is_array($topic) ? ($topic['slug'] ?? '') : $topic;
-    if ($slug === '') return siteUrl('topics');
-    return siteUrl('topic/' . rawurlencode($slug));
+    if ($slug === '') return url('topics');
+    return url('topic/' . rawurlencode($slug));
 }
 /** Detail URL for a category row (/category/X). */
 function categoryUrl(array|string $category): string {
     $slug = is_array($category) ? ($category['slug'] ?? '') : $category;
-    if ($slug === '') return siteUrl();
-    return siteUrl('category/' . rawurlencode($slug));
+    if ($slug === '') return url();
+    return url('category/' . rawurlencode($slug));
 }
 /** URL for a lesson collection, optionally with a volume (/lessons/X[/Y]). */
 function collectionUrl(array|string $collection, array|string|null $volume = null): string {
     $slug = is_array($collection) ? ($collection['slug'] ?? '') : $collection;
-    if ($slug === '') return siteUrl('lessons');
-    $url = 'lessons/' . rawurlencode($slug);
+    if ($slug === '') return url('lessons');
+    $path = 'lessons/' . rawurlencode($slug);
     $volumeSlug = $volume === null ? '' : (is_array($volume) ? ($volume['slug'] ?? '') : $volume);
-    if ($volumeSlug !== '') $url .= '/' . rawurlencode($volumeSlug);
-    return siteUrl($url);
+    if ($volumeSlug !== '') $path .= '/' . rawurlencode($volumeSlug);
+    return url($path);
 }
 /** Detail URL for a media_files record (/video/{id} or /audio/{id}). */
 function mediaUrl(string $kind, int $id): string {
     $kind = $kind === 'audio' ? 'audio' : 'video';
-    if ($id < 1) return siteUrl($kind === 'audio' ? 'audios' : 'videos');
-    return siteUrl($kind . '/' . $id);
+    if ($id < 1) return url($kind === 'audio' ? 'audios' : 'videos');
+    return url($kind . '/' . $id);
 }
 
 // ─── Slug ─────────────────────────────────────────────────────────────────────
@@ -742,8 +831,7 @@ function searchAll(string $q, int $limit=12, int $offset=0): array {
 // ─── SEO helpers ──────────────────────────────────────────────────────────────
 
 function canonicalUrl(string $path): string {
-    if(!SITE_URL) return '';
-    return rtrim(SITE_URL,'/').'/'.ltrim($path,'/');
+    return absolute_url($path);
 }
 function breadcrumbsJsonLd(array $crumbs): string {
     $list=[]; $pos=1;
