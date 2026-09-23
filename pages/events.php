@@ -128,14 +128,18 @@ require_once __DIR__ . '/../includes/header.php';
       <?php foreach ($events as $ev): $evUrl = postUrl($ev); ?>
       <div class="col-md-6 col-lg-4">
         <article class="news-card h-100">
-          <?php if (!empty($ev['featured_image'])): ?>
-          <div class="news-card-img-wrap">
-            <a href="<?= $evUrl ?>">
-              <img src="<?= imgUrl($ev['featured_image']) ?>" alt="<?= sanitize($ev['title']) ?>" class="news-card-img" loading="lazy">
+          <!-- Like every other card list (docs/UI_CONTRACT.md): the image slot is
+               always rendered, with an icon placeholder when there is no image. -->
+          <div class="news-card-img-wrap position-relative">
+            <a href="<?= $evUrl ?>" tabindex="-1" aria-hidden="true">
+              <?php if (!empty($ev['featured_image'])): ?>
+              <img src="<?= imgUrl($ev['featured_image']) ?>" alt="<?= sanitize($ev['title']) ?>" class="news-card-img" loading="lazy" decoding="async">
+              <?php else: ?>
+              <div class="news-card-img-placeholder"><i class="bi bi-calendar-event"></i></div>
+              <?php endif; ?>
             </a>
             <div class="news-card-badge"><?= postTypeBadge($ev['post_type']) ?></div>
           </div>
-          <?php endif; ?>
 
           <div class="news-card-body">
             <div class="news-card-meta">

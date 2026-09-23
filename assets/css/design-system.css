@@ -1250,3 +1250,39 @@ body { overflow-x: clip; }
 @media (min-width: 992px) {
   .about-sidebar { position: sticky; top: 86px; }
 }
+
+/* Icon buttons: the markup relies on the stylesheet for their box (the header
+ * buttons carry no inline size), so give them one plus phone-sized steps. */
+.jhd-icon-btn {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  font-size: 1.1rem;
+}
+.jhd-icon-btn i { line-height: 1; }
+
+/* Nested drawer topics (depth-1/depth-2) keep the tree readable. */
+.drawer-topic.depth-1 { padding-inline-start: 32px; font-size: 0.89rem; }
+.drawer-topic.depth-2 { padding-inline-start: 46px; font-size: 0.85rem; color: var(--jhd-muted); }
+
+/* Header/drawer responsive steps — the brand and the icon buttons shrink so the
+ * header row never widens the page on small phones. */
+@media (max-width: 991.98px) {
+  .jhd-header-row { gap: 12px; padding-top: 10px; padding-bottom: 10px; }
+  .jhd-brand { gap: 10px; }
+  .jhd-brand img { width: 44px; height: 44px; }
+  .jhd-brand strong { font-size: 0.98rem; }
+  .jhd-header-actions { gap: 8px; }
+}
+@media (max-width: 600px) {
+  .jhd-brand img { width: 40px; height: 40px; }
+  .jhd-brand small { font-size: 0.68rem; }
+  .jhd-header-actions { gap: 6px; }
+  .jhd-icon-btn { width: 36px; height: 36px; font-size: 1rem; }
+  .jhd-drawer { width: min(320px, 88vw); }
+}
+@media (max-width: 359px) {
+  .jhd-brand img { width: 34px; height: 34px; }
+  .jhd-brand small { display: none; }
+  .jhd-icon-btn { width: 32px; height: 32px; }
+}
