@@ -9,22 +9,191 @@
  */
 require_once __DIR__ . '/config/config.php';
 
-if (env_value('VERCEL') && (int)($_SERVER['CONTENT_LENGTH'] ?? 0)>4*1024*1024) { http_response_code(413); exit('حجم درخواست بیش از حد مجاز است.'); }
-foreach ($_GET as $value) { if (!is_string($value)) { http_response_code(400); exit('Invalid query parameter'); } }
+if (env_value('VERCEL') && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 4 * 1024 * 1024) {
+    http_response_code(413);
+    exit('حجم درخواست بیش از حد مجاز است.');
+}
+foreach ($_GET as $value) {
+    if (!is_string($value)) {
+        http_response_code(400);
+        exit('Invalid query parameter');
+    }
+}
 
 $path = rawurldecode(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/');
 if (BASE_PATH) {
-    if ($path === BASE_PATH) $path='/';
-    elseif (str_starts_with($path, BASE_PATH . '/')) $path=substr($path,strlen(BASE_PATH));
+    if ($path === BASE_PATH) $path = '/';
+    elseif (str_starts_with($path, BASE_PATH . '/')) $path = substr($path, strlen(BASE_PATH));
     else { http_response_code(404); exit; }
 }
-if (str_contains($path, '..') || str_contains($path, "\0") || str_contains($path, '\\')) { http_response_code(404); exit; }
+if (str_contains($path, '..') || str_contains($path, "\0") || str_contains($path, '\\')) {
+    http_response_code(404);
+    exit;
+}
 
 /** 404 page shared by every unmatched request. */
 function jhdNotFound(): void {
     http_response_code(404);
     header('Content-Type: text/html; charset=utf-8');
-    echo '<!doctype html><html lang="fa" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>صفحه پیدا نشد</title><main style="font-family:Tahoma;text-align:center;padding:12vh 1rem"><h1>۴۰۴ — صفحه پیدا نشد</h1><p>ممکن است نشانی تغییر کرده باشد.</p><a href="'.htmlspecialchars(BASE_PATH.'/',ENT_QUOTES).'">بازگشت به صفحه اصلی</a></main></html>';
+    $homeUrl = htmlspecialchars(BASE_PATH . '/', ENT_QUOTES, 'UTF-8');
+    $newsUrl = htmlspecialchars(BASE_PATH . '/news', ENT_QUOTES, 'UTF-8');
+    $articlesUrl = htmlspecialchars(BASE_PATH . '/articles', ENT_QUOTES, 'UTF-8');
+    $reportsUrl = htmlspecialchars(BASE_PATH . '/reports', ENT_QUOTES, 'UTF-8');
+    $booksUrl = htmlspecialchars(BASE_PATH . '/books', ENT_QUOTES, 'UTF-8');
+    $lessonsUrl = htmlspecialchars(BASE_PATH . '/lessons', ENT_QUOTES, 'UTF-8');
+    $searchUrl = htmlspecialchars(BASE_PATH . '/search', ENT_QUOTES, 'UTF-8');
+    $logoUrl = htmlspecialchars(BASE_PATH . '/assets/img/logo.jpg', ENT_QUOTES, 'UTF-8');
+    $fontUrl = htmlspecialchars(BASE_PATH . '/assets/fonts/Vazirmatn-Regular.woff2', ENT_QUOTES, 'UTF-8');
+
+    echo <<<HTML
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>۴۰۴ — صفحه پیدا نشد | جامعه‌الهدی</title>
+<style>
+@font-face {
+    font-family: 'Vazirmatn';
+    src: url('$fontUrl') format('woff2');
+    font-weight: 400 700;
+    font-display: swap;
+}
+:root {
+    --bg: #f8f7f2;
+    --surface: #ffffff;
+    --text: #182d39;
+    --muted: #657572;
+    --green: #245c4c;
+    --gold: #b39250;
+    --border: #dfe5df;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: 'Vazirmatn', Tahoma, sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    line-height: 1.8;
+}
+.error-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    max-width: 620px;
+    width: 100%;
+    padding: 40px 32px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+}
+.error-logo {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 2px solid var(--gold);
+    margin-bottom: 20px;
+}
+.error-code {
+    font-size: 3.5rem;
+    font-weight: 900;
+    color: var(--green);
+    line-height: 1;
+    margin-bottom: 12px;
+}
+.error-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+.error-desc {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-bottom: 28px;
+}
+.actions-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 30px;
+}
+.btn-home {
+    background: var(--green);
+    color: #fff;
+    padding: 10px 24px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.92rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.2s;
+}
+.btn-home:hover {
+    background: #173e34;
+}
+.quick-links {
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+}
+.quick-links-title {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 14px;
+    font-weight: 700;
+}
+.links-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+}
+.links-grid a {
+    color: var(--green);
+    text-decoration: none;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.84rem;
+    transition: all 0.2s;
+}
+.links-grid a:hover {
+    border-color: var(--gold);
+    background: var(--surface);
+}
+</style>
+</head>
+<body>
+<main class="error-card">
+    <img src="$logoUrl" alt="جامعه‌الهدی" class="error-logo" onerror="this.style.display='none'">
+    <div class="error-code">۴۰۴</div>
+    <h1 class="error-title">صفحه مورد نظر یافت نشد</h1>
+    <p class="error-desc">نشانی وارد شده تغییر کرده یا صفحه از روی سایت برداشته شده است.</p>
+    <div class="actions-row">
+        <a href="$homeUrl" class="btn-home">بازگشت به صفحه اصلی</a>
+        <a href="$searchUrl" class="btn-home" style="background:#556b2f">جستجو در سایت</a>
+    </div>
+    <div class="quick-links">
+        <div class="quick-links-title">بخش‌های اصلی جامعه‌الهدی</div>
+        <div class="links-grid">
+            <a href="$newsUrl">اخبار</a>
+            <a href="$articlesUrl">مقالات</a>
+            <a href="$reportsUrl">گزارش‌ها</a>
+            <a href="$booksUrl">کتابخانه</a>
+            <a href="$lessonsUrl">دروس حوزوی</a>
+        </div>
+    </div>
+</main>
+</body>
+</html>
+HTML;
     exit;
 }
 
@@ -39,7 +208,7 @@ function jhdRouteTable(array $routes, array $aliases): array {
         $table[$path] = $entry;
         if ($path === '/' || str_contains(substr($path, 1), '.')) return;
         $table[$path . '/'] = $entry;
-        if (!$variants) return;   // aliases answer as written (plus a trailing slash)
+        if (!$variants) return; // aliases answer as written (plus a trailing slash)
         $table[$path . '.php'] = $entry;
         if (basename($entry['file']) === 'index.php') $table[$path . '/index.php'] = $entry;
     };
@@ -57,42 +226,78 @@ function jhdRouteTable(array $routes, array $aliases): array {
 
 /** Stream a static file with content type, caching, ETag and range support. */
 function jhdServeStatic(string $file): void {
-    $types=['css'=>'text/css','js'=>'application/javascript','svg'=>'image/svg+xml','woff'=>'font/woff','woff2'=>'font/woff2'];
-    $ext = pathinfo($file, PATHINFO_EXTENSION);
-    header('Content-Type: '.($types[$ext] ?? (new finfo(FILEINFO_MIME_TYPE))->file($file)));
+    $types = [
+        'css' => 'text/css',
+        'js' => 'application/javascript',
+        'svg' => 'image/svg+xml',
+        'woff' => 'font/woff',
+        'woff2' => 'font/woff2',
+        'png' => 'image/png',
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'webp' => 'image/webp',
+        'gif' => 'image/gif',
+        'ico' => 'image/x-icon',
+        'pdf' => 'application/pdf',
+        'mp3' => 'audio/mpeg',
+        'mp4' => 'video/mp4',
+    ];
+    $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+    header('Content-Type: ' . ($types[$ext] ?? (new finfo(FILEINFO_MIME_TYPE))->file($file)));
     header('Cache-Control: public, max-age=3600');
-    $etag='"'.dechex(filemtime($file)).'-'.dechex(filesize($file)).'"';
-    header('ETag: '.$etag);
-    if (($_SERVER['HTTP_IF_NONE_MATCH'] ?? '') === $etag) { http_response_code(304); exit; }
-    if (in_array($ext, ['pdf','doc','docx'],true)) header('Content-Disposition: attachment');
-    $size = filesize($file); $start=0; $end=$size-1;
+    $etag = '"' . dechex(filemtime($file)) . '-' . dechex(filesize($file)) . '"';
+    header('ETag: ' . $etag);
+    if (($_SERVER['HTTP_IF_NONE_MATCH'] ?? '') === $etag) {
+        http_response_code(304);
+        exit;
+    }
+    if (in_array($ext, ['pdf', 'doc', 'docx'], true)) {
+        header('Content-Disposition: attachment');
+    }
+    $size = filesize($file);
+    $start = 0;
+    $end = $size - 1;
     header('Accept-Ranges: bytes');
     if (isset($_SERVER['HTTP_RANGE'])) {
-        if (!preg_match('/^bytes=(\d*)-(\d*)$/D', $_SERVER['HTTP_RANGE'], $range) || ($range[1]==='' && $range[2]==='') || ($range[1]!=='' && (int)$range[1] >= $size)) {
-            http_response_code(416); header('Content-Range: bytes */'.$size); exit;
+        if (!preg_match('/^bytes=(\d*)-(\d*)$/D', $_SERVER['HTTP_RANGE'], $range) || ($range[1] === '' && $range[2] === '') || ($range[1] !== '' && (int)$range[1] >= $size)) {
+            http_response_code(416);
+            header('Content-Range: bytes */' . $size);
+            exit;
         }
-        $start=$range[1]==='' ? max(0,$size-(int)$range[2]) : (int)$range[1];
-        $end=$range[1]!=='' && $range[2]!=='' ? min((int)$range[2],$end) : $end;
-        if ($end<$start) { http_response_code(416); exit; }
-        http_response_code(206); header("Content-Range: bytes $start-$end/$size");
+        $start = $range[1] === '' ? max(0, $size - (int)$range[2]) : (int)$range[1];
+        $end = $range[1] !== '' && $range[2] !== '' ? min((int)$range[2], $end) : $end;
+        if ($end < $start) {
+            http_response_code(416);
+            exit;
+        }
+        http_response_code(206);
+        header("Content-Range: bytes $start-$end/$size");
     }
-    header('Content-Length: '.($end-$start+1));
+    header('Content-Length: ' . ($end - $start + 1));
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'HEAD') {
         while (ob_get_level()) ob_end_flush();
-        $handle=fopen($file,'rb'); fseek($handle,$start); $remaining=$end-$start+1;
-        while ($remaining>0 && !feof($handle)) { $data=fread($handle,min(65536,$remaining)); echo $data; $remaining-=strlen($data); }
+        $handle = fopen($file, 'rb');
+        fseek($handle, $start);
+        $remaining = $end - $start + 1;
+        while ($remaining > 0 && !feof($handle)) {
+            $data = fread($handle, min(65536, $remaining));
+            echo $data;
+            $remaining -= strlen($data);
+        }
         fclose($handle);
     }
     exit;
 }
 
 // ─── ۱) فایل‌های استاتیک ─────────────────────────────────────────────────────
-// `assets/images/…` نام قدیمی پوشه تصاویر است؛ به `assets/img/…` نگاشت می‌شود تا
-// مقدارهای ذخیره‌شده در دیتابیس (مثل site_logo) و کش مرورگرها نشکنند.
 $assetPath = preg_replace('~^/assets/images/~', '/assets/img/', $path);
-if (preg_match('~^/assets/[a-zA-Z0-9_./-]+\.(css|js|svg|png|jpe?g|webp|gif|woff2?)$~D', $assetPath)) {
+if (preg_match('~^/assets/[a-zA-Z0-9_./-]+\.(css|js|svg|png|jpe?g|webp|gif|woff2?|ico)$~D', $assetPath)) {
     $file = __DIR__ . $assetPath;
     if (is_file($file) && !is_link($file)) jhdServeStatic($file);
+}
+if ($path === '/favicon.ico') {
+    $file = __DIR__ . '/assets/img/favicon.svg';
+    if (is_file($file)) jhdServeStatic($file);
 }
 if (UPLOAD_STORAGE === 'local' && preg_match('~^/uploads/(?:[a-zA-Z0-9_-]+/)+[a-zA-Z0-9_.-]+\.(jpg|jpeg|png|gif|webp|mp3|ogg|wav|m4a|mp4|webm|mov|mkv|pdf|doc|docx)$~D', $path)) {
     $file = UPLOAD_DIR . substr($path, 9);
@@ -110,7 +315,11 @@ if ($entry === null) {
         // `pages/$1.php` — only fixed alternations are captured into the script name.
         $script = preg_replace_callback('/\$(\d+)/', static fn($m) => $matches[(int)$m[1]] ?? '', $script);
         foreach ($params as $key => $index) {
-            if (($matches[$index] ?? '') !== '') $_GET[$key] = $matches[$index];
+            if (is_int($index)) {
+                if (($matches[$index] ?? '') !== '') $_GET[$key] = $matches[$index];
+            } else {
+                $_GET[$key] = $index;
+            }
         }
         $entry = ['file' => $script, 'canonical' => $path];
         break;
@@ -122,10 +331,10 @@ foreach ($entry['get'] ?? [] as $key => $value) $_GET[$key] ??= $value;
 
 $target = $entry['file'];
 $file = realpath(__DIR__ . '/' . $target);
-if ($file === false || !str_starts_with($file, realpath(__DIR__) . DIRECTORY_SEPARATOR) || !is_file($file)) jhdNotFound();
+if ($file === false || !str_starts_with($file, realpath(__DIR__) . DIRECTORY_SEPARATOR) || !is_file($file)) {
+    jhdNotFound();
+}
 
-// Pages read the script path from these (menu highlighting, role gates) and the
-// public URL from JHD_ROUTE_PATH (canonical link) — internal paths never leak.
 $_SERVER['SCRIPT_NAME'] = BASE_PATH . '/' . $target;
 $_SERVER['PHP_SELF'] = $_SERVER['SCRIPT_NAME'];
 $_SERVER['JHD_ROUTE_PATH'] = BASE_PATH . $entry['canonical'];

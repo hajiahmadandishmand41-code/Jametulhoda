@@ -19,7 +19,7 @@
 - **Session مشترک در PostgreSQL**؛ session محلی فقط برای آزمون/development.
 - **Storage:** local در development، S3-compatible در production. آدرس عمومی با مسیر فیزیکی جداست.
 - **رابط:** فونت Vazirmatn و Bootstrap RTL محلی، پوسته روشن/تاریک، منوی موبایل، بدون ابزار JS سنگین.
-- **Routing:** `.htaccess` همه درخواست‌ها را به `router.php` می‌فرستد و `router.php` فقط allowlist `config/routes.php` را می‌خواند. هر نشانی اصلی به‌صورت خودکار سه شکل `/x`، `/x/` و `/x.php` را پاسخ می‌دهد؛ مسیرهای پویا (`/post/{slug}`، `/book/{id}`، `/lessons/{collection}`، `/search/{q}`) هم ثبت شده‌اند. هیچ فایل PHP دیگری از وب قابل اجرا نیست.
+- **Routing:** `.htaccess` همه درخواست‌ها را به `router.php` می‌فرستد و `router.php` فقط allowlist `config/routes.php` را می‌خواند. هر نشانی اصلی به‌صورت خودکار سه شکل `/x`، `/x/` و `/x.php` را پاسخ می‌دهد (aliasها فقط با همان نوشتار و اسلش پایانی، تا مسیرهای مسدود مثل `/install.php` خودکار باز نشوند)؛ مسیرهای پویا (`/post/{slug}`، `/book/{id}`، `/lessons/{collection}`، `/search/{q}`) هم ثبت شده‌اند. هیچ فایل PHP دیگری از وب قابل اجرا نیست.
 
 ## اجرای محلی
 
@@ -37,6 +37,26 @@ php -S 0.0.0.0:8080 router.php
 ```
 
 برای اجرای زیرمسیر، مثلاً `/school`، `BASE_PATH=/school` قرار دهید و تمام درخواست‌ها را به router بفرستید. دامنه در لینک‌های داخلی hard-code نمی‌شود. برای canonical و sitemap، `SITE_URL` را برابر URL کامل عمومی (شامل زیرمسیر در صورت وجود) قرار دهید.
+
+### اجرای محلی بدون سرور دیتابیس (SQLite)
+
+برای کار روی UI/لینک‌ها و آزمون‌های HTTP می‌توانید به‌جای PostgreSQL/MySQL از درایور
+محلی SQLite استفاده کنید (فقط توسعه/آزمون؛ در `APP_ENV=production` رد می‌شود).
+طرحواره و داده‌های نمونه در `tests/fixtures/schema.sqlite.sql` و
+`tests/fixtures/seed.sqlite.sql` هستند و با `bin/dev-db.php` ساخته می‌شوند:
+
+```sh
+export APP_ENV=development DB_DRIVER=sqlite SESSION_DRIVER=files \
+       SQLITE_PATH=/tmp/jametulhoda-dev.sqlite UPLOAD_STORAGE=local
+php bin/dev-db.php            # دیتابیس را از نو می‌سازد (schema + seed)
+php -S 0.0.0.0:8080 router.php
+# مدیر نمونهٔ seed: admin / TestAdmin123!@#
+TEST_ADMIN_USERNAME=admin TEST_ADMIN_PASSWORD='TestAdmin123!@#' npm run test:http
+node tests/links.mjs
+```
+
+CI همان آزمون‌ها را روی PostgreSQL واقعی و سپس داخل کانتینر Apache اجرا می‌کند
+(`.github/workflows/ci.yml`)؛ SQLite فقط حلقهٔ توسعهٔ محلی را سریع می‌کند.
 
 ### حساب مدیر
 

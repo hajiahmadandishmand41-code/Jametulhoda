@@ -29,3 +29,7 @@ node_modules/
 # Private shared-hosting configuration
 config/local.php
 config/install.lock
+
+# Python bytecode from the static route/link audits
+__pycache__/
+*.pyc

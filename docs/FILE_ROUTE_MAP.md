@@ -29,13 +29,14 @@ admin/media/            index.php
 admin/categories/       index.php
 admin/topics/           index.php create.php edit.php
 admin/news/             index.php create.php edit.php delete.php
-admin/posts/            index.php create.php edit.php delete.php
+admin/posts/            index.php create.php edit.php delete.php action.php
 admin/speeches/         index.php create.php edit.php delete.php
 admin/messages/         index.php            (admin/messages.php is now a redirect stub)
 admin/banners/          index.php
-pages/                  about announcements articles book books category contact lesson
-                        lessons media-library news post programs qa religious-activities
-                        reports research search speech speeches topic topics (.php)
+pages/                  about announcements articles book books category contact events
+                        lesson lessons media media-library news post programs qa
+                        religious-activities reports research search speech speeches
+                        topic topics (.php)
 content/                home-intro.php       (page fragments included by controllers)
 assets/                 css/ js/ img/ fonts/ vendor/
 uploads/                images/ books/ videos/ audios/ documents/ (+ legacy audio/ video/
@@ -43,7 +44,7 @@ uploads/                images/ books/ videos/ audios/ documents/ (+ legacy audi
 database/               database.mysql.sql  database.postgres.sql  migrations/
 php/                    install.php          (browser installer)
 bin/                    migrate.php  create-admin.php  storage-gc.php  db-test.php
-                        install-cli.php  migrate-sections.php
+                        install-cli.php  migrate-sections.php  dev-db.php
 storage/                logs/  cache/
 tests/ docs/            unchanged
 ```
@@ -86,12 +87,17 @@ logic in `admin/messages.php` (its unique feature — "mark all as read" — was
 `['routes' => …, 'aliases' => …, 'patterns' => …]`; `router.php` expands it, and
 `.htaccess` sends every request to `router.php`.
 
-Expansion rules (applied by `router.php::jhdExpandRoutes()`):
+Expansion rules (applied by `router.php::jhdRouteTable()`):
 
 * canonical `/x` also answers `/x/` and `/x.php`
 * canonical `/x` whose target is `index.php` also answers `/x/index.php`
-* aliases inherit the same variants
-* only scripts listed as targets are reachable — everything else is 404
+* a path that already contains a dot (`/sitemap.xml`, `/index.php`, `/php/install.php`)
+  stays exact — no extra variants
+* aliases answer **as written** (plus a trailing slash) and reuse the canonical entry of
+  their target, so an alias never invents a `.php` spelling. That is why `/install`
+  reaches the installer while `/install.php` stays 404
+* only scripts listed as targets (or matched by a pattern) are reachable — everything
+  else is 404
 
 ### 3.1 Public
 
@@ -105,9 +111,10 @@ Expansion rules (applied by `router.php::jhdExpandRoutes()`):
 | `/books` | `pages/books.php` | aliases `/library`, `/files` |
 | `/category` | `pages/category.php` | `?slug=`, `?page=` |
 | `/contact` | `pages/contact.php` | POST form + rate limit |
+| `/events` | `pages/events.php` | programs + religious activities + announcements; alias `/event`; `?type=`, `?q=`, `?page=` |
 | `/lesson` | `pages/lesson.php` | `?slug=` |
 | `/lessons` | `pages/lessons.php` | `?collection=`, `?volume=`, `?q=`, `?level=`, `?page=` |
-| `/media-library` | `pages/media-library.php` | `?kind=audio\|video` |
+| `/media`, `/media-library` | `pages/media-library.php` | `?kind=audio\|video` (`/media` is the short spelling used by the menus) |
 | `/audio`, `/audios` | `pages/media-library.php` | default `kind=audio` |
 | `/video`, `/videos` | `pages/media-library.php` | default `kind=video` |
 | `/news` | `pages/news.php` | |
@@ -129,11 +136,21 @@ Expansion rules (applied by `router.php::jhdExpandRoutes()`):
 
 | Pattern | Script | Query produced |
 |---|---|---|
-| `^/book/(\d+)/?$` | `pages/book.php` | `id` |
-| `^/book/([a-z0-9\-]+)/?$` | `pages/book.php` | `slug` |
-| `^/(post\|lesson\|speech\|category\|topic)/([^/]+)/?$` | `pages/$1.php` | `slug` |
+| `^/books?/(\d+)/?$` | `pages/book.php` | `id` |
+| `^/books?/([^/]+)/?$` | `pages/book.php` | `slug` |
+| `^/(article\|articles\|news\|research\|researches\|report\|reports\|event\|events\|announcement\|announcements\|program\|programs)/([^/]+)/?$` | `pages/post.php` | `expected_type`, `slug` — `pages/post.php` normalises the plural/type prefix (`events`→`program`, …) and answers 404 when the slug belongs to another type |
+| `^/(video\|audio\|media)/(\d+)/?$` | `pages/media.php` | `kind`, `id` |
+| `^/topics?/([^/]+)/?$` | `pages/topic.php` | `slug` |
+| `^/lesson/([^/]+)/?$` | `pages/lesson.php` | `slug` |
+| `^/speech/([^/]+)/?$` | `pages/speech.php` | `slug` |
+| `^/category/([^/]+)/?$` | `pages/category.php` | `slug` |
+| `^/post/([^/]+)/?$` | `pages/post.php` | `slug` |
 | `^/lessons/([^/]+)/?$` | `pages/lessons.php` | `collection` |
 | `^/lessons/([^/]+)/([^/]+)/?$` | `pages/lessons.php` | `collection`, `volume` |
+| `^/search/([^/]+)/?$` | `pages/search.php` | `q` |
+| `^/admin/users/edit/(\d+)/?$` | `admin/users/index.php` | `edit` |
+| `^/admin/topics/(\d+)/edit/?$`, `^/admin/topics/edit/(\d+)/?$` | `admin/topics/edit.php` | `id` |
+| `^/admin/content/(\d+)/(publish\|unpublish\|archive\|delete)/?$` | `admin/posts/action.php` | `id`, `action` — GET shows a CSRF confirmation form, only POST mutates |
 
 ### 3.3 Admin
 
@@ -144,7 +161,8 @@ Expansion rules (applied by `router.php::jhdExpandRoutes()`):
 | `/admin` | `admin/index.php` | `requireLogin()` |
 | `/admin/change-password` | `admin/change-password.php` | `requireLogin()` |
 | `/admin/settings` | `admin/settings.php` | superadmin, admin |
-| `/admin/users` | `admin/users/index.php` | superadmin |
+| `/admin/content` | `admin/posts/index.php` | `requireLogin()`; every post type in one list (`?type=`, `?status=`, `?q=`) |
+| `/admin/users`, `/admin/users/new` | `admin/users/index.php` | superadmin |
 | `/admin/messages` | `admin/messages/index.php` | superadmin, admin |
 | `/admin/media` | `admin/media/index.php` | superadmin, admin |
 | `/admin/articles` (+`/create`, `/edit`, `/delete`) | `admin/articles/*.php` | `requireLogin()` |
@@ -160,7 +178,8 @@ Expansion rules (applied by `router.php::jhdExpandRoutes()`):
 | `/php/install`, `/php/install.php` | `php/install.php` | installer; locked by `config/install.lock` |
 
 Aliases kept for old bookmarks/links: `/dashboard` → `/admin`, `/login` → `/admin/login`,
-`/logout` → `/admin/logout`, `/library` and `/files` → `/books`.
+`/logout` → `/admin/logout`, `/library` and `/files` → `/books`, `/event` → `/events`,
+`/install` → `/php/install` (short spelling; `/install.php` deliberately stays 404).
 
 ### 3.4 Static
 

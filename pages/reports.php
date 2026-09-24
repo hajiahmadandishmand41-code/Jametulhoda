@@ -1,68 +1,196 @@
 <?php
 /**
- * reports.php — آرشیو گزارش‌های دینی و فعالیت‌های مدرسه (بخش اصلی Home)
+ * reports.php — آرشیو گزارش‌های تصویری، میدانی و فعالیت‌های حوزه علمیه جامعه‌الهدی
  */
-$pageTitle='گزارش‌ها';
-$pageDesc='گزارش فعالیت‌های علمی، فرهنگی، جلسات، محافل، مراسم و برنامه‌های مدرسه علمیه جامعه‌الهدی.';
-require_once __DIR__.'/../includes/header.php';
-require_once __DIR__.'/../includes/functions.php';
+$pageTitle = 'گزارش‌ها و رخدادها';
+$pageDesc = 'گزارش فعالیت‌های علمی، فرهنگی، جلسات، محافل، مراسم و برنامه‌های مذهبی مدرسه علمیه جامعه‌الهدی.';
+require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/auth.php';
+startSecureSession();
 
-$search=trim($_GET['q'] ?? '');
-$topicSlug=trim($_GET['topic'] ?? '');
-$topicId=null;
-if($topicSlug){ $t=getTopicBySlug($topicSlug); if($t) $topicId=(int)$t['id']; }
-$page=max(1,(int)($_GET['page'] ?? 1));
-$limit=12; $offset=($page-1)*$limit;
-$opts=['type'=>'report','limit'=>$limit,'offset'=>$offset];
-if($search) $opts['search']=$search;
-if($topicId) $opts['topic']=$topicId;
-$posts=getPosts($opts);
-$total=countPosts(['type'=>'report'] + ($search?['search'=>$search]:[]) + ($topicId?['topic'=>$topicId]:[]));
-$pages=(int)ceil($total/$limit);
+$db = getDB();
+$search = trim($_GET['q'] ?? '');
+$topicSlug = trim($_GET['topic'] ?? '');
+$topicId = null;
+if ($topicSlug) {
+    $t = getTopicBySlug($topicSlug);
+    if ($t) $topicId = (int)$t['id'];
+}
 
-$breadcrumbs=[['name'=>'صفحه اصلی','url'=>siteUrl()],['name'=>'گزارش‌ها','url'=>siteUrl('reports')]];
-if($topicId && $t) $breadcrumbs[]=['name'=>$t['name'],'url'=>siteUrl('reports?topic='.urlencode($t['slug']))];
-$breadcrumbsJsonLd=breadcrumbsJsonLd($breadcrumbs);
+$page = max(1, (int)($_GET['page'] ?? 1));
+$limit = 12;
+$offset = ($page - 1) * $limit;
+
+$opts = ['type' => 'report', 'limit' => $limit, 'offset' => $offset];
+if ($search) $opts['search'] = $search;
+if ($topicId) $opts['topic'] = $topicId;
+
+$posts = getPosts($opts);
+$total = countPosts(['type' => 'report'] + ($search ? ['search' => $search] : []) + ($topicId ? ['topic' => $topicId] : []));
+
+// فال‌بک هوشمند در صورت کم بودن رکوردهای صرفاً report
+if (empty($posts) && !$search && !$topicId) {
+    try {
+        $stmt = $db->query("SELECT * FROM posts WHERE status='published' AND (title ILIKE '%گزارش%' OR summary ILIKE '%گزارش%') ORDER BY published_at DESC LIMIT 12");
+        $posts = $stmt->fetchAll();
+        $total = count($posts);
+    } catch (\Throwable) {}
+}
+
+$pages = (int)ceil($total / $limit);
+
+$breadcrumbs = [
+    ['name' => 'صفحه اصلی', 'url' => url()],
+    ['name' => 'گزارش‌ها', 'url' => url('reports')]
+];
+if ($topicId && !empty($t)) {
+    $breadcrumbs[] = ['name' => $t['name'], 'url' => url('reports', ['topic' => $t['slug']])];
+}
+$breadcrumbsJsonLd = breadcrumbsJsonLd($breadcrumbs);
+
+require_once __DIR__ . '/../includes/header.php';
 ?>
-<div class="breadcrumb-bar"><div class="container"><nav><ol class="breadcrumb mb-0">
-<li class="breadcrumb-item"><a href="<?= siteUrl() ?>">صفحه اصلی</a></li>
-<li class="breadcrumb-item active">گزارش‌ها</li>
-<?php if(!empty($t)): ?><li class="breadcrumb-item active"><?= sanitize($t['name']) ?></li><?php endif; ?>
-</ol></nav></div></div>
 
-<div class="py-5"><div class="container">
-<div class="page-header mb-4">
-<h1 class="page-title"><i class="bi bi-newspaper ms-2 text-gold"></i> گزارش‌ها</h1>
-<div class="section-divider"></div>
-<p class="text-muted">گزارش فعالیت‌های مدرسه، جلسات، محافل، مراسم، برنامه‌های علمی و مناسبت‌های دینی — هر گزارش دارای صفحه مستقل، URL مستقل، عنوان دقیق، تاریخ، تصویر، خلاصه، متن کامل و موضوعات مرتبط.</p>
-<?php if($total>0): ?><p class="text-muted small mt-2"><?= number_format($total) ?> گزارش</p><?php endif; ?>
+<!-- Breadcrumb -->
+<div class="breadcrumb-bar">
+  <div class="container">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-0">
+        <?php foreach ($breadcrumbs as $i => $bc): $isLast = ($i === count($breadcrumbs) - 1); ?>
+        <li class="breadcrumb-item <?= $isLast ? 'active' : '' ?>" <?= $isLast ? 'aria-current="page"' : '' ?>>
+          <?php if (!$isLast): ?><a href="<?= sanitize($bc['url']) ?>"><?= sanitize($bc['name']) ?></a><?php else: ?><?= sanitize($bc['name']) ?><?php endif; ?>
+        </li>
+        <?php endforeach; ?>
+      </ol>
+    </nav>
+  </div>
 </div>
 
-<form method="get" class="mb-4"><div class="input-group" style="max-width:480px"><input type="text" name="q" class="form-control" placeholder="جستجو در گزارش‌ها..." value="<?= sanitize($search) ?>"><button class="btn btn-primary"><i class="bi bi-search"></i></button><?php if($search): ?><a href="<?= siteUrl('reports') ?>" class="btn btn-outline-secondary"><i class="bi bi-x"></i></a><?php endif; ?></div></form>
+<div class="py-5">
+  <div class="container">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
+      <div>
+        <span class="jhd-eyebrow">پوشش میدانی و رخدادهای حوزه</span>
+        <h1 class="page-title mb-1">
+          <i class="bi bi-card-text ms-2 text-gold"></i> گزارش‌های تصویری و خبری
+        </h1>
+        <div class="section-divider"></div>
+        <p class="text-muted mt-2 mb-0">
+          رویدادها، همایش‌ها، مناسبت‌های مذهبی، جلسات اساتید و فعالیت‌های علمی جامعه‌الهدی
+        </p>
+      </div>
+      <?php if ($total > 0): ?>
+      <span class="badge bg-secondary px-3 py-2">
+        <i class="bi bi-images ms-1"></i><?= number_format($total) ?> گزارش
+      </span>
+      <?php endif; ?>
+    </div>
 
-<?php if(empty($posts)): ?>
-<div class="text-center py-5"><i class="bi bi-inbox display-1 d-block mb-3 opacity-25 text-muted"></i><h4 class="text-muted">گزارشی یافت نشد</h4></div>
-<?php else: ?>
-<div class="row g-4">
-<?php foreach($posts as $p): ?>
-<div class="col-md-6 col-lg-4">
-<article class="news-card h-100">
-<div class="news-card-img-wrap">
-<?php if($p['featured_image']): ?><img src="<?= imgUrl($p['featured_image']) ?>" alt="<?= sanitize($p['title']) ?>" class="news-card-img" loading="lazy"><?php else: ?><div class="news-card-img-placeholder"><i class="bi bi-newspaper"></i></div><?php endif; ?>
-<div class="news-card-badge"><?= postTypeBadge($p['post_type']) ?></div>
+    <!-- Search Form -->
+    <form method="get" class="mb-4" role="search">
+      <div class="row g-2 align-items-center">
+        <div class="col-md-6 col-lg-5">
+          <div class="input-group">
+            <input type="text" name="q" class="form-control"
+                   placeholder="جستجو در گزارش‌ها..."
+                   value="<?= sanitize($search) ?>">
+            <?php if ($topicSlug): ?>
+            <input type="hidden" name="topic" value="<?= sanitize($topicSlug) ?>">
+            <?php endif; ?>
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-search ms-1"></i>جستجو
+            </button>
+            <?php if ($search || $topicSlug): ?>
+            <a href="<?= url('reports') ?>" class="btn btn-outline-secondary" title="حذف فیلترها">
+              <i class="bi bi-x-lg"></i>
+            </a>
+            <?php endif; ?>
+          </div>
+        </div>
+      </div>
+      <?php if ($search || $topicSlug): ?>
+      <div class="mt-2 text-muted small">
+        فیلتر فعال:
+        <?php if ($search): ?>«<strong><?= sanitize($search) ?></strong>»<?php endif; ?>
+        <?php if ($topicSlug && !empty($t)): ?>در موضوع «<strong><?= sanitize($t['name']) ?></strong>»<?php endif; ?>
+        — <?= number_format($total) ?> مورد
+      </div>
+      <?php endif; ?>
+    </form>
+
+    <?php if (empty($posts)): ?>
+    <div class="text-center py-5 border rounded" style="background:var(--jhd-surface)">
+      <i class="bi bi-card-text display-1 text-muted opacity-25 d-block mb-3"></i>
+      <h4 class="text-muted">
+        <?= $search ? 'گزارشی با این مشخصات یافت نشد' : 'هنوز گزارشی در این بخش درج نشده است' ?>
+      </h4>
+      <a href="<?= url('reports') ?>" class="btn btn-outline-primary btn-sm mt-2">
+        <i class="bi bi-arrow-right ms-1"></i>مشاهده همه گزارش‌ها
+      </a>
+    </div>
+    <?php else: ?>
+    <div class="row g-4">
+      <?php foreach ($posts as $p): $pUrl = postUrl($p); ?>
+      <div class="col-md-6 col-lg-4">
+        <article class="news-card report-card h-100">
+          <div class="news-card-img-wrap">
+            <a href="<?= $pUrl ?>">
+              <?php if (!empty($p['featured_image'])): ?>
+              <img src="<?= imgUrl($p['featured_image']) ?>" alt="<?= sanitize($p['title']) ?>" class="news-card-img" loading="lazy">
+              <?php else: ?>
+              <div class="news-card-placeholder"><i class="bi bi-camera"></i></div>
+              <?php endif; ?>
+            </a>
+            <div class="report-card-badge"><i class="bi bi-camera-fill ms-1"></i>گزارش</div>
+          </div>
+
+          <div class="news-card-body">
+            <div class="news-card-meta">
+              <span><i class="bi bi-calendar3 ms-1"></i><?= persianDate($p['published_at'] ?? $p['created_at']) ?></span>
+            </div>
+
+            <h2 class="news-card-title h5">
+              <a href="<?= $pUrl ?>"><?= sanitize($p['title']) ?></a>
+            </h2>
+
+            <?php if (!empty($p['summary'])): ?>
+            <p class="news-card-summary">
+              <?= sanitize(excerpt($p['summary'], 110)) ?>
+            </p>
+            <?php endif; ?>
+
+            <?php $pt = getTopicsForPost((int)$p['id']); if (!empty($pt)): ?>
+            <div class="d-flex flex-wrap gap-1 mb-2">
+              <?php foreach (array_slice($pt, 0, 2) as $tp): ?>
+              <a href="<?= topicUrl($tp) ?>" class="badge badge-news text-decoration-none" style="font-size:0.72rem">
+                #<?= sanitize($tp['name']) ?>
+              </a>
+              <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+
+            <div class="news-card-footer">
+              <a href="<?= $pUrl ?>" class="btn-read-more">
+                مشاهده متن کامل گزارش <i class="bi bi-arrow-left"></i>
+              </a>
+            </div>
+          </div>
+        </article>
+      </div>
+      <?php endforeach; ?>
+    </div>
+
+    <!-- صفحه‌بندی -->
+    <?php if ($pages > 1): ?>
+    <div class="mt-5">
+      <?= paginate($total, $limit, $page, url('reports', ['q' => $search, 'topic' => $topicSlug, 'page' => '%d'])) ?>
+    </div>
+    <?php endif; ?>
+    <?php endif; ?>
+  </div>
 </div>
-<div class="news-card-body">
-<div class="news-card-meta"><span class="text-muted small"><i class="bi bi-calendar3 ms-1"></i><?= persianDate($p['published_at'] ?? $p['created_at']) ?></span></div>
-<h2 class="news-card-title h5"><a href="<?= postUrl($p) ?>"><?= sanitize($p['title']) ?></a></h2>
-<?php if($p['summary']): ?><p class="news-card-summary"><?= sanitize(excerpt($p['summary'],110)) ?></p><?php endif; ?>
-<?php $pt=getTopicsForPost((int)$p['id']); if($pt): ?><div class="d-flex flex-wrap gap-1 mt-2"><?php foreach(array_slice($pt,0,2) as $tp): ?><a href="<?= topicUrl($tp) ?>" class="badge bg-light text-dark border" style="font-size:.70rem"><?= sanitize($tp['name']) ?></a><?php endforeach; ?></div><?php endif; ?>
-<div class="news-card-footer"><a href="<?= postUrl($p) ?>" class="btn-read-more">مشاهده گزارش <i class="bi bi-arrow-left ms-1"></i></a></div>
-</div>
-</article>
-</div>
-<?php endforeach; ?>
-</div>
-<?php if($pages>1): ?><div class="mt-5"><?= paginate($total,$limit,$page, siteUrl('reports?q='.urlencode($search).'&topic='.urlencode($topicSlug).'&page=%d')) ?></div><?php endif; ?>
-<?php endif; ?>
-</div></div>
-<?php require_once __DIR__.'/../includes/footer.php'; ?>
+
+<?php require_once __DIR__ . '/../includes/footer.php'; ?>

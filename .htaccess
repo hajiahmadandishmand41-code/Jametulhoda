@@ -1,19 +1,31 @@
-# Jametulhoda — Apache configuration (InfinityFree / cPanel / Docker)
+# Jametulhoda — Apache configuration (InfinityFree / cPanel / Docker, Apache 2.4+)
 # router.php owns the route table: every request that is not a real file inside
 # assets/ or uploads/ is handed to it, and it answers a uniform 404 for anything
 # that is not a public route (including config/, includes/, pages/, bin/, tests/,
-# database/, storage/ and repository files such as *.sql or .env).
-Options -Indexes
+# database/, storage/ and repository files such as *.sql, *.md, *.json or .env).
+# Nothing else may be served directly — a "serve any existing static file" rule
+# here would publish those repository files again.
+Options -Indexes -MultiViews
 
-RewriteEngine On
+<IfModule mod_rewrite.c>
+    RewriteEngine On
 
-# Real static files are served by Apache directly (no PHP process needed).
-RewriteCond %{REQUEST_URI} /(assets|uploads)/ [NC]
-RewriteCond %{REQUEST_FILENAME} -f
-RewriteRule ^ - [L]
+    # 1. Real static files inside assets/ or uploads/ are served by Apache itself
+    #    (no PHP process needed). The extra path segments keep this working when
+    #    the site lives in a subdirectory of the document root.
+    RewriteCond %{REQUEST_URI} ^/(?:[^/]+/)*(assets|uploads)/ [NC]
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [END]
 
-RewriteRule ^router\.php$ - [L]
-RewriteRule ^ router.php [END,QSA]
+    # 2. The front controller itself is never rewritten again.
+    RewriteRule ^router\.php$ - [END]
+
+    # 3. Everything else (including real directories such as admin/ and any
+    #    physical .php file) goes through router.php, so the route allowlist and
+    #    the security gates can never be bypassed. [END] stops the per-directory
+    #    rewrite loop without a second pass.
+    RewriteRule ^ router.php [END,QSA]
+</IfModule>
 
 <IfModule mod_headers.c>
     Header always set X-Content-Type-Options "nosniff"

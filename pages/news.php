@@ -1,8 +1,9 @@
 <?php
 /**
- * news.php — صفحه اخبار + دکمه لایک + نشانه‌گر ویدیو
+ * news.php — صفحه اخبار مدرسه علمیه جامعه‌الهدی
  */
 $pageTitle = 'اخبار';
+$pageDesc = 'اخبار، رویدادها، اطلاعیه‌ها و گزارش‌های جاری مدرسه علمیه جامعه‌الهدی';
 require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/media.php';
 
@@ -11,14 +12,14 @@ $page   = max(1, (int)($_GET['page'] ?? 1));
 $limit  = POSTS_PER_PAGE;
 $offset = ($page - 1) * $limit;
 
-$opts = ['type' => 'news', 'section' => 'news', 'limit' => $limit, 'offset' => $offset];
+$opts = ['type' => 'news', 'limit' => $limit, 'offset' => $offset];
 if ($search) $opts['search'] = $search;
 
 $posts = getPosts($opts);
-$total = countPosts(array_merge(['type' => 'news', 'section' => 'news'], $search ? ['search' => $search] : []));
+$total = countPosts(array_merge(['type' => 'news'], $search ? ['search' => $search] : []));
 $pages = (int)ceil($total / $limit);
 
-// دریافت یک‌جای تعداد لایک و ویدیو برای همه پست‌ها (بدون N+1 query)
+// دریافت تعداد ویدیوها بدون N+1 query
 $postIds  = array_column($posts, 'id');
 $videoMap = [];
 if (!empty($postIds)) {
@@ -36,8 +37,8 @@ if (!empty($postIds)) {
     <div class="container">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="<?= siteUrl() ?>">صفحه اصلی</a></li>
-                <li class="breadcrumb-item active">اخبار</li>
+                <li class="breadcrumb-item"><a href="<?= url() ?>">صفحه اصلی</a></li>
+                <li class="breadcrumb-item active" aria-current="page">اخبار</li>
             </ol>
         </nav>
     </div>
@@ -48,22 +49,23 @@ if (!empty($postIds)) {
         <div class="page-header mb-4">
             <h1 class="page-title"><i class="bi bi-newspaper ms-2 text-gold"></i>اخبار مدرسه</h1>
             <div class="section-divider"></div>
+            <p class="text-muted">تازه‌ترین اخبار، اطلاعیه‌ها و رویدادهای جاری مدرسه علمیه جامعه‌الهدی</p>
         </div>
 
-        <!-- جستجو -->
-        <form method="get" class="mb-4">
-            <div class="input-group" style="max-width:400px">
+        <!-- جستجو در اخبار -->
+        <form method="get" class="mb-4" role="search">
+            <div class="input-group" style="max-width:440px">
                 <input type="text" name="q" class="form-control" placeholder="جستجو در اخبار..." value="<?= sanitize($search) ?>">
-                <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i></button>
+                <button type="submit" class="btn btn-primary" aria-label="جستجو"><i class="bi bi-search"></i></button>
                 <?php if ($search): ?>
-                <a href="<?= siteUrl('news') ?>" class="btn btn-outline-secondary"><i class="bi bi-x"></i></a>
+                <a href="<?= url('news') ?>" class="btn btn-outline-secondary" title="پاک کردن جستجو"><i class="bi bi-x-lg"></i></a>
                 <?php endif; ?>
             </div>
         </form>
 
         <?php if ($search): ?>
         <div class="alert alert-info mb-4">
-            نتایج جستجو برای «<strong><?= sanitize($search) ?></strong>» — <?= number_format($total) ?> نتیجه
+            نتایج جستجو برای «<strong><?= sanitize($search) ?></strong>» — <?= number_format($total) ?> نتیجه یافت شد.
         </div>
         <?php endif; ?>
 
@@ -72,7 +74,7 @@ if (!empty($postIds)) {
             <i class="bi bi-newspaper display-1 text-muted opacity-25 d-block mb-3"></i>
             <h4 class="text-muted">خبری یافت نشد</h4>
             <?php if ($search): ?>
-            <a href="<?= siteUrl('news') ?>" class="btn btn-primary mt-2">نمایش همه اخبار</a>
+            <a href="<?= url('news') ?>" class="btn btn-primary mt-3">نمایش همه اخبار</a>
             <?php endif; ?>
         </div>
         <?php else: ?>
@@ -80,19 +82,23 @@ if (!empty($postIds)) {
         <!-- لیست اخبار -->
         <div class="row g-4">
             <?php foreach ($posts as $k => $news):
-                $nid      = (int)$news['id'];
-                                                $hasFeatVideo  = !empty($news['featured_video']);
+                $nid = (int)$news['id'];
+                $hasFeatVideo = !empty($news['featured_video']);
                 $hasMediaVideo = !empty($videoMap[$nid]);
-                $hasVideo      = $hasMediaVideo || $hasFeatVideo;
+                $hasVideo = $hasMediaVideo || $hasFeatVideo;
+                $newsUrl = postUrl($news);
             ?>
             <div class="col-md-6 col-lg-4">
                 <article class="news-card h-100">
                     <div class="news-card-img-wrap position-relative">
-                        <?php if ($news['featured_image']): ?>
-                        <img src="<?= imgUrl($news['featured_image']) ?>" alt="<?= sanitize($news['title']) ?>" class="news-card-img" loading="lazy" decoding="async">
-                        <?php else: ?>
-                        <div class="news-card-img-placeholder"><i class="bi bi-newspaper"></i></div>
-                        <?php endif; ?>
+                        <a href="<?= $newsUrl ?>" tabindex="-1" aria-hidden="true">
+                            <?php if ($news['featured_image']): ?>
+                            <img src="<?= imgUrl($news['featured_image']) ?>" alt="<?= sanitize($news['title']) ?>" class="news-card-img" loading="lazy" decoding="async">
+                            <?php else: ?>
+                            <div class="news-card-img-placeholder"><i class="bi bi-newspaper"></i></div>
+                            <?php endif; ?>
+                        </a>
+                        <div class="news-card-badge"><?= postTypeBadge($news['post_type']) ?></div>
                         <?php if ($hasVideo): ?>
                         <span class="video-badge-card"><i class="bi bi-camera-video-fill"></i> ویدیو</span>
                         <?php endif; ?>
@@ -100,27 +106,24 @@ if (!empty($postIds)) {
                     <div class="news-card-body">
                         <div class="news-card-meta">
                             <span class="text-muted small"><i class="bi bi-calendar3 ms-1"></i><?= persianDate($news['published_at'] ?? $news['created_at']) ?></span>
-                            
+                            <?php if (!empty($news['cat_name'])): ?>
+                            <span class="badge bg-light text-dark border" style="font-size:.70rem"><?= sanitize($news['cat_name']) ?></span>
+                            <?php endif; ?>
                         </div>
-                        <h3 class="news-card-title">
-                            <a href="<?= postUrl($news) ?>"><?= sanitize($news['title']) ?></a>
-                        </h3>
+                        <h2 class="news-card-title h5">
+                            <a href="<?= $newsUrl ?>"><?= sanitize($news['title']) ?></a>
+                        </h2>
                         <?php if ($news['summary']): ?>
                         <p class="news-card-summary"><?= sanitize(excerpt($news['summary'], 130)) ?></p>
                         <?php endif; ?>
                         <div class="news-card-footer">
-                            <a href="<?= postUrl($news) ?>" class="btn-read-more">
-                                ادامه مطلب <i class="bi bi-arrow-left"></i>
+                            <a href="<?= $newsUrl ?>" class="btn-read-more">
+                                ادامه مطلب <i class="bi bi-arrow-left ms-1"></i>
                             </a>
-                            <div class="d-flex gap-2 align-items-center">
-                                <!-- دکمه لایک -->
-                                
-                                <!-- کپی لینک -->
-                                <button class="btn-copy-link" title="کپی لینک خبر"
-                                    onclick="navigator.clipboard.writeText('<?= postUrl($news) ?>').then(function(){this.innerHTML='<i class=\'bi bi-check-circle text-success\'></i>';}.bind(this))">
-                                    <i class="bi bi-link-45deg"></i>
-                                </button>
-                            </div>
+                            <button class="btn btn-sm btn-outline-secondary py-0 px-2" title="کپی پیوند خبر"
+                                onclick="navigator.clipboard.writeText('<?= htmlspecialchars(absolute_url($newsUrl), ENT_QUOTES) ?>').then(function(){ if(window.showToast) showToast('پیوند خبر کپی شد!','success'); })">
+                                <i class="bi bi-link-45deg"></i>
+                            </button>
                         </div>
                     </div>
                 </article>
@@ -131,7 +134,7 @@ if (!empty($postIds)) {
         <!-- صفحه‌بندی -->
         <?php if ($pages > 1): ?>
         <div class="mt-5">
-            <?= paginate($total, $limit, $page, siteUrl('news') . '?q=' . urlencode($search) . '&page=%d') ?>
+            <?= paginate($total, $limit, $page, url('news') . '?q=' . urlencode($search) . '&page=%d') ?>
         </div>
         <?php endif; ?>
         <?php endif; ?>
