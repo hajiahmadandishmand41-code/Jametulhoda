@@ -104,7 +104,7 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="py-5"><div class="container">
 <!-- Topic header -->
-<div class="row g-4 align-items-start mb-5">
+<div class="jhd-topic-hero row g-4 align-items-start mb-5">
     <div class="col-lg-8">
         <h1 class="page-title" style="font-size:2rem"><?= sanitize($topic['name']) ?></h1>
         <div class="section-divider"></div>

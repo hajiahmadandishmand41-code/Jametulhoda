@@ -284,10 +284,10 @@ function newDatabaseConnection(): PDO {
         return $pdo;
     }
     if (databaseDriver() === 'mysql') {
-        $host = env_value('DB_HOST', 'sql304.infinityfree.com');
+        $host = env_value('DB_HOST');
         $port = (int)env_value('DB_PORT', '3306');
-        $name = env_value('DB_NAME', 'if0_42959770_jametulhoda');
-        $user = env_value('DB_USER', 'if0_42959770');
+        $name = env_value('DB_NAME');
+        $user = env_value('DB_USER');
         $pass = env_value('DB_PASS');
 
         if ($pass === '') {

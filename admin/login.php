@@ -52,7 +52,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ورود مدیر — <?= sanitize(SITE_NAME) ?></title>
+<title>ورود به سامانه مدیریت | <?= sanitize(SITE_NAME) ?></title>
+<meta name="description" content="ورود امن مدیران و ویراستاران جامعة‌الهدی به سامانه مدیریت محتوا.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="canonical" href="<?= sanitize(absolute_url('login')) ?>">
 <link rel="stylesheet" href="<?= siteUrl('assets/vendor/bootstrap.rtl.min.css') ?>">
 <link rel="stylesheet" href="<?= siteUrl('assets/vendor/icons/bootstrap-icons.min.css') ?>">
 
@@ -76,12 +79,20 @@ body { font-family: 'Vazirmatn', sans-serif; background: linear-gradient(135deg,
 .alert { border-radius: 10px; border: none; font-size: .88rem; }
 .back-link { text-align: center; margin-top: 16px; font-size: .85rem; }
 .back-link a { color: #40916c; }
+html[data-theme="dark"] body { background: radial-gradient(circle at 88% 8%, rgba(228,190,107,.12), transparent 20rem), #0e1613; color: #eaf2ed; }
+html[data-theme="dark"] .login-card { background: #15221c; border: 1px solid #263930; }
+html[data-theme="dark"] .login-header { background: #0b1711; }
+html[data-theme="dark"] .form-label { color: #eaf2ed; }
+html[data-theme="dark"] .form-control { background: #101a14; color: #eaf2ed; border-color: #34473b; }
+html[data-theme="dark"] .form-control::placeholder { color: #9ab1a6; }
+html[data-theme="dark"] .back-link a { color: #83e2bf; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
 </style>
 <script src="<?= siteUrl('assets/js/theme.js') ?>"></script>
 <link rel="stylesheet" href="<?= siteUrl('assets/css/design-system.css') ?>">
 <script src="<?= siteUrl('assets/js/interface.js') ?>" defer></script>
 </head>
-<body><button style="position:fixed;bottom:20px;left:20px;z-index:1000;background:var(--jhd-surface)" class="jhd-icon-btn" data-theme-toggle aria-label="تغییر پوسته" aria-pressed="false"><i class="bi bi-moon"></i></button>
+<body class="jhd-login-site"><button style="position:fixed;bottom:20px;left:20px;z-index:1000;background:var(--jhd-surface)" class="jhd-icon-btn" data-theme-toggle aria-label="تغییر پوسته" aria-pressed="false"><i class="bi bi-moon"></i></button>
 <div class="login-card">
     <div class="login-header">
         <img src="<?= imgUrl(getSetting('site_logo', 'assets/img/logo.jpg')) ?>" alt="لوگو" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕌</text></svg>'">

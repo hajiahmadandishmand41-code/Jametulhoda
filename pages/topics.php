@@ -38,7 +38,7 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="py-5">
   <div class="container">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
+    <div class="jhd-page-heading d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
       <div>
         <span class="jhd-eyebrow">منظومه فکری و درخت‌واره علوم اسلامی</span>
         <h1 class="page-title mb-1">

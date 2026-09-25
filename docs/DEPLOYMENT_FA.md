@@ -1,5 +1,7 @@
 # راهنمای Deployment و عملیات
 
+> **وضعیت شاخهٔ جاری — ۲۴ سپتامبر ۲۰۲۶:** اصلاحات `arena/01a0d390-jametulhoda` هنوز روی PHP/Apache واقعی یا InfinityFree اجرا نشده‌اند؛ این محیط PHP، Apache و Docker ندارد و اتصال عمومی `jametulhoda.gt.tc` در TLS handshake پاسخ قابل‌اعتماد نداد. گزارش‌های CI/Preview که در پایین این فایل آمده‌اند مربوط به revisionهای پیشین هستند و این تغییرات را تأیید نمی‌کنند. `/news` تا اجرای موفق HTTP smoke روی همین نسخه، status تأییدشده ندارد.
+
 ## ۱. مسیر اجرای سایت
 
 Root پروژه تغییر نکرده است. `index.php` محتوای خانه است؛ همه درخواست‌های وب از `router.php` عبور می‌کنند. `config/routes.php` تنها فهرست مجاز اجرای PHP است. فایل SQL، `.env`، config، vendor، ابزار CLI و Git از این مسیر سرو نمی‌شوند. `.htaccess` ریشه همه درخواست‌ها را به router می‌فرستد. فایل‌های قدیمی با نام `admin.htaccess` یا `uploads.htaccess` فایل فعال Apache نیستند؛ حفاظت به آن‌ها متکی نیست.
@@ -15,7 +17,9 @@ Container: PHP 8.3 Apache، `pdo_pgsql`, mbstring/GD/zip/dom، Composer و OPcac
 | نام | کاربرد |
 |---|---|
 | `APP_ENV` | `development` برای محلی؛ `production` برای انتشار |
-| `DATABASE_URL` | تنها URL PostgreSQL؛ روی Neon با `sslmode=verify-full`؛ local آزمایشی می‌تواند `sslmode=disable` باشد |
+| `DATABASE_URL` | URL اتصال PostgreSQL؛ روی Neon با `sslmode=verify-full`؛ local آزمایشی می‌تواند `sslmode=disable` باشد |
+| `DB_DRIVER` | `mysql` برای InfinityFree/MySQL، یا `pgsql`/تنظیم `DATABASE_URL` برای PostgreSQL |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS` | اتصال MySQL/MariaDB روی InfinityFree؛ مقدارهای دقیق را از پنل hosting بگیرید، هیچ host/account credential پیش‌فرضی در مخزن نیست |
 | `SITE_URL` | URL عمومی HTTPS، بدون slash انتهایی؛ مبنای canonical/sitemap، نه Host ورودی |
 | `BASE_PATH` | محلی اختیاری مثل `/school`؛ روی Vercel معمولاً خالی |
 | `SITE_EMAIL`, `SITE_PHONE`, `SITE_ADDRESS` | مقادیر تماس پیش‌فرض؛ تنظیمات DB می‌توانند آن‌ها را override کنند |

@@ -19,7 +19,7 @@ return [
 
     // ─── دیتابیس MySQL (InfinityFree / cPanel) ────────────────────────────
     'DB_DRIVER' => 'mysql',
-    'DB_HOST' => 'sql304.infinityfree.com',
+    'DB_HOST' => 'sqlXXX.infinityfree.com',
     'DB_PORT' => '3306',
     'DB_NAME' => 'if0_00000000_jametulhoda',
     'DB_USER' => 'if0_00000000',
@@ -49,9 +49,9 @@ return [
     // در محیط production باید database باشد (جدول app_sessions).
     'SESSION_DRIVER' => 'database',
 
-    // ─── حساب مدیر پیش‌فرض (فقط برای نصاب/اسکریپت ساخت مدیر) ───────────────
-    // رمز هرگز به‌صورت متن ساده ذخیره نمی‌شود؛ فقط password_hash().
+    // ─── حساب مدیر ────────────────────────────────────────────────────────
+    // هیچ رمز عمومی/پیش‌فرضی تنظیم نکنید؛ از محیط محرمانه با حداقل ۱۴ نویسه استفاده کنید.
     // 'ADMIN_USERNAME' => 'admin',
-    // 'ADMIN_PASSWORD' => 'JH@2026#Admin',
+    // 'ADMIN_PASSWORD' => 'یک-رمز-تصادفی-و-محرمانه-۱۴-نویسه-یا-بیشتر',
     // 'ADMIN_EMAIL' => 'hajiahmads299@gmail.com',
 ];

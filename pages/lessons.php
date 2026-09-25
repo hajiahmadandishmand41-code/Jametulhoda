@@ -74,7 +74,7 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="py-5">
   <div class="container">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
+    <div class="jhd-page-heading d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
       <div>
         <span class="jhd-eyebrow">مدرسه علمیه و آموزش مجازی معارف</span>
         <h1 class="page-title mb-1">
@@ -175,8 +175,8 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
       <h2 class="h5 fw-bold mb-0">جدیدترین جلسات درسی</h2>
       <form method="get" class="d-flex gap-2 flex-wrap">
-        <input type="text" name="q" class="form-control form-control-sm" placeholder="جستجو در درس‌ها..." value="<?= sanitize($search) ?>" style="max-width:200px">
-        <select name="level" class="form-select form-select-sm" style="max-width:130px">
+        <input type="search" name="q" class="form-control form-control-sm" aria-label="جستجو در درس‌ها" placeholder="جستجو در درس‌ها..." value="<?= sanitize($search) ?>" style="max-width:200px">
+        <select name="level" class="form-select form-select-sm" aria-label="فیلتر سطح درس" style="max-width:130px">
           <option value="">همه سطوح</option>
           <option value="beginner" <?= $level === 'beginner' ? 'selected' : '' ?>>مقدماتی</option>
           <option value="intermediate" <?= $level === 'intermediate' ? 'selected' : '' ?>>متوسط</option>

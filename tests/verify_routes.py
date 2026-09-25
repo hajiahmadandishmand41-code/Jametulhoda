@@ -121,6 +121,8 @@ if __name__ == '__main__':
         ('/research/', 200),
         ('/media', 200),
         ('/media/', 200),
+        ('/videos', 200),
+        ('/audios', 200),
         ('/topics', 200),
         ('/topics/', 200),
         ('/search', 200),
@@ -141,6 +143,7 @@ if __name__ == '__main__':
         # The legacy root installer path must stay unreachable (docs/FILE_ROUTE_MAP.md).
         ('/install.php', 404),
         ('/news/new-school-year', 200),
+        ('/post/generic-post', 200),
         ('/article/aql-in-religion', 200),
         ('/articles/aql-in-religion', 200),
         ('/report/milad-report', 200),
@@ -173,9 +176,26 @@ if __name__ == '__main__':
         ('/admin/includes/header.php', 404),
     ]
 
+    # The target files are part of the public route contract, not just that a
+    # URL happens to match some unrelated pattern.
+    expected_handlers = {
+        '/': 'index.php', '/news': 'pages/news.php', '/articles': 'pages/articles.php',
+        '/reports': 'pages/reports.php', '/events': 'pages/events.php', '/books': 'pages/books.php',
+        '/lessons': 'pages/lessons.php', '/research': 'pages/research.php', '/media': 'pages/media-library.php',
+        '/videos': 'pages/media-library.php', '/audios': 'pages/media-library.php', '/topics': 'pages/topics.php',
+        '/search': 'pages/search.php', '/about': 'pages/about.php', '/contact': 'pages/contact.php',
+        '/qa': 'pages/qa.php', '/login': 'admin/login.php',
+        '/news/new-school-year': 'pages/post.php', '/article/aql-in-religion': 'pages/post.php',
+        '/articles/aql-in-religion': 'pages/post.php', '/report/milad-report': 'pages/post.php',
+        '/reports/milad-report': 'pages/post.php', '/post/generic-post': 'pages/post.php',
+        '/book/usul-aqaid': 'pages/book.php', '/books/usul-aqaid': 'pages/book.php',
+        '/lesson/fiqh-lesson-1': 'pages/lesson.php', '/topic/mahdaviat': 'pages/topic.php',
+        '/topics/mahdaviat': 'pages/topic.php', '/video/1': 'pages/media.php', '/audio/2': 'pages/media.php',
+    }
+
     all_passed = True
-    print("\n" + "="*80)
-    print(f"{'ROUTE':<35} {'EXPECTED':<10} {'GOT':<10} {'HANDLER':<25} {'FILE_EXISTS'}")
+    print("\n" + "="*100)
+    print(f"{'ROUTE':<35} {'EXPECTED':<10} {'GOT':<10} {'EXPECTED TARGET':<30} {'ACTUAL TARGET'}")
     print("="*80)
 
     for req, exp in test_cases:
@@ -185,11 +205,13 @@ if __name__ == '__main__':
         if res:
             target_file = res['file']
             file_exists = os.path.isfile(target_file)
-        status = 'PASS' if got == exp and (exp == 404 or file_exists) else 'FAIL'
+        handler_str = res['file'] if res else '-'
+        expected_handler = expected_handlers.get(req)
+        target_matches = expected_handler is None or handler_str == expected_handler
+        status = 'PASS' if got == exp and (exp == 404 or file_exists) and target_matches else 'FAIL'
         if status == 'FAIL':
             all_passed = False
-        handler_str = res['file'] if res else '-'
-        print(f"[{status}] {req:<32} {exp:<10} {got:<10} {handler_str:<25} {file_exists}")
+        print(f"[{status}] {req:<32} {exp:<10} {got:<10} {(expected_handler or '-'): <30} {handler_str}")
 
     print("="*80)
     if all_passed:

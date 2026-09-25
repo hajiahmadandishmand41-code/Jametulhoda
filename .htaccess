@@ -6,14 +6,23 @@
 # Nothing else may be served directly — a "serve any existing static file" rule
 # here would publish those repository files again.
 Options -Indexes -MultiViews
+DirectoryIndex index.php
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    # RewriteBase is intentionally omitted: `router.php` is a relative substitution,
+    # so Apache resolves it beside this .htaccess at both domain root and subdirectory installs.
 
-    # 1. Real static files inside assets/ or uploads/ are served by Apache itself
-    #    (no PHP process needed). The extra path segments keep this working when
-    #    the site lives in a subdirectory of the document root.
-    RewriteCond %{REQUEST_URI} ^/(?:[^/]+/)*(assets|uploads)/ [NC]
+    # 1. Trusted static assets are served directly by Apache (no PHP process).
+    #    Uploaded image/audio/video files are bypassed only for a media allowlist;
+    #    documents are streamed by the router as attachments, and unexpected
+    #    .php/executable uploads reach the router and 404.
+    #    The optional path prefix also supports a site installed in a subdirectory.
+    RewriteCond %{REQUEST_URI} ^/(?:[^/]+/)*assets/ [NC]
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [END]
+
+    RewriteCond %{REQUEST_URI} ^/(?:[^/]+/)*uploads/.+\.(?:jpe?g|png|gif|webp|mp3|ogg|wav|m4a|mp4|webm|mov|mkv)$ [NC]
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule ^ - [END]
 

@@ -284,8 +284,8 @@ CREATE TABLE IF NOT EXISTS featured_banners (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT IGNORE INTO settings (setting_key, value) VALUES
-('site_name',        'مدرسه علمیه جامعه‌الهدی'),
-('site_slogan',      'علم، معرفت و تهذیب در پرتو قرآن و عترت'),
+('site_name',        'جامعة‌الهدی'),
+('site_slogan',      'مرکز علمی، آموزشی و پژوهشی در پرتو قرآن و عترت'),
 ('site_email',       'hajiahmads299@gmail.com'),
 ('address',          'کابل، افغانستان'),
 ('phone',            '0798228441'),

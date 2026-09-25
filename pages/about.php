@@ -3,6 +3,7 @@
  * about.php — درباره مدرسه
  */
 $pageTitle = 'درباره ما';
+$pageDesc = 'با جامعة‌الهدی، مرکز علمی، آموزشی و پژوهشی علوم اسلامی در کابل آشنا شوید؛ اهداف آموزشی، پژوهشی و راه‌های ارتباط با مجموعه.';
 require_once __DIR__ . '/../includes/header.php';
 ?>
 <div class="breadcrumb-bar">

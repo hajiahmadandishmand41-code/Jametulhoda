@@ -842,7 +842,13 @@ function breadcrumbsJsonLd(array $crumbs): string {
 }
 function articleJsonLd(array $post): string {
     if(!SITE_URL) return '';
-    $data=['@context'=>'https://schema.org','@type'=>'Article','headline'=>$post['title'],'datePublished'=>$post['published_at'] ?? $post['created_at'],'dateModified'=>$post['updated_at'] ?? $post['published_at'],'author'=>['@type'=>'Person','name'=>$post['author_name']??'جامعه‌الهدی'],'publisher'=>['@type'=>'Organization','name'=>getSetting('site_name', SITE_NAME),'logo'=>['@type'=>'ImageObject','url'=>canonicalUrl('assets/img/logo.jpg')]]];
+    $canonical = canonicalUrl(postUrl($post));
+    $organization = getSetting('site_name', SITE_NAME);
+    if ($organization === 'مدرسه علمیه جامعه‌الهدی') $organization = SITE_NAME;
+    $author = !empty($post['author_name'])
+        ? ['@type' => 'Person', 'name' => $post['author_name']]
+        : ['@type' => 'Organization', 'name' => $organization];
+    $data=['@context'=>'https://schema.org','@type'=>'Article','headline'=>$post['title'],'mainEntityOfPage'=>['@type'=>'WebPage','@id'=>$canonical],'url'=>$canonical,'datePublished'=>$post['published_at'] ?? $post['created_at'],'dateModified'=>$post['updated_at'] ?? $post['published_at'],'author'=>$author,'publisher'=>['@type'=>'Organization','name'=>$organization,'logo'=>['@type'=>'ImageObject','url'=>canonicalUrl('assets/img/logo.jpg')]]];
     if(!empty($post['featured_image'])) $data['image']=imgUrl($post['featured_image']);
     if(!empty($post['summary'])) $data['description']=excerpt($post['summary'],160);
     return json_encode($data, JSON_UNESCAPED_UNICODE|JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT);

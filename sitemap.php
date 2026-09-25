@@ -1,11 +1,13 @@
 <?php
 require_once __DIR__ . '/includes/functions.php';
 // Sitemap needs an absolute base URL
-$__sitemapBase = SITE_URL && filter_var(SITE_URL, FILTER_VALIDATE_URL) && preg_match('~^https?://~i', SITE_URL) ? rtrim(SITE_URL, '/') : '';
-if ($__sitemapBase === '') {
-    $proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host = $_SERVER['HTTP_HOST'] ?? 'jametulhoda.gt.tc';
-    $__sitemapBase = $proto . '://' . rtrim($host, '/') . rtrim(BASE_PATH, '/');
+$__sitemapBase = SITE_URL && filter_var(SITE_URL, FILTER_VALIDATE_URL) && preg_match('~^https?://~i', SITE_URL)
+    ? rtrim(SITE_URL, '/')
+    : 'https://jametulhoda.gt.tc';
+// SITE_URL may intentionally be only an origin while BASE_PATH denotes a
+// subdirectory. Include that prefix exactly once in every sitemap location.
+if (BASE_PATH !== '' && !str_ends_with($__sitemapBase, BASE_PATH)) {
+    $__sitemapBase .= BASE_PATH;
 }
 header('Content-Type: application/xml; charset=utf-8');
 header('Cache-Control: public, max-age=900');
@@ -22,7 +24,6 @@ $paths = [
     'research'              => 'research',
     'media'                 => 'media',
     'topics'                => 'topics',
-    'search'                => 'search',
     'about'                 => 'about',
     'contact'               => 'contact',
     'speeches'              => 'speeches',
@@ -51,6 +52,7 @@ try {
             'research'=> 'research/',
             'report'  => 'report/',
             'speech'  => 'speech/',
+            'program', 'religious', 'announcement' => 'event/',
             default   => 'post/',
         };
         $paths['post:' . $row['slug']] = $prefix . rawurlencode($row['slug']);

@@ -49,7 +49,7 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="py-5">
   <div class="container">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
+    <div class="jhd-page-heading d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
       <div>
         <span class="jhd-eyebrow">تحقیقات تخصصی و مستند</span>
         <h1 class="page-title mb-1">
@@ -70,7 +70,7 @@ require_once __DIR__ . '/../includes/header.php';
     <!-- Search Form -->
     <form method="get" class="mb-4" role="search">
       <div class="input-group" style="max-width:480px">
-        <input type="text" name="q" class="form-control"
+        <input type="search" name="q" class="form-control" aria-label="جستجو در پژوهش‌ها"
                placeholder="جستجو در عنوان یا متن پژوهش‌ها..."
                value="<?= sanitize($search) ?>">
         <button type="submit" class="btn btn-primary">
