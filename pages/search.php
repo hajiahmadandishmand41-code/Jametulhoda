@@ -8,13 +8,12 @@ require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/auth.php';
 startSecureSession();
 
-$q = trim($_GET['q'] ?? '');
+$q = is_string($_GET['q'] ?? null) ? mb_substr(trim($_GET['q']), 0, 200) : '';
 $pageTitle = $q ? 'جستجو: ' . $q : 'جستجو در آرشیو محتوا';
 $pageDesc = $q ? 'نتایج جستجو برای «' . $q . '» در موضوعات، مقالات، گزارش‌ها، کتاب‌ها، دروس و رسانه‌های جامعه‌الهدی.' : 'جستجو در آرشیو محتوایی مدرسه جامعه‌الهدی — موضوعات، مقالات، گزارش‌ها، کتاب‌ها، دروس، ویدیو و صوت.';
 
 $page  = max(1, (int)($_GET['page'] ?? 1));
 $limit = 12;
-$q = mb_substr($q, 0, 200);
 $results = [];
 $total = 0;
 
@@ -67,7 +66,7 @@ require_once __DIR__ . '/../includes/header.php';
     <!-- فرم جستجو -->
     <form method="get" class="mb-5" role="search">
       <div class="input-group input-group-lg" style="max-width:640px">
-        <input type="text" name="q" class="form-control" placeholder="مثلاً: مهدویت، فلسفه، اصول فقه، کلام..." value="<?= sanitize($q) ?>" autofocus>
+        <input type="search" name="q" class="form-control" aria-label="جستجو در آرشیو محتوا" placeholder="مثلاً: مهدویت، فلسفه، اصول فقه، کلام..." value="<?= sanitize($q) ?>" autofocus>
         <button type="submit" class="btn btn-primary"><i class="bi bi-search ms-1"></i>جستجو</button>
       </div>
     </form>

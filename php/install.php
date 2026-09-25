@@ -74,10 +74,10 @@ $lockPath = __DIR__ . '/../config/install.lock';
 $alreadyInstalled = is_file($lockPath);
 
 $defaults = [
-    'db_host' => env_value('DB_HOST', 'sql304.infinityfree.com'),
+    'db_host' => env_value('DB_HOST'),
     'db_port' => env_value('DB_PORT', '3306'),
-    'db_name' => env_value('DB_NAME', 'if0_42959770_jametulhoda'),
-    'db_user' => env_value('DB_USER', 'if0_42959770'),
+    'db_name' => env_value('DB_NAME'),
+    'db_user' => env_value('DB_USER'),
     'site_url' => env_value('SITE_URL', ''),
     'admin_username' => env_value('ADMIN_USERNAME', DEFAULT_ADMIN_USERNAME),
     'admin_email' => env_value('ADMIN_EMAIL', env_value('SITE_EMAIL', 'hajiahmads299@gmail.com')),
@@ -96,11 +96,9 @@ if (!$alreadyInstalled && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $siteUrl = rtrim(trim((string)($_POST['site_url'] ?? '')), '/');
     $adminUsername = trim((string)($_POST['admin_username'] ?? $defaults['admin_username']));
     $adminPassword = (string)($_POST['admin_password'] ?? '');
-    // An empty password field installs the documented default administrator
-    // password (DEFAULT_ADMIN_PASSWORD). Like every other password it is stored
-    // only as a password_hash() digest.
-    $usedDefaultPassword = $adminPassword === '';
-    if ($usedDefaultPassword) $adminPassword = DEFAULT_ADMIN_PASSWORD;
+    // A private environment override is supported, but installation must never
+    // silently create or reset an account to a published/default password.
+    if ($adminPassword === '') $adminPassword = DEFAULT_ADMIN_PASSWORD;
     $adminName = trim((string)($_POST['admin_name'] ?? 'مدیر سایت'));
     $adminEmail = trim((string)($_POST['admin_email'] ?? $defaults['admin_email']));
 
@@ -122,7 +120,7 @@ if (!$alreadyInstalled && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         if ($siteUrl !== '' && !filter_var($siteUrl, FILTER_VALIDATE_URL)) throw new RuntimeException('آدرس سایت معتبر نیست.');
         $siteUrlInsecure = $siteUrl !== '' && !preg_match('~^https://~i', $siteUrl);
         if ($adminUsername === '' || !preg_match('/^[a-zA-Z0-9_.-]{3,80}$/', $adminUsername)) throw new RuntimeException('نام کاربری مدیر معتبر نیست.');
-        if (!$usedDefaultPassword && strlen($adminPassword) < 8) throw new RuntimeException('رمز مدیر باید حداقل ۸ کاراکتر باشد.');
+        if (strlen($adminPassword) < 14) throw new RuntimeException('برای مدیر یک رمز یکتا با حداقل ۱۴ نویسه وارد کنید.');
         if ($adminEmail !== '' && !filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) throw new RuntimeException('ایمیل مدیر معتبر نیست.');
 
         $dsn = 'mysql:host=' . $host . ';port=' . $port . ';dbname=' . rawurlencode($name) . ';charset=utf8mb4';
@@ -197,9 +195,6 @@ if (!$alreadyInstalled && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
         $alreadyInstalled = true;
         $success = 'نصب با موفقیت انجام شد. ' . $adminNote;
-        if ($usedDefaultPassword) {
-            $success .= ' رمز پیش‌فرض مدیر استفاده شد؛ لطفاً پس از اولین ورود از بخش «تغییر رمز عبور» آن را عوض کنید.';
-        }
         if ($siteUrlInsecure) {
             $success .= ' توجه: آدرس سایت با https ذخیره نشد؛ تا زمانی که SSL رایگان را فعال نکنید، robots.txt محدود می‌ماند و sitemap.xml خطا می‌دهد.';
         }
@@ -215,14 +210,14 @@ if (!$alreadyInstalled && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>نصب Jametulhoda</title>
 <style>
-body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f4f7fb;color:#162033}
-.wrap{max-width:760px;margin:32px auto;padding:16px}.card{background:#fff;border:1px solid #e1e7ef;border-radius:18px;padding:24px;box-shadow:0 12px 32px rgba(20,40,70,.08)}
-h1{margin-top:0}.muted{color:#64748b}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.full{grid-column:1/-1}label{display:block;font-weight:700;margin-bottom:6px}input{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #cfd8e3;border-radius:10px;font:inherit}button,.btn{display:inline-block;border:0;border-radius:10px;padding:11px 18px;background:#183b70;color:#fff;text-decoration:none;font:inherit;cursor:pointer}.notice{padding:12px 14px;border-radius:10px;margin-bottom:16px}.error{background:#fff1f2;color:#9f1239}.success{background:#ecfdf5;color:#166534}.section{border-top:1px solid #e8edf3;margin-top:22px;padding-top:22px}@media(max-width:640px){.grid{grid-template-columns:1fr}.full{grid-column:auto}}
+@font-face{font-family:Vazirmatn;src:url(<?= htmlspecialchars(BASE_PATH . '/assets/fonts/Vazirmatn-Regular.woff2', ENT_QUOTES, 'UTF-8') ?>) format('woff2');font-style:normal;font-weight:400;font-display:swap}*{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:'Vazirmatn',system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at 88% 8%,rgba(179,140,54,.12),transparent 19rem),linear-gradient(135deg,#edf4ef,#f8faf8 56%,#f4f1e8);color:#172820;line-height:1.75}
+.wrap{max-width:820px;margin:clamp(16px,5vh,52px) auto;padding:16px}.card{background:rgba(255,255,255,.96);border:1px solid #dbe6df;border-radius:22px;padding:clamp(20px,4vw,38px);box-shadow:0 18px 48px rgba(18,55,38,.11)}
+h1{margin:0 0 8px;color:#184f38;font-size:clamp(1.5rem,4vw,2.1rem);line-height:1.45}.muted{color:#52675d}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.full{grid-column:1/-1}label{display:block;font-weight:750;margin-bottom:6px;color:#1d3327}input{width:100%;padding:11px 12px;border:1px solid #cfddd4;border-radius:10px;background:#fff;color:#172820;font:inherit;transition:border-color .16s,box-shadow .16s}input:focus{outline:0;border-color:#1b5e43;box-shadow:0 0 0 4px rgba(27,94,67,.12)}button,.btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:10px;padding:11px 20px;background:#1b5e43;color:#fff;text-decoration:none;font:inherit;font-weight:750;cursor:pointer;transition:transform .16s,background .16s}button:hover,.btn:hover{background:#124430;color:#fff;transform:translateY(-1px)}.notice{padding:12px 14px;border-radius:10px;margin-bottom:16px}.error{background:#fff1f2;color:#9f1239}.success{background:#ecfdf5;color:#166534}.section{border-top:1px solid #e3ebe5;margin-top:24px;padding-top:22px}.section h2{color:#184f38;font-size:1.2rem}@media(max-width:640px){.wrap{padding:10px}.card{border-radius:16px}.grid{grid-template-columns:1fr;gap:12px}.full{grid-column:auto}}@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
-<body>
+<body class="jhd-installer">
 <div class="wrap"><div class="card">
-<h1>نصب Jametulhoda</h1>
+<h1>راه‌اندازی جامعة‌الهدی</h1>
 <p class="muted">راه‌اندازی MySQL برای InfinityFree و ساخت اولین حساب مدیر.</p>
 
 <?php if ($error): ?><div class="notice error"><?= installerEscape($error) ?></div><?php endif; ?>
@@ -235,21 +230,21 @@ h1{margin-top:0}.muted{color:#64748b}.grid{display:grid;grid-template-columns:1f
 <?php else: ?>
 <form method="post" autocomplete="off">
 <div class="grid">
-<div><label>MySQL Host</label><input name="db_host" value="<?= installerEscape($defaults['db_host']) ?>" required></div>
-<div><label>Port</label><input name="db_port" type="number" value="<?= installerEscape($defaults['db_port']) ?>" required></div>
-<div><label>Database Name</label><input name="db_name" value="<?= installerEscape($defaults['db_name']) ?>" required></div>
-<div><label>MySQL Username</label><input name="db_user" value="<?= installerEscape($defaults['db_user']) ?>" required></div>
-<div class="full"><label>MySQL Password</label><input name="db_pass" type="password" required></div>
-<div class="full"><label>Site URL</label><input name="site_url" value="<?= installerEscape($defaults['site_url']) ?>" placeholder="https://jametulhoda.gt.tc"></div>
+<div><label for="db-host">میزبان MySQL</label><input id="db-host" name="db_host" value="<?= installerEscape($defaults['db_host']) ?>" required></div>
+<div><label for="db-port">درگاه اتصال</label><input id="db-port" name="db_port" type="number" value="<?= installerEscape($defaults['db_port']) ?>" required></div>
+<div><label for="db-name">نام دیتابیس</label><input id="db-name" name="db_name" value="<?= installerEscape($defaults['db_name']) ?>" required></div>
+<div><label for="db-user">نام کاربری MySQL</label><input id="db-user" name="db_user" value="<?= installerEscape($defaults['db_user']) ?>" required></div>
+<div class="full"><label for="db-pass">رمز عبور MySQL</label><input id="db-pass" name="db_pass" type="password" required></div>
+<div class="full"><label for="site-url">نشانی کامل سایت (HTTPS)</label><input id="site-url" name="site_url" value="<?= installerEscape($defaults['site_url']) ?>" placeholder="https://jametulhoda.gt.tc"></div>
 </div>
 
 <div class="section"><h2>حساب مدیر</h2>
 <div class="grid">
-<div><label>Username</label><input name="admin_username" value="<?= installerEscape($defaults['admin_username']) ?>" required></div>
-<div><label>Email</label><input name="admin_email" type="email" value="<?= installerEscape($defaults['admin_email']) ?>"></div>
-<div><label>نام مدیر</label><input name="admin_name" value="مدیر سایت"></div>
-<div><label>رمز مدیر</label><input name="admin_password" type="password" minlength="8" placeholder="خالی = رمز پیش‌فرض نصب">
-<p class="muted" style="margin:6px 0 0">اگر خالی بگذارید، رمز پیش‌فرض مستند (<code>DEFAULT_ADMIN_PASSWORD</code> در <code>config/config.php</code>) به‌صورت هش‌شده ذخیره می‌شود. اگر این حساب از قبل در دیتابیس وجود داشته باشد، رمز آن بازنشانی و نشست‌های فعال باطل می‌شوند.</p></div>
+<div><label for="admin-username">نام کاربری مدیر</label><input id="admin-username" name="admin_username" value="<?= installerEscape($defaults['admin_username']) ?>" required></div>
+<div><label for="admin-email">ایمیل مدیر</label><input id="admin-email" name="admin_email" type="email" value="<?= installerEscape($defaults['admin_email']) ?>"></div>
+<div><label for="admin-name">نام مدیر</label><input id="admin-name" name="admin_name" value="مدیر سایت"></div>
+<div><label for="admin-password">رمز مدیر</label><input id="admin-password" name="admin_password" type="password" minlength="14" autocomplete="new-password" required>
+<p class="muted" style="margin:6px 0 0">یک رمز یکتا با حداقل ۱۴ نویسه انتخاب کنید. اگر این حساب از قبل در دیتابیس وجود داشته باشد، رمز آن بازنشانی و نشست‌های فعال باطل می‌شوند.</p></div>
 </div></div>
 
 <div class="section"><button type="submit">شروع نصب</button></div>

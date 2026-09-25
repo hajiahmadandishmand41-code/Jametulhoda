@@ -96,6 +96,22 @@ $breadcrumbs = [
     ['name' => $mediaTitle, 'url' => canonicalUrl(mediaUrl($kind, (int)$media['id']))],
 ];
 $breadcrumbsJsonLd = breadcrumbsJsonLd($breadcrumbs);
+$mediaSchema = [
+    '@context' => 'https://schema.org',
+    '@type' => $isAudio ? 'AudioObject' : 'VideoObject',
+    'name' => $mediaTitle,
+    'description' => $pageDesc,
+    'contentUrl' => $fileUrl,
+    'uploadDate' => $media['created_at'] ?? null,
+    'inLanguage' => 'fa',
+];
+if ($isAudio) {
+    $mediaSchema['associatedMedia'] = ['@type' => 'CreativeWork', 'name' => $parent['title']];
+} else {
+    $mediaSchema['embedUrl'] = canonicalUrl(mediaUrl($kind, (int)$media['id']));
+    if ($poster !== '') $mediaSchema['thumbnailUrl'] = $poster;
+}
+$mediaJsonLd = json_encode($mediaSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -107,7 +123,7 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="py-5"><div class="container"><div class="row g-4">
 <div class="col-lg-8">
-<article>
+<article class="jhd-media-detail">
 <div class="d-flex flex-wrap gap-2 mb-2">
 <span class="badge <?= $isAudio ? 'bg-success' : 'bg-danger' ?>"><i class="bi bi-<?= $isAudio ? 'headphones' : 'camera-video-fill' ?> ms-1"></i><?= $isAudio ? 'صوت' : 'ویدیو' ?></span>
 <?php if ($parentTopics): foreach (array_slice($parentTopics, 0, 3) as $t): ?><a href="<?= topicUrl($t) ?>" class="badge bg-light text-dark border"><?= sanitize($t['name']) ?></a><?php endforeach; endif; ?>

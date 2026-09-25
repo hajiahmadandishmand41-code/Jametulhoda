@@ -14,7 +14,7 @@
  * ۱۰. نگارخانه چندرسانه‌ای و سخنرانی‌ها (Media & Videos)
  */
 $pageTitle = '';
-$pageDesc = 'مدرسه علمیه جامعه‌الهدی — اخبار مدرسه، مقالات علمی، گزارش‌ها، کتابخانه دیجیتال، دروس حوزوی و موضوعات معارف اسلامی در کابل، افغانستان.';
+$pageDesc = 'پرتال علمی، آموزشی و پژوهشی جامعة‌الهدی؛ دسترسی به اخبار، مقالات، گزارش‌ها، کتاب‌ها، درس‌ها و موضوعات علوم اسلامی.';
 require_once __DIR__ . '/config/config.php';
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/includes/functions.php';
@@ -37,35 +37,10 @@ if ($heroPost) {
 }
 
 // ─── ۲. بخش‌های محتوایی بر اساس پایگاه داده ──────────────────────────────────
-// الف. اخبار مدرسه
+// هر بخش فقط محتوای هم‌نوع خود را نمایش می‌دهد؛ محتوای نامرتبط به عنوان خبر/مقاله/گزارش جا زده نمی‌شود.
 $latestNews = getPosts(['type' => 'news', 'limit' => 3]);
-if (empty($latestNews)) {
-    $latestNews = getPosts(['limit' => 3]);
-}
-
-// ب. مقالات علمی و یادداشت‌ها
 $latestArticles = getPosts(['type' => 'article', 'limit' => 3]);
-if (empty($latestArticles)) {
-    $latestArticles = getPosts(['type' => 'research', 'limit' => 3]);
-}
-if (empty($latestArticles)) {
-    $latestArticles = getPosts(['limit' => 3]);
-}
-
-// ج. گزارش‌ها
 $latestReports = getPosts(['type' => 'report', 'limit' => 3]);
-if (empty($latestReports)) {
-    // جستجو برای مطالبی که در عنوانشان «گزارش» دارند
-    try {
-        $stmt = $db->query("SELECT * FROM posts WHERE status='published' AND (title ILIKE '%گزارش%' OR summary ILIKE '%گزارش%') ORDER BY published_at DESC LIMIT 3");
-        $latestReports = $stmt->fetchAll();
-    } catch (\Throwable) {
-        $latestReports = [];
-    }
-}
-if (empty($latestReports)) {
-    $latestReports = getPosts(['type' => 'news', 'limit' => 3]);
-}
 
 // د. موضوعات مهم و کلیدی
 $featuredTopics = [];
@@ -76,21 +51,13 @@ try {
     $featuredTopics = getTopics(['limit' => 6]);
 }
 
-// اگر موضوعات در دیتابیس هنوز کم باشد، موضوعات استاندارد معارف اسلامی
-$defaultTopicBadges = [
-    ['name' => 'کلام و عقاید اسلامی', 'slug' => 'kalam-aqaid', 'desc' => 'پژوهش‌های استدلالی در توحید، نبوت، امامت و معاد', 'icon' => 'bi-shield-check'],
-    ['name' => 'فقه و اصول استنباط', 'slug' => 'fiqh-usul', 'desc' => 'بررسی احکام فقهی، ادله اربعه و متون اصلی حوزه', 'icon' => 'bi-journal-bookmark'],
-    ['name' => 'مهدویت و موعودباوری', 'slug' => 'mahdaviat', 'desc' => 'مباحث امامت، غیبت، انتظار و حکومت جهانی عدل', 'icon' => 'bi-sun'],
-    ['name' => 'قرآن و علوم حدیث', 'slug' => 'quran-hadith', 'desc' => 'تفسیر آیات وحی، درایة‌الحدیث و مفاهیم بنیادین', 'icon' => 'bi-book-half'],
-    ['name' => 'فلسفه و منطق اسلامی', 'slug' => 'philosophy', 'desc' => 'حکمت متعالیه، مبادی برهان و معرفت‌شناسی دینی', 'icon' => 'bi-compass'],
-    ['name' => 'تاریخ و سیره اهل‌بیت', 'slug' => 'tarikh-ahlulbayt', 'desc' => 'تحلیل وقایع صدر اسلام و سیره هدایت‌بخش معصومین(ع)', 'icon' => 'bi-hourglass-split'],
-];
-
 // هـ. رویدادها و برنامه‌ها
-$latestEvents = getPosts(['type' => 'program', 'limit' => 3]);
-if (empty($latestEvents)) {
-    $latestEvents = getPosts(['type' => 'announcement', 'limit' => 3]);
-}
+$latestEvents = array_merge(
+    getPosts(['type' => 'program', 'limit' => 3]),
+    getPosts(['type' => 'religious', 'limit' => 3])
+);
+usort($latestEvents, static fn(array $a, array $b): int => strcmp((string)($b['published_at'] ?? $b['created_at'] ?? ''), (string)($a['published_at'] ?? $a['created_at'] ?? '')));
+$latestEvents = array_slice($latestEvents, 0, 3);
 
 // و. کتاب‌ها
 $latestBooks = getBooks(['limit' => 4]);
@@ -145,7 +112,7 @@ require_once __DIR__ . '/includes/header.php';
                     <i class="bi bi-tag ms-1"></i><?= sanitize($heroTopic['name']) ?>
                 </a>
                 <?php else: ?>
-                <span class="jhd-eyebrow"><i class="bi bi-star ms-1"></i>محتوای ویژه روز</span>
+                <span class="jhd-eyebrow"><i class="bi bi-star ms-1"></i><?= !empty($heroPost['is_featured']) ? 'مطلب برگزیده' : 'تازه از جامعة‌الهدی' ?></span>
                 <?php endif; ?>
 
                 <h1 class="jhd-hero-title mt-2">
@@ -187,6 +154,17 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </div>
 </section>
+<?php else: ?>
+<section class="jhd-hero" aria-labelledby="hero-empty-title">
+    <div class="container">
+        <div class="jhd-hero-empty">
+            <span class="jhd-eyebrow"><i class="bi bi-journal-bookmark ms-1"></i>جامعة‌الهدی</span>
+            <h1 id="hero-empty-title">مرکز علمی، آموزشی و پژوهشی</h1>
+            <p>مطالب و برنامه‌های منتشرشده در این پایگاه، پس از ثبت در سامانه در همین صفحه نمایش داده می‌شوند.</p>
+            <a class="btn btn-primary" href="<?= url('topics') ?>">گشت‌وگذار در موضوعات <i class="bi bi-arrow-left ms-1"></i></a>
+        </div>
+    </div>
+</section>
 <?php endif; ?>
 
 <!-- ─── ۲. بنر اعلان ویژه ────────────────────────────────────────────────── -->
@@ -225,6 +203,9 @@ require_once __DIR__ . '/includes/header.php';
             </a>
         </div>
 
+        <?php if (empty($latestNews)): ?>
+        <div class="jhd-empty-state"><i class="bi bi-newspaper" aria-hidden="true"></i><p>هنوز خبری برای نمایش منتشر نشده است.</p></div>
+        <?php else: ?>
         <div class="row g-4">
             <?php foreach ($latestNews as $item): $nUrl = postUrl($item); ?>
             <div class="col-md-6 col-lg-4">
@@ -262,6 +243,7 @@ require_once __DIR__ . '/includes/header.php';
             </div>
             <?php endforeach; ?>
         </div>
+        <?php endif; ?>
     </div>
 </section>
 
@@ -281,14 +263,17 @@ require_once __DIR__ . '/includes/header.php';
             </a>
         </div>
 
+        <?php if (empty($latestArticles)): ?>
+        <div class="jhd-empty-state"><i class="bi bi-file-text" aria-hidden="true"></i><p>مقاله‌ای برای نمایش در این بخش ثبت نشده است.</p></div>
+        <?php else: ?>
         <div class="row g-4">
             <?php foreach ($latestArticles as $art): $aUrl = postUrl($art); ?>
             <div class="col-md-6 col-lg-4">
                 <article class="article-card h-100">
                     <div class="article-card-header">
-                        <span class="article-card-author">
-                            <i class="bi bi-person ms-1"></i><?= sanitize($art['author_name'] ?? 'هیئت علمی حوزه') ?>
-                        </span>
+                        <?php if (!empty($art['author_name'])): ?>
+                        <span class="article-card-author"><i class="bi bi-person ms-1"></i><?= sanitize($art['author_name']) ?></span>
+                        <?php endif; ?>
                         <span class="article-card-date">
                             <i class="bi bi-calendar3 ms-1"></i><?= persianDate($art['published_at'] ?? $art['created_at']) ?>
                         </span>
@@ -309,6 +294,7 @@ require_once __DIR__ . '/includes/header.php';
             </div>
             <?php endforeach; ?>
         </div>
+        <?php endif; ?>
     </div>
 </section>
 
@@ -328,6 +314,9 @@ require_once __DIR__ . '/includes/header.php';
             </a>
         </div>
 
+        <?php if (empty($latestReports)): ?>
+        <div class="jhd-empty-state"><i class="bi bi-card-text" aria-hidden="true"></i><p>گزارشی برای نمایش در این بخش ثبت نشده است.</p></div>
+        <?php else: ?>
         <div class="row g-4">
             <?php foreach ($latestReports as $rep): $rUrl = postUrl($rep); ?>
             <div class="col-md-6 col-lg-4">
@@ -362,6 +351,7 @@ require_once __DIR__ . '/includes/header.php';
             </div>
             <?php endforeach; ?>
         </div>
+        <?php endif; ?>
     </div>
 </section>
 
@@ -381,15 +371,16 @@ require_once __DIR__ . '/includes/header.php';
             </a>
         </div>
 
+        <?php if (empty($featuredTopics)): ?>
+        <div class="jhd-empty-state"><i class="bi bi-diagram-3" aria-hidden="true"></i><p>موضوعی برای نمایش ثبت نشده است.</p></div>
+        <?php else: ?>
         <div class="row g-4">
             <?php
-            // نمایش موضوعات واقعی یا ترکیب با موضوعات غنی شاخص
-            $displayTopics = !empty($featuredTopics) ? $featuredTopics : $defaultTopicBadges;
             $icons = ['bi-shield-check', 'bi-journal-bookmark', 'bi-sun', 'bi-book-half', 'bi-compass', 'bi-hourglass-split'];
-            foreach ($displayTopics as $idx => $tp):
-                $tUrl = !empty($tp['id']) ? topicUrl($tp) : url('topics');
-                $tIcon = $tp['icon'] ?? $icons[$idx % count($icons)];
-                $tCount = isset($tp['post_count']) && (int)$tp['post_count'] > 0 ? (int)$tp['post_count'] . ' مطلب' : 'مطالب و پژوهش‌ها';
+            foreach ($featuredTopics as $idx => $tp):
+                $tUrl = topicUrl($tp);
+                $tIcon = $icons[$idx % count($icons)];
+                $tCount = (int)($tp['post_count'] ?? 0) . ' مطلب';
             ?>
             <div class="col-sm-6 col-lg-4">
                 <div class="topic-card-showcase">
@@ -400,7 +391,7 @@ require_once __DIR__ . '/includes/header.php';
                         <a href="<?= $tUrl ?>" class="text-reset text-decoration-none"><?= sanitize($tp['name']) ?></a>
                     </h3>
                     <p class="topic-card-desc">
-                        <?= sanitize($tp['intro'] ?? $tp['desc'] ?? $tp['description'] ?? 'مجموعه مقالات، اخبار، دروس و کتب تخصصی مرتبط با این حوزه علمی.') ?>
+                        <?= sanitize($tp['intro'] ?? $tp['desc'] ?? $tp['description'] ?? 'مطالب ثبت‌شده و پیوندهای مرتبط با این موضوع.') ?>
                     </p>
                     <div class="mt-auto d-flex align-items-center justify-content-between w-100 pt-2 border-top">
                         <span class="small text-muted"><i class="bi bi-layers ms-1"></i><?= $tCount ?></span>
@@ -412,11 +403,11 @@ require_once __DIR__ . '/includes/header.php';
             </div>
             <?php endforeach; ?>
         </div>
+        <?php endif; ?>
     </div>
 </section>
 
 <!-- ─── ۷. برنامه‌ها و رویدادهای آینده ──────────────────────────────────── -->
-<?php if (!empty($latestEvents)): ?>
 <section class="py-5 section-plain" id="events-section">
     <div class="container">
         <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-2">
@@ -432,6 +423,9 @@ require_once __DIR__ . '/includes/header.php';
             </a>
         </div>
 
+        <?php if (empty($latestEvents)): ?>
+        <div class="jhd-empty-state"><i class="bi bi-calendar-event" aria-hidden="true"></i><p>رویدادی برای نمایش ثبت نشده است.</p></div>
+        <?php else: ?>
         <div class="row g-4">
             <?php foreach ($latestEvents as $ev): $evUrl = postUrl($ev); ?>
             <div class="col-md-6 col-lg-4">
@@ -457,9 +451,9 @@ require_once __DIR__ . '/includes/header.php';
             </div>
             <?php endforeach; ?>
         </div>
+        <?php endif; ?>
     </div>
 </section>
-<?php endif; ?>
 
 <!-- ─── ۸. کتابخانه دیجیتال ─────────────────────────────────────────────── -->
 <?php if (!empty($latestBooks)): ?>

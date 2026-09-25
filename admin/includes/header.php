@@ -135,11 +135,53 @@ body { overflow-x: clip; }
   #sidebarToggle { display: inline-flex; }
   .admin-content { padding: 16px; }
 }
+/* Shared finishing touches for every administration screen. */
+.admin-content h1, .admin-content h2, .admin-content h3, .admin-content h4 { color: var(--admin-text); font-weight: 800; letter-spacing: -.02em; }
+.admin-card { border-radius: 16px; box-shadow: 0 8px 28px rgba(18, 43, 29, .055); transition: border-color .18s ease, box-shadow .18s ease; }
+.admin-card-header { min-height: 52px; background: linear-gradient(100deg, rgba(45,106,79,.045), transparent 75%); }
+.admin-table { --bs-table-color: var(--admin-text); --bs-table-bg: var(--admin-white); --bs-table-border-color: var(--admin-border); }
+.admin-table th { white-space: nowrap; }
+.admin-table td { line-height: 1.65; }
+.admin-content .form-control, .admin-content .form-select { min-height: 42px; border-radius: 9px; border-color: var(--admin-border); }
+.admin-content textarea.form-control { min-height: 120px; }
+.admin-content .form-control:focus, .admin-content .form-select:focus { border-color: var(--admin-green); box-shadow: 0 0 0 4px rgba(45,106,79,.12); }
+.admin-content .btn { border-radius: 9px; font-weight: 650; }
+.admin-content .alert { border: 0; border-radius: 12px; box-shadow: 0 3px 12px rgba(18,43,29,.06); }
+.admin-content .badge { font-weight: 650; letter-spacing: .01em; }
+.admin-content :focus-visible, .admin-sidebar :focus-visible { outline: 3px solid var(--admin-gold); outline-offset: 2px; }
+.admin-sidebar { scrollbar-gutter: stable; }
+.admin-topbar { min-height: 64px; backdrop-filter: blur(14px); }
+html[data-theme="dark"] {
+  --admin-sidebar: #0b1711;
+  --admin-sidebar-hover: #183327;
+  --admin-sidebar-active: #234d38;
+  --admin-bg: #101814;
+  --admin-white: #17231c;
+  --admin-border: #2b3b31;
+  --admin-text: #e8f0eb;
+  --admin-muted: #a0b2a8;
+}
+html[data-theme="dark"] body { background: var(--admin-bg); color: var(--admin-text); }
+html[data-theme="dark"] .admin-topbar,
+html[data-theme="dark"] .admin-card { background: var(--admin-white); color: var(--admin-text); border-color: var(--admin-border); }
+html[data-theme="dark"] .admin-card-header { border-color: var(--admin-border); background: linear-gradient(100deg, rgba(92,203,163,.08), transparent 75%); }
+html[data-theme="dark"] .admin-table th { background: #1d2c23; color: var(--admin-muted); }
+html[data-theme="dark"] .admin-table td { background: var(--admin-white); color: var(--admin-text); border-color: var(--admin-border); }
+html[data-theme="dark"] .admin-table tr:hover td { background: #1c2d23; }
+html[data-theme="dark"] .admin-content .form-control,
+html[data-theme="dark"] .admin-content .form-select { background-color: #111c16; color: var(--admin-text); border-color: var(--admin-border); }
+html[data-theme="dark"] .admin-content .form-control::placeholder { color: var(--admin-muted); }
+html[data-theme="dark"] .admin-content .text-muted { color: var(--admin-muted) !important; }
+@media (max-width: 575.98px) {
+  .admin-topbar { padding: 10px 14px; }
+  .admin-content { padding: 12px; }
+  .admin-card-body { padding: 15px; }
+}
 </style>
 <script src="<?= asset('js/theme.js') ?>"></script>
 <script src="<?= asset('js/interface.js') ?>" defer></script>
 </head>
-<body>
+<body class="jhd-admin-site">
 
 <!-- سایدبار مدیریت -->
 <div class="admin-sidebar" id="adminSidebar" role="navigation" aria-label="منوی مدیریت">

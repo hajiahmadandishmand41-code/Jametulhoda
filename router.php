@@ -51,6 +51,7 @@ function jhdNotFound(): void {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, follow">
 <title>۴۰۴ — صفحه پیدا نشد | جامعه‌الهدی</title>
 <style>
 @font-face {
@@ -321,7 +322,9 @@ if ($entry === null) {
                 $_GET[$key] = $index;
             }
         }
-        $entry = ['file' => $script, 'canonical' => $path];
+        // Dynamic routes accept a trailing slash, but expose one stable canonical path.
+        $canonicalPath = '/' . trim($path, '/');
+        $entry = ['file' => $script, 'canonical' => $canonicalPath];
         break;
     }
 }

@@ -67,21 +67,24 @@ jobs:
           php -S 0.0.0.0:8080 router.php > test-server.log 2>&1 &
           curl --retry 10 --retry-connrefused --retry-delay 1 --fail --silent http://127.0.0.1:8080/ > /dev/null
           npm run test:http 2>&1 | tee /tmp/http-tests.log
+          node tests/route-smoke.mjs 2>&1 | tee /tmp/route-smoke.log
           npm run test:browser 2>&1 | tee /tmp/browser-tests.log
           node tests/links.mjs 2>&1 | tee /tmp/link-tests.log
           if grep -Ei "PHP (Warning|Fatal|Parse)|Application failure|Upload failed" test-server.log; then exit 1; fi
           # `tee` swallows the suite exit codes, so a FAIL line has to be caught here too
           # (the container step below already does the same for Apache).
-          if grep -q "FAIL" /tmp/http-tests.log; then
-            echo "::error title=HTTP FAIL::$(grep FAIL /tmp/http-tests.log | head -n 20 | tr '\n' ' ' | cut -c1-800)"
-            exit 1
-          fi
+          for log in /tmp/http-tests.log /tmp/route-smoke.log /tmp/browser-tests.log /tmp/link-tests.log; do
+            if grep -q "FAIL" "$log"; then
+              echo "::error title=Integration FAIL::$(grep FAIL "$log" | head -n 20 | tr '\n' ' ' | cut -c1-800)"
+              exit 1
+            fi
+          done
       - name: Failure diagnostics
         if: failure()
         run: |
           python3 - <<'PYTHON'
           import pathlib
-          for name in ['/tmp/http-tests.log','/tmp/browser-tests.log','/tmp/link-tests.log','test-server.log']:
+          for name in ['/tmp/http-tests.log','/tmp/route-smoke.log','/tmp/browser-tests.log','/tmp/link-tests.log','test-server.log']:
               path=pathlib.Path(name)
               if path.exists():
                   lines=[line for line in path.read_text().splitlines() if any(word in line for word in ['FAIL','Fatal','Warning','Error','failure','exceeded','status','path','checked'])]
@@ -96,6 +99,11 @@ jobs:
           trap 'docker logs jhd-container > container-server.log 2>&1; docker rm -f jhd-container' EXIT
           curl --retry 10 --retry-connrefused --retry-delay 1 --fail --silent http://127.0.0.1:8081/ > /dev/null
           TEST_BASE_URL=http://127.0.0.1:8081/ npm run test:http 2>&1 | tee /tmp/http-8081.log
+          TEST_BASE_URL=http://127.0.0.1:8081/ node tests/route-smoke.mjs 2>&1 | tee /tmp/route-smoke-8081.log
+          if grep -q "FAIL" /tmp/route-smoke-8081.log; then cat /tmp/route-smoke-8081.log; exit 1; fi
+          docker exec jhd-container sh -c "printf '%s' '<?php echo \"ROUTE_PROBE_EXECUTED\"; ?>' > /var/www/html/uploads/route-probe.php"
+          probe_status=$(curl --silent --output /tmp/upload-route-probe --write-out '%{http_code}' http://127.0.0.1:8081/uploads/route-probe.php)
+          if [ "$probe_status" != 404 ] || grep -Eq 'ROUTE_PROBE_EXECUTED|<\?php' /tmp/upload-route-probe; then echo "Unsafe uploaded PHP route: HTTP $probe_status"; exit 1; fi
           TEST_BASE_URL=http://127.0.0.1:8081/ npm run test:browser 2>&1 | tee /tmp/browser-8081.log
           docker logs jhd-container > container-server.log 2>&1
           echo "--- container-server.log start ---"; cat container-server.log; echo "--- end ---"

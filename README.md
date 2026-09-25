@@ -1,14 +1,6 @@
-# Deploy with Vercel
+# جامعة‌الهدی — پایگاه علمی، آموزشی و پژوهشی
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fhajiahmadandishmand41-code%2Fjametulhoda%2Ftree%2Farena%2F01a0bf9d-jametulhoda&env=DATABASE_URL,SITE_URL,APP_ENV,UPLOAD_STORAGE,UPLOAD_BASE_URL,S3_ENDPOINT,S3_REGION,S3_BUCKET,S3_ACCESS_KEY_ID,S3_SECRET_ACCESS_KEY)
-
-> **وضعیت:** نسخه اصلاح‌شده در شاخه `arena/01a0bf9d-jametulhoda` است. GitHub CI شامل Docker build موفق شده و Vercel از اتصال GitHub یک Preview ساخته است. این Preview محافظت‌شده است و صحت runtime production هنوز تأیید نشده است. قبل از انتشار، [گزارش بررسی و محدودیت‌های باقی‌مانده](docs/AUDIT_FA.md) و [راهنمای استقرار](docs/DEPLOYMENT_FA.md) را بخوانید. دکمه بالا جایگزین تنظیم دیتابیس و storage نیست.
-
-> **وضعیت همگام‌سازی:** اتصال GitHub برقرار شد و commitهای باقی‌مانده push شدند. اصلاح بازیابی آپلودها نیز با [CI موفق روی `ff3aafd`](https://github.com/hajiahmadandishmand41-code/jametulhoda/actions/runs/35526743172) تأیید شد. پیش از استفاده، migration جدید و برنامه زمان‌بندی پاک‌سازی را طبق راهنما اجرا کنید.
-
-[مشاهده Preview واقعی Vercel — نیازمند ورود مجاز به Vercel](https://jametulhoda-git-arena-01a0bf9d-jametulhoda-eshop4.vercel.app)
-
-# مدرسه علمیه جامعه‌الهدی
+> **وضعیت بررسی این شاخه:** اصلاحات routing، لینک‌ها، SEO، امنیت آپلود و رابط کاربری در حال بازبینی است. آزمون‌های ایستا و خزیدن لینک‌های منبع اجرا شده‌اند؛ PHP lint، HTTP/Apache، مرورگر و CI برای همین تغییرات هنوز تأیید نشده‌اند. میزبان عمومی در این بررسی پاسخ قابل‌اعتماد نداد؛ بنابراین وضعیت live و HTTP 200 برای `/news` ادعا نمی‌شود. جزئیات و محدودیت‌ها در [گزارش Audit](docs/AUDIT_FA.md) و [راهنمای استقرار](docs/DEPLOYMENT_FA.md) است.
 
 وب‌سایت فارسی و RTL با PHP، MySQL/PostgreSQL، کتابخانه، دروس، اخبار، مقالات، صوت و ویدیو و پنل مدیریت. صفحات PHP موجود حفظ شده‌اند؛ یک front controller قابل‌اعتماد، ذخیره‌سازی مرکزی و هویت بصری مشترک به آن‌ها افزوده شده است و ساختار پوشه‌ها در بازسازی ۲۰۲۶-۰۹ مرتب شده است (بدون حذف قابلیت).
 
@@ -60,18 +52,14 @@ CI همان آزمون‌ها را روی PostgreSQL واقعی و سپس داخ
 
 ### حساب مدیر
 
-حساب پیش‌فرض مدیر: نام کاربری **`admin`** و رمز **`JH@2026#Admin`** (ثابت‌های `DEFAULT_ADMIN_USERNAME` و `DEFAULT_ADMIN_PASSWORD` در `config/config.php`). رمز **هرگز** به‌صورت متن ساده ذخیره نمی‌شود؛ فقط خروجی `password_hash()` در دیتابیس می‌نشیند. اگر حساب از قبل وجود داشته باشد، `php/install.php` و `bin/create-admin.php` رمز آن را بازنشانی می‌کنند و با افزایش `auth_version` همه نشست‌های فعال باطل می‌شود.
+نام کاربری مدیر در نصب تازه می‌تواند `admin` باشد، اما هیچ رمز پیش‌فرض یا رمز عمومی‌ای وجود ندارد. برای ساخت/بازنشانی حساب، رمز یکتا و دست‌کم ۱۴ نویسه را فقط از محیط محرمانه میزبان یا محیط CLI وارد کنید. رمز به‌صورت `password_hash()` ذخیره می‌شود و بازنشانی حساب، نشست‌های قبلی را باطل می‌کند.
 
 ```sh
-# با مقادیر پیش‌فرض (admin / JH@2026#Admin)
-php bin/create-admin.php
-
-# یا با اعتبارنامه دلخواه خودتان (رمز دست‌کم ۱۴ کاراکتر)
-ADMIN_USERNAME=me ADMIN_PASSWORD='یک-رمز-طولانی-و-یکتا' php bin/create-admin.php
+ADMIN_USERNAME=me ADMIN_PASSWORD='یک-رمز-طولانی-و-یکتا-با-حداقل-۱۴-نویسه' php bin/create-admin.php
 unset ADMIN_PASSWORD
 ```
 
-> **توصیه امنیتی:** بلافاصله پس از اولین ورود، رمز پیش‌فرض را از `/admin/change-password` عوض کنید.
+در نصاب وب، رمز مدیر اجباری است؛ آن را پس از نصب در محل امن نگه دارید و در صورت افشا فوراً از `/admin/change-password` تغییر دهید.
 
 ورود کارکنان: `/admin/login`. مدیر ارشد در `/admin/users` حساب کارکنان، نقش و فعال‌بودن را مدیریت می‌کند. ویراستار به محتوا دسترسی دارد؛ تنظیمات، پیام‌ها و مدیریت رسانه برای مدیر/مدیر ارشد است. ثبت‌نام عمومی و پروفایل دانشجو هنوز پیاده‌سازی نشده‌اند؛ فرم تماس، مسیر درخواست پذیرش است، نه ثبت‌نام حساب.
 

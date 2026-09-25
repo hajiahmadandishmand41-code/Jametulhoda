@@ -210,7 +210,7 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="single-post-share mt-5 p-4 bg-soft rounded-xl">
 <h2 class="h5 mb-3"><i class="bi bi-share ms-2 text-gold"></i> اشتراک‌گذاری</h2>
-<div class="d-flex flex-wrap gap-2 align-items-center mb-3"><div class="share-url-box flex-grow-1"><input type="text" id="postUrl" class="form-control form-control-sm" value="<?= htmlspecialchars(canonicalUrl(postUrl($post))) ?>" readonly style="direction:ltr;font-size:.82rem"></div><button class="btn btn-primary btn-sm" onclick="copyLink()"><i class="bi bi-clipboard ms-1"></i> کپی پیوند</button></div>
+<div class="d-flex flex-wrap gap-2 align-items-center mb-3"><div class="share-url-box flex-grow-1"><input type="text" id="postUrl" class="form-control form-control-sm" aria-label="پیوند عمومی این مطلب" value="<?= htmlspecialchars(canonicalUrl(postUrl($post))) ?>" readonly style="direction:ltr;font-size:.82rem"></div><button class="btn btn-primary btn-sm" onclick="copyLink()"><i class="bi bi-clipboard ms-1"></i> کپی پیوند</button></div>
 <div class="d-flex gap-2 flex-wrap"><a href="https://t.me/share/url?url=<?= urlencode(canonicalUrl(postUrl($post))) ?>&text=<?= urlencode($post['title']) ?>" target="_blank" class="btn btn-sm" style="background:#2ca5e0;color:#fff"><i class="bi bi-telegram ms-1"></i> تلگرام</a><a href="https://wa.me/?text=<?= urlencode($post['title'].' - '.canonicalUrl(postUrl($post))) ?>" target="_blank" class="btn btn-sm" style="background:#25d366;color:#fff"><i class="bi bi-whatsapp ms-1"></i> واتساپ</a></div>
 <div id="copyMsg" class="text-success small mt-2" style="display:none"><i class="bi bi-check-circle ms-1"></i> پیوند با موفقیت کپی شد!</div>
 </div>

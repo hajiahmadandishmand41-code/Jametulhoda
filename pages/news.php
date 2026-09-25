@@ -55,7 +55,8 @@ if (!empty($postIds)) {
         <!-- جستجو در اخبار -->
         <form method="get" class="mb-4" role="search">
             <div class="input-group" style="max-width:440px">
-                <input type="text" name="q" class="form-control" placeholder="جستجو در اخبار..." value="<?= sanitize($search) ?>">
+                <label class="visually-hidden" for="news-search">جستجو در اخبار</label>
+                <input id="news-search" type="search" name="q" class="form-control" placeholder="جستجو در اخبار..." value="<?= sanitize($search) ?>">
                 <button type="submit" class="btn btn-primary" aria-label="جستجو"><i class="bi bi-search"></i></button>
                 <?php if ($search): ?>
                 <a href="<?= url('news') ?>" class="btn btn-outline-secondary" title="پاک کردن جستجو"><i class="bi bi-x-lg"></i></a>
@@ -91,7 +92,7 @@ if (!empty($postIds)) {
             <div class="col-md-6 col-lg-4">
                 <article class="news-card h-100">
                     <div class="news-card-img-wrap position-relative">
-                        <a href="<?= $newsUrl ?>" tabindex="-1" aria-hidden="true">
+                        <a href="<?= $newsUrl ?>" aria-label="مشاهده خبر: <?= sanitize($news['title']) ?>">
                             <?php if ($news['featured_image']): ?>
                             <img src="<?= imgUrl($news['featured_image']) ?>" alt="<?= sanitize($news['title']) ?>" class="news-card-img" loading="lazy" decoding="async">
                             <?php else: ?>

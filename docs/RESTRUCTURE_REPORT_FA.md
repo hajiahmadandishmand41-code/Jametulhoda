@@ -68,14 +68,12 @@ PHP Warning/Fatal در لاگ سرور. جریان «سایت هنوز نصب ن
 
 ## ۴. حساب مدیر
 
-* پیش‌فرض: **`admin` / `JH@2026#Admin`** (`DEFAULT_ADMIN_USERNAME` / `DEFAULT_ADMIN_PASSWORD`
-  در `config/config.php`، قابل override با env).
+* نام کاربری نصب می‌تواند `admin` باشد؛ رمز عمومی/پیش‌فرض حذف شده و باید رمز محرمانهٔ یکتا با حداقل ۱۴ نویسه وارد شود.
 * ذخیره **فقط** با `password_hash()`؛ متن ساده هرگز در دیتابیس، `config/local.php` یا لاگ نمی‌نشیند.
 * اگر حساب وجود داشته باشد: `php/install.php` و `bin/create-admin.php` رمز را بازنشانی،
   حساب را فعال و نقش را `superadmin` می‌کنند و با `auth_version + 1` **همه نشست‌های فعال را
   باطل** می‌کنند (هر دو حالت «ایجاد» و «بازنشانی» به‌صورت واقعی آزمون شد).
-* در فرم نصاب، خالی‌گذاشتن فیلد رمز = استفاده از رمز پیش‌فرض مستند؛ پیام موفقیت این را
-  یادآوری می‌کند و توصیه می‌کند پس از اولین ورود از `/admin/change-password` عوض شود.
+* در فرم نصاب، رمز مدیر اجباری است و حداقل ۱۴ نویسه دارد؛ هیچ رمز پیش‌فرضی پذیرفته نمی‌شود.
 
 ## ۵. محافظت از فایل‌های حساس
 
@@ -143,8 +141,7 @@ PHP Warning/Fatal در لاگ سرور. جریان «سایت هنوز نصب ن
 6. **`storage/cache/` ساخته شد ولی هنوز مصرف‌کننده ندارد** (لایهٔ cache در پروژه پیاده نشده)؛
    `storage/logs/php-error.log` فقط در `APP_ENV=production` و در صورت writable بودن استفاده
    می‌شود تا در development/CI هشدارها در stderr دیده شوند.
-7. **رمز پیش‌فرض مدیر در مخزن مستند است** — این خواستهٔ صریح کارفرماست؛ حتماً پس از اولین
-   ورود تغییر داده شود (`/admin/change-password`).
+7. **سیاست رمز مدیر در نسخه فعلی سخت‌گیرانه‌تر شده است:** رمز پیش‌فرض عمومی حذف شده؛ رمز محرمانه و یکتا (حداقل ۱۴ نویسه) هنگام نصب/ساخت حساب لازم است.
 8. `admin/lesson-collections/` و `admin/banners/` فرم inline دارند (بدون `create.php`) — دست نخورد.
 
 ## ۸. چطور دوباره آزمون کنیم
@@ -155,8 +152,8 @@ find . -name '*.php' -not -path './vendor/*' -not -path './node_modules/*' -prin
 # ۲) آزمون‌های واحد/امنیتی و migration تکرارپذیر
 php tests/security.php && php bin/migrate.php && php bin/migrate.php
 ALLOW_DESTRUCTIVE_TESTS=1 php tests/storage-recovery.php
-# ۳) ساخت مدیر (پیش‌فرض admin / JH@2026#Admin یا با env دلخواه)
-php bin/create-admin.php
+# ۳) ساخت مدیر با رمز محرمانهٔ یکتا (حداقل ۱۴ نویسه)
+ADMIN_USERNAME=admin ADMIN_PASSWORD='یک-رمز-محرمانه-و-یکتا-۱۴-نویسه-یا-بیشتر' php bin/create-admin.php
 # ۴) سرور محلی و آزمون‌های HTTP/مرورگر/لینک‌ها
 php -S 0.0.0.0:8080 router.php &
 npm ci && npm run test:http && npm run test:browser && node tests/links.mjs

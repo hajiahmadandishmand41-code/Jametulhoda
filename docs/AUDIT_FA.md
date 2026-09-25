@@ -1,10 +1,34 @@
-# گزارش Audit و اصلاحات — ۲۰ سپتامبر ۲۰۲۶
+# گزارش Audit و اصلاحات — ۲۴ سپتامبر ۲۰۲۶
 
-## جمع‌بندی صریح
+## وضعیت شاخهٔ در حال بازبینی
 
-**این تحویل هنوز تأیید نهایی production-ready نیست؛ Build و Preview Deployment موفق ثبت شده، اما runtime عمومیِ deployment محافظت‌شده قابل تأیید نیست.** زیرساخت PHP/PostgreSQL، بخش مهمی از امنیت و upload، routing و رابط سایت اصلاح شده و تست محلی واقعی دارد. پس از push، اتصال GitHub به Vercel به‌صورت خودکار Preview ساخت. محتوای آن پشت Deployment Protection بود؛ Neon واقعی، S3 واقعی و runtime آن بدون دسترسی مشاهده قابل تأیید نبودند. قابلیت‌های جدیدی که در پروژه اولیه وجود نداشتند، همگی در این مرحله پیاده نشده‌اند. موارد باقی‌مانده در پایان گزارش آمده‌اند.
+**این گزارش وضعیت تغییرات شاخهٔ `arena/01a0d390-jametulhoda` را از commit پایهٔ `ade9821` ثبت می‌کند. این شاخه هنوز برای production یا نصب واقعی روی InfinityFree تأیید نشده است.** تغییرات فعلی بر رفع routing و canonicalها، تمرکز لینک‌سازی در helperها، هدر/ناوبری RTL، metadata و structured data، قواعد اجرای upload، sitemap و آزمون مسیرها متمرکز است.
 
-مبنای بررسی: commit `ac9c7e7`، مخزن واقعی در ریشه، نه پروژه جدید داخل پوشه تو‌در‌تو. پس از دریافت تاریخچه کامل قابل دسترسی، مخزن یک commit اولیه داشت. صفحات و فرم‌های سالم حفظ شدند؛ حذف کدها عمدتاً مربوط به schema mutation هنگام درخواست وب، installer ناامن، مسیرهای آپلود پراکنده و هدر جایگزین‌شده است.
+### آزمون‌های همین working tree
+
+- `python3 tests/verify_routes.py`: **70/70** آزمون ایستای resolution مسیر و وجود فایل‌ها موفق.
+- `python3 tests/crawl_links.py`: **تمام لینک‌ها و مسیرهای داخلی کشف‌شده** معتبر؛ این خزندهٔ منبعی، پاسخ HTTP را نمی‌سازد.
+- `node --check` برای `assets/js/interface.js` و آزمون‌های HTTP/browser/route-smoke، `python3 -m py_compile` برای audit scriptها، بررسی ساختاری delimiterهای CSS در ۷ stylesheet/template و `git diff --check`: موفق در اجرای نهایی همین working tree.
+- اسکن لینک‌های `href`/`action` در صفحهٔ اصلی، `includes/` و `pages/` (۳۴ template) هیچ لینک مستقیمی به `pages/*.php`, `includes/*.php` یا `config/*.php` پیدا نکرد.
+- لایهٔ ظاهری مشترک برای فهرست‌ها، جزئیات، فرم‌ها، کارت‌ها و blank stateها گسترش یافت؛ پنل مدیریت و login، و نصب‌کنندهٔ فارسی نیز polish شدند. این‌ها بررسی ایستای CSS/markup هستند و screenshot/accessibility browser audit نیستند.
+- **PHP در محیط محلی در دسترس نیست**؛ بنابراین PHP lint، اجرای محلی HTTP، تست Apache/.htaccess، مرورگر، route-smoke جدید، آزمون dynamic DB-backed و probe فایل PHP در uploads هنوز برای این تغییرات اجرا نشده‌اند.
+- درخواست‌های پیشین به `https://jametulhoda.gt.tc/` و `/news` در TLS handshake شکست خوردند. در نتیجه status میزبان عمومی نامعلوم است و **برای `/news` ادعای HTTP 200 نمی‌شود**.
+- آزمون Playwright گسترش یافته تا علاوه بر خانه، ۱۶ مسیر عمومی و detail URLهای ساخته‌شده در آزمون HTTP را در عرض‌های ۳۶۰/۷۶۸/۱۲۸۰ پیکسل از نظر status، عنوان قابل‌مشاهده، description و overflow بسنجد؛ **کد آزمون syntax-checked است اما به علت نبود PHP/مرورگر اجرا نشده است**.
+- کد route-smoke که CI روی PHP server و کانتینر Apache فراخوانی می‌کند، ۱۷ مسیر عمومی، پیوند «اخبار» صفحهٔ خانه تا `/news`، و ۶ مسیر نامعتبر/خصوصی (از جمله `install.php` ریشه) را می‌سنجد. workflow همچنین assertionهای شکست و probe فایل PHP در uploads را دارد؛ **این workflow برای همین تغییرات هنوز اجرا/تأیید نشده است**.
+
+### مسیر، امنیت و SEO — تغییرات موجود و نیازمند runtime verification
+
+- مسیر `/news` همچنان از `.htaccess → router.php → config/routes.php → pages/news.php` عبور می‌کند. `config/routes.php` جدول اصلی مسیرها، aliasها و dynamic patternها باقی مانده است.
+- `.htaccess` مسیرهای عمومی را به router می‌فرستد و برای فایل‌های upload فقط فهرست محدودی از image/audio/video را مستقیم می‌خواند؛ اسناد از PHP stream می‌شوند و extension اجرایی باید به 404 برسد. قاعدهٔ Apache و subdirectory/InfinityFree هنوز روی host واقعی بررسی نشده است.
+- canonical، description، noindex برای search/404، canonical aliasهای media، robots و sitemap تنظیم شده‌اند؛ Article/Book/Media JSON-LD افزوده شده است. صحت HTML/HTTP و داده‌های DB-backed هنوز در runtime نیازمند آزمون است.
+- مقدار نام جدید برای نصب‌های تازه در defaults آمده است؛ مقدار custom قدیمی در settings عمداً overwrite نمی‌شود. فقط مقدار legacy پیش‌فرض نمایش عمومی normalize می‌شود.
+- credentials دیتابیس واقعی در این بررسی استفاده نشده‌اند. تنظیمات موجود را پیش از استقرار در محیط آزمایشی بررسی کنید.
+
+## پیشینهٔ بررسی نسخهٔ پایه
+
+بخش‌های بعدی این فایل خلاصهٔ audit و CI مربوط به **نسخهٔ پایه/تغییرات پیشین** هستند، نه شواهد اجرای تغییرات این شاخه. نتیجه‌های CI یا مرورگر آن قسمت‌ها را به عنوان تأیید این working tree تلقی نکنید؛ برای این شاخه لازم است workflow مجدداً اجرا شود.
+
+مبنای audit پیشین: commit `ac9c7e7`، مخزن واقعی در ریشه، نه پروژهٔ تو‌در‌تو. صفحات و فرم‌های سالم حفظ شدند؛ تغییرات گستردهٔ پیشین مربوط به دیتابیس، storage، session، uploader و front controller بوده‌اند.
 
 ## مشکلات پیدا شده
 

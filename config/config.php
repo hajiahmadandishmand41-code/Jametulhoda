@@ -28,9 +28,11 @@ define('BASE_DIR', dirname(__DIR__));
 define('STORAGE_DIR', BASE_DIR . '/storage');
 
 // Site
-define('SITE_NAME',   'مدرسه علمیه جامعه‌الهدی');
-define('SITE_SLOGAN', 'علم، معرفت و تهذیب در پرتو قرآن و عترت');
-define('SITE_URL',    env_value('SITE_URL'));
+define('SITE_NAME',   'جامعة‌الهدی');
+define('SITE_SLOGAN', 'مرکز علمی، آموزشی و پژوهشی در پرتو قرآن و عترت');
+// Default canonical origin follows the domain supplied for this installation;
+// custom domains must override SITE_URL in the environment/local config.
+define('SITE_URL',    env_value('SITE_URL', 'https://jametulhoda.gt.tc'));
 define('SITE_EMAIL',  env_value('SITE_EMAIL', 'hajiahmads299@gmail.com'));
 define('SITE_PHONE',  env_value('SITE_PHONE', '0798228441'));
 define('SITE_ADDRESS',env_value('SITE_ADDRESS', 'کابل، افغانستان'));
@@ -64,14 +66,11 @@ define('LESSONS_PER_PAGE', 12);
 define('CSRF_TOKEN_NAME', 'csrf_token');
 
 /**
- * Default administrator account used by the installer (php/install.php) and by
- * bin/create-admin.php. The password is stored **only** as a password_hash()
- * digest; if the account already exists its password is reset to this value and
- * auth_version is bumped so every existing session is invalidated.
- * Override both per deployment with ADMIN_USERNAME / ADMIN_PASSWORD.
+ * Installer account defaults. Username may default to `admin`; administrator
+ * passwords must be explicitly supplied as unique deployment secrets.
  */
 define('DEFAULT_ADMIN_USERNAME', env_value('DEFAULT_ADMIN_USERNAME', 'admin'));
-define('DEFAULT_ADMIN_PASSWORD', env_value('DEFAULT_ADMIN_PASSWORD', 'JH@2026#Admin'));
+define('DEFAULT_ADMIN_PASSWORD', env_value('DEFAULT_ADMIN_PASSWORD'));
 
 // Error Reporting
 error_reporting(E_ALL);

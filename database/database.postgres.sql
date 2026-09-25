@@ -304,8 +304,8 @@ CREATE TABLE IF NOT EXISTS featured_banners (
 );
 
 INSERT INTO settings (setting_key, value) VALUES
-('site_name',        'مدرسه علمیه جامعه‌الهدی'),
-('site_slogan',      'علم، معرفت و تهذیب در پرتو قرآن و عترت'),
+('site_name',        'جامعة‌الهدی'),
+('site_slogan',      'مرکز علمی، آموزشی و پژوهشی در پرتو قرآن و عترت'),
 ('site_email',       'hajiahmads299@gmail.com'),
 ('address',          'کابل، افغانستان'),
 ('phone',            '0798228441'),

@@ -7,7 +7,7 @@ if (APP_ENV !== 'production' && APP_ENV !== 'local') {
 } else {
     $adminBase = rtrim(BASE_PATH, '/') . '/admin/';
     $siteBase = rtrim(BASE_PATH, '/') . '/';
-    $sitemapUrl = SITE_URL ? rtrim(SITE_URL, '/') . '/sitemap.xml' : absolute_url('sitemap.xml');
+    $sitemapUrl = absolute_url('sitemap.xml');
 
     echo "Disallow: {$adminBase}\n";
     echo "Disallow: " . rtrim(BASE_PATH, '/') . "/bin/\n";

@@ -17,6 +17,9 @@ $isHomePage = (($currentPage ?? '') === 'index.php')
 $footerCats    = getCategories();
 $recentPosts   = getPosts(['limit' => 4]);
 $siteName      = getSetting('site_name', SITE_NAME);
+if ($siteName === 'مدرسه علمیه جامعه‌الهدی') $siteName = SITE_NAME; // normalize the legacy installation default
+$siteSlogan    = getSetting('site_slogan', SITE_SLOGAN);
+if ($siteSlogan === 'علم، معرفت و تهذیب در پرتو قرآن و عترت') $siteSlogan = SITE_SLOGAN; // normalize the legacy installation default
 $siteAddress   = getSetting('address', SITE_ADDRESS);
 $sitePhone     = getSetting('phone', SITE_PHONE);
 $siteEmail     = getSetting('email', SITE_EMAIL);
@@ -32,7 +35,7 @@ $siteEmail     = getSetting('email', SITE_EMAIL);
                             <img src="<?= imgUrl(getSetting('site_logo', 'assets/img/logo.jpg')) ?>" alt="نشان <?= sanitize($siteName) ?>" class="footer-logo" onerror="this.src='<?= asset('img/placeholder.svg') ?>'">
                             <h5 class="footer-title mb-0"><?= sanitize($siteName) ?></h5>
                         </div>
-                        <p class="footer-text"><?= sanitize(getSetting('site_slogan', SITE_SLOGAN)) ?></p>
+                        <p class="footer-text"><?= sanitize($siteSlogan) ?></p>
                         <p class="footer-text small"><?= sanitize(getSetting('about_short', 'مدرسه علمیه جامعه‌الهدی یکی از مراکز علوم و معارف اسلامی در کابل، افغانستان است.')) ?></p>
                         <p class="footer-text small mt-2">
                             <i class="bi bi-person-fill ms-1 text-gold"></i>
@@ -61,6 +64,7 @@ $siteEmail     = getSetting('email', SITE_EMAIL);
                             <li><a href="<?= url('research') ?>"><i class="bi bi-chevron-left"></i>پژوهش‌ها</a></li>
                             <li><a href="<?= url('media') ?>"><i class="bi bi-chevron-left"></i>رسانه (صوت و ویدیو)</a></li>
                             <li><a href="<?= url('topics') ?>"><i class="bi bi-chevron-left"></i>موضوعات دینی</a></li>
+                            <li><a href="<?= url('qa') ?>"><i class="bi bi-chevron-left"></i>پرسش و پاسخ</a></li>
                             <li><a href="<?= url('about') ?>"><i class="bi bi-chevron-left"></i>درباره ما</a></li>
                             <li><a href="<?= url('contact') ?>"><i class="bi bi-chevron-left"></i>تماس با ما</a></li>
                         </ul>

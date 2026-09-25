@@ -220,12 +220,12 @@
 | `storage/logs/`, `storage/cache/` | ایجاد شدند؛ در production خطاها در `storage/logs/php-error.log` ثبت می‌شوند (در development همان stderr تا CI هشدارها را ببیند). |
 | `config/routes.php` | بازنویسی به‌عنوان تنها مرجع مسیرها: `routes` + `aliases` + `patterns`؛ افزودن `/videos`، `/audios`، `/admin/users/`، `/lessons/{collection}/{volume}`، `/book/{slug}`، `/search/{q}`. |
 | `router.php` | گسترش خودکار هر نشانی به `/x`، `/x/`، `/x.php` و `/x/index.php`؛ سرو static با alias تصویر؛ تنظیم `JHD_ROUTE_PATH`؛ توابع جدا برای ۴۰۴ و سرو فایل. |
-| `.htaccess` | سرو مستقیم فایل‌های واقعی `assets/` و `uploads/` توسط Apache (بدون مصرف PHP) و ارجاع بقیهٔ درخواست‌ها به `router.php`؛ هیچ `Require all denied`‌ای ندارد (Apache آن را پیش از mod_rewrite اجرا می‌کند و ۴۰۳ به‌جای ۴۰۴ می‌داد). |
+| `.htaccess` | سرو مستقیم assetها و uploadهای تصویری/صوتی/ویدیویی مجاز؛ PDF/DOC از router عبور می‌کنند تا با attachment header پخش شوند؛ فایل اجرایی upload همیشه ۴۰۴ است. |
 | `.htaccess`های جدید | پوشه‌های داخلی (`config/`, `includes/`, `pages/`, `content/`, `database/`, `database/migrations/`, `storage/`, `storage/logs/`, `storage/cache/`, `bin/`, `php/`, `tests/`, `docs/`, `admin/`, `admin/includes/`, `admin/*/`) → `Options -Indexes`؛ `uploads/` و `uploads/*/` → `Options -Indexes -ExecCGI` + `RemoveHandler`/`RemoveType` برای اسکریپت‌ها. پاسخ همهٔ مسیرهای غیرمجاز از طرف `router.php` با ۴۰۴ داده می‌شود. |
 | `config/config.php` | `BASE_DIR`/`STORAGE_DIR`، `DEFAULT_ADMIN_USERNAME`/`DEFAULT_ADMIN_PASSWORD`، مسیر error_log در production، پوشه‌های آپلود صوت/ویدیو. |
 | `config/local.example.php` | **جدید** — الگوی فایل تنظیمات خصوصی برای نصب دستی. |
-| `php/install.php` | مسیر schema به `database/`؛ اگر حساب مدیر وجود داشته باشد رمز آن با `password_hash()` بازنشانی و `auth_version` افزایش می‌یابد؛ فیلد رمز خالی = رمز پیش‌فرض مستند؛ لینک‌های تمیز. |
-| `bin/create-admin.php` | پیش‌فرض `admin` / `JH@2026#Admin`؛ ایجاد **یا** بازنشانی امن رمز + `auth_version`؛ پیام دقیق‌تر. |
+| `php/install.php` | مسیر schema به `database/`؛ اگر حساب مدیر وجود داشته باشد رمز آن با `password_hash()` بازنشانی و `auth_version` افزایش می‌یابد؛ رمز اجباری و بدون مقدار پیش‌فرض عمومی؛ لینک‌های تمیز. |
+| `bin/create-admin.php` | نام کاربری قابل تنظیم؛ رمز محرمانهٔ اجباری با حداقل ۱۴ نویسه؛ ایجاد **یا** بازنشانی امن رمز + `auth_version`. |
 | `bin/migrate.php` | انتخاب schema از `database/` بر اساس درایور. |
 | همه پیوندهای داخلی (۲۹۷ مورد در ۵۳ فایل) | `siteUrl('about.php')` → `siteUrl('about')` و به‌همین ترتیب برای همه صفحات عمومی، admin و رسانه؛ شکل `.php` همچنان به‌عنوان alias کار می‌کند. |
 | `includes/header.php` | canonical از `JHD_ROUTE_PATH` (مسیر عمومی) به‌جای `SCRIPT_NAME` (مسیر داخلی `pages/…`)؛ `search?q=` در JSON-LD. |

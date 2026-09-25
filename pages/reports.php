@@ -10,7 +10,6 @@ require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/auth.php';
 startSecureSession();
 
-$db = getDB();
 $search = trim($_GET['q'] ?? '');
 $topicSlug = trim($_GET['topic'] ?? '');
 $topicId = null;
@@ -29,15 +28,6 @@ if ($topicId) $opts['topic'] = $topicId;
 
 $posts = getPosts($opts);
 $total = countPosts(['type' => 'report'] + ($search ? ['search' => $search] : []) + ($topicId ? ['topic' => $topicId] : []));
-
-// فال‌بک هوشمند در صورت کم بودن رکوردهای صرفاً report
-if (empty($posts) && !$search && !$topicId) {
-    try {
-        $stmt = $db->query("SELECT * FROM posts WHERE status='published' AND (title ILIKE '%گزارش%' OR summary ILIKE '%گزارش%') ORDER BY published_at DESC LIMIT 12");
-        $posts = $stmt->fetchAll();
-        $total = count($posts);
-    } catch (\Throwable) {}
-}
 
 $pages = (int)ceil($total / $limit);
 
@@ -71,7 +61,7 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="py-5">
   <div class="container">
     <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
+    <div class="jhd-page-heading d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
       <div>
         <span class="jhd-eyebrow">پوشش میدانی و رخدادهای حوزه</span>
         <h1 class="page-title mb-1">
@@ -94,7 +84,7 @@ require_once __DIR__ . '/../includes/header.php';
       <div class="row g-2 align-items-center">
         <div class="col-md-6 col-lg-5">
           <div class="input-group">
-            <input type="text" name="q" class="form-control"
+            <input type="search" name="q" class="form-control" aria-label="جستجو در گزارش‌ها"
                    placeholder="جستجو در گزارش‌ها..."
                    value="<?= sanitize($search) ?>">
             <?php if ($topicSlug): ?>

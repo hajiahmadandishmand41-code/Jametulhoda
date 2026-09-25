@@ -32,9 +32,13 @@ document.querySelectorAll('[data-theme-toggle]').forEach(button => {
     if (!toggleBtn || !drawer || !overlay) return;
 
     let previousActiveElement = null;
+    let previousBodyOverflow = '';
+    let closeTimer = null;
 
     function openDrawer() {
+        if (closeTimer) window.clearTimeout(closeTimer);
         previousActiveElement = document.activeElement;
+        previousBodyOverflow = document.body.style.overflow;
         drawer.removeAttribute('inert');
         drawer.setAttribute('aria-hidden', 'false');
         drawer.classList.add('open');
@@ -57,11 +61,13 @@ document.querySelectorAll('[data-theme-toggle]').forEach(button => {
         drawer.classList.remove('open');
         overlay.classList.remove('show');
         toggleBtn.setAttribute('aria-expanded', 'false');
-        document.body.style.overflow = '';
+        document.body.style.overflow = previousBodyOverflow;
 
-        setTimeout(() => {
+        closeTimer = window.setTimeout(() => {
+            if (drawer.classList.contains('open')) return;
             overlay.hidden = true;
             drawer.setAttribute('inert', '');
+            closeTimer = null;
         }, 280);
 
         if (previousActiveElement && typeof previousActiveElement.focus === 'function') {
@@ -88,10 +94,29 @@ document.querySelectorAll('[data-theme-toggle]').forEach(button => {
     // Overlay click (click outside)
     overlay.addEventListener('click', closeDrawer);
 
-    // Escape key
+    // Keyboard dismissal and focus containment for the modal drawer.
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && drawer.classList.contains('open')) {
+        if (!drawer.classList.contains('open')) return;
+        if (e.key === 'Escape') {
             closeDrawer();
+            return;
+        }
+        if (e.key !== 'Tab') return;
+        const focusable = [...drawer.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+            .filter(element => element.getClientRects().length > 0);
+        if (!focusable.length) {
+            e.preventDefault();
+            drawer.focus();
+            return;
+        }
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && (document.activeElement === first || !drawer.contains(document.activeElement))) {
+            e.preventDefault();
+            last.focus();
+        } else if (!e.shiftKey && (document.activeElement === last || !drawer.contains(document.activeElement))) {
+            e.preventDefault();
+            first.focus();
         }
     });
 
@@ -104,7 +129,7 @@ document.querySelectorAll('[data-theme-toggle]').forEach(button => {
     });
 
     // Resize cleanup: if screen resized to desktop size, close drawer and reset overflow
-    const desktopMedia = window.matchMedia('(min-width: 992px)');
+    const desktopMedia = window.matchMedia('(min-width: 1200px)');
     desktopMedia.addEventListener('change', (e) => {
         if (e.matches && drawer.classList.contains('open')) {
             closeDrawer();

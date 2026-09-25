@@ -78,11 +78,11 @@ require __DIR__.'/../includes/header.php';
 <article class="container py-4 py-md-5">
 <div class="row g-4 g-lg-5">
 <div class="col-lg-4">
-<div style="background:#fafaf7;border:1px solid #e8e6dc;border-radius:20px;padding:16px;text-align:center">
+<div class="jhd-book-cover-panel">
 <?php if(!empty($book['cover_image'])): ?>
 <img src="<?= imgUrl($book['cover_image']) ?>" alt="جلد <?= sanitize($book['title']) ?>" style="width:100%;max-width:360px;aspect-ratio:3/4;object-fit:cover;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.12)" loading="eager" width="400" height="530">
 <?php else: ?>
-<div style="aspect-ratio:3/4;display:grid;place-items:center;background:#ede8d8;border-radius:14px"><i class="bi bi-book" style="font-size:4rem;color:#b9ad8e"></i></div>
+<div class="jhd-book-cover-placeholder" aria-hidden="true"><i class="bi bi-book"></i></div>
 <?php endif; ?>
 <div class="mt-4 d-grid gap-2">
 <?php if(!empty($book['pdf_file'])): ?><a href="<?= bookUrl($book).'?download=pdf' ?>" class="btn btn-primary"><i class="bi bi-file-pdf ms-2"></i> دانلود PDF</a><?php endif; ?>
@@ -90,16 +90,16 @@ require __DIR__.'/../includes/header.php';
 </div>
 <?php if($topics): ?>
 <div class="text-start mt-4">
-<div class="small fw-bold mb-2" style="color:var(--jhd-primary)"><i class="bi bi-tags ms-1"></i> موضوعات</div>
+<div class="small fw-bold mb-2" style="color:var(--jhd-green)"><i class="bi bi-tags ms-1"></i> موضوعات</div>
 <div class="d-flex flex-wrap gap-2">
-<?php foreach($topics as $tp): ?><a href="<?= topicUrl($tp) ?>" class="badge rounded-pill" style="background:#f0ece3;color:#5b4a1a;border:1px solid #e8e6dc"><?= sanitize($tp['name']) ?></a><?php endforeach; ?>
+<?php foreach($topics as $tp): ?><a href="<?= topicUrl($tp) ?>" class="badge rounded-pill jhd-book-topic"><?= sanitize($tp['name']) ?></a><?php endforeach; ?>
 </div>
 </div>
 <?php endif; ?>
 </div>
 
 <?php if(!empty($book['author']) || !empty($book['publisher'])): ?>
-<div class="mt-4 p-3 rounded-4" style="background:#fff;border:1px solid #eee">
+<div class="mt-4 p-3 rounded-4 jhd-book-metadata">
 <?php if(!empty($book['author'])): ?><div class="d-flex justify-content-between small py-1"><span class="text-muted">نویسنده</span><strong><?= sanitize($book['author']) ?></strong></div><?php endif; ?>
 <?php if(!empty($book['translator'])): ?><div class="d-flex justify-content-between small py-1"><span class="text-muted">مترجم</span><strong><?= sanitize($book['translator']) ?></strong></div><?php endif; ?>
 <?php if(!empty($book['publisher'])): ?><div class="d-flex justify-content-between small py-1"><span class="text-muted">ناشر</span><strong><?= sanitize($book['publisher']) ?></strong></div><?php endif; ?>
@@ -111,26 +111,26 @@ require __DIR__.'/../includes/header.php';
 
 <div class="col-lg-8">
 <span class="jhd-eyebrow">کتابخانه دیجیتال</span>
-<h1 style="font-size:1.85rem;font-weight:900;color:var(--jhd-primary);line-height:1.35;margin:10px 0 8px"><?= sanitize($book['title']) ?></h1>
+<h1 class="jhd-detail-title"><?= sanitize($book['title']) ?></h1>
 <?php if(!empty($book['author'])): ?><p class="text-muted mb-3"><i class="bi bi-person ms-1"></i> <?= sanitize($book['author']) ?><?= !empty($book['translator']) ? ' — ترجمهٔ '.sanitize($book['translator']) : '' ?></p><?php endif; ?>
 
 <?php if(!empty($book['description'])): ?>
 <section class="mb-4">
-<h2 class="h6 fw-bold" style="color:var(--jhd-primary)"><i class="bi bi-info-circle ms-2"></i> معرفی کتاب</h2>
-<div class="post-content" style="line-height:2;color:#2b2b2b"><?= nl2br(sanitize($book['description'])) ?></div>
+<h2 class="h6 fw-bold" style="color:var(--jhd-green)"><i class="bi bi-info-circle ms-2"></i> معرفی کتاب</h2>
+<div class="post-content jhd-book-copy"><?= nl2br(sanitize($book['description'])) ?></div>
 </section>
 <?php endif; ?>
 
 <?php if(!empty($book['toc'])): ?>
-<section class="mb-4 p-3 p-md-4 rounded-4" style="background:#fafaf7;border:1px solid #e8e6dc">
-<h2 class="h6 fw-bold mb-3" style="color:var(--jhd-primary)"><i class="bi bi-list-ol ms-2"></i> فهرست مطالب</h2>
-<div style="white-space:pre-wrap;line-height:1.9;color:#3a3a3a;font-size:.93rem"><?= sanitize($book['toc']) ?></div>
+<section class="mb-4 p-3 p-md-4 rounded-4 jhd-book-toc">
+<h2 class="h6 fw-bold mb-3" style="color:var(--jhd-green)"><i class="bi bi-list-ol ms-2"></i> فهرست مطالب</h2>
+<div class="jhd-book-toc-content"><?= sanitize($book['toc']) ?></div>
 </section>
 <?php endif; ?>
 
 <?php if($topics): ?>
 <section class="mb-4">
-<h2 class="h6 fw-bold" style="color:var(--jhd-primary)"><i class="bi bi-diagram-3 ms-2"></i> پیوندهای داخلی</h2>
+<h2 class="h6 fw-bold" style="color:var(--jhd-green)"><i class="bi bi-diagram-3 ms-2"></i> پیوندهای داخلی</h2>
 <div class="d-flex flex-wrap gap-2">
 <?php foreach($topics as $tp): ?><a href="<?= topicUrl($tp) ?>" class="btn btn-sm btn-outline-secondary rounded-pill"><?= sanitize($tp['name']) ?></a><?php endforeach; ?>
 </div>
@@ -146,14 +146,14 @@ require __DIR__.'/../includes/header.php';
 
 <?php if($related): ?>
 <section class="mt-5">
-<h2 class="h5 fw-bold mb-3" style="color:var(--jhd-primary)"><i class="bi bi-collection ms-2"></i> کتاب‌های مرتبط</h2>
+<h2 class="h5 fw-bold mb-3" style="color:var(--jhd-green)"><i class="bi bi-collection ms-2"></i> کتاب‌های مرتبط</h2>
 <div class="row g-3">
 <?php foreach($related as $rb):
   $rbUrl=bookUrl($rb);
 ?>
 <div class="col-6 col-md-4 col-lg-2">
 <a href="<?= $rbUrl ?>" style="text-decoration:none;color:inherit">
-<div style="border:1px solid #e8e6dc;border-radius:14px;overflow:hidden;background:#fff">
+<div class="jhd-book-related-card">
 <?php if(!empty($rb['cover_image'])): ?><img src="<?= imgUrl($rb['cover_image']) ?>" style="width:100%;aspect-ratio:3/4;object-fit:cover;display:block" loading="lazy" alt="<?= sanitize($rb['title']) ?>"><?php endif; ?>
 <div class="p-2"><div class="small fw-bold" style="line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden"><?= sanitize($rb['title']) ?></div><?php if(!empty($rb['author'])): ?><div class="text-muted" style="font-size:.75rem"><?= sanitize($rb['author']) ?></div><?php endif; ?></div>
 </div>

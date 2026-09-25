@@ -11,6 +11,14 @@ startSecureSession();
 $kind = ($_GET['kind'] ?? 'video') === 'audio' ? 'audio' : 'video';
 $pageTitle = $kind === 'audio' ? 'کتابخانه صوتی و سخنرانی‌ها' : 'نگارخانه ویدیویی';
 $pageDesc = $kind === 'audio' ? 'سخنرانی‌ها، صوت جلسات علمی، ادعیه و زیارات مدرسه علمیه جامعه‌الهدی' : 'ویدیوها، نشست‌های تخصصی و کلیپ‌های تصویری مدرسه علمیه جامعه‌الهدی';
+$mediaPath = current_path();
+if (in_array($mediaPath, ['/audio', '/audios'], true) || ($mediaPath === '/media' && isset($_GET['kind']) && $kind === 'audio')) {
+    $canonicalOverride = url('audios');
+} elseif (in_array($mediaPath, ['/video', '/videos'], true) || ($mediaPath === '/media' && isset($_GET['kind']) && $kind === 'video')) {
+    $canonicalOverride = url('videos');
+} else {
+    $canonicalOverride = url('media');
+}
 
 $page = max(1, (int)($_GET['page'] ?? 1));
 $limit = 12;
@@ -65,7 +73,7 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="py-5">
   <div class="container">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
+    <div class="jhd-page-heading d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
       <div>
         <span class="jhd-eyebrow">شنیدن، دیدن و آموختن معارف</span>
         <h1 class="page-title mb-1">

@@ -2,9 +2,8 @@
 /**
  * bin/create-admin.php — ساخت یا بازیابی حساب مدیر ارشد از خط فرمان
  *
- * پیش‌فرض: نام کاربری `admin` و رمز `JH@2026#Admin`
- * (DEFAULT_ADMIN_USERNAME / DEFAULT_ADMIN_PASSWORD در config/config.php).
- * با ADMIN_USERNAME و ADMIN_PASSWORD می‌توانید مقدار دیگری بدهید.
+ * نام کاربری می‌تواند از DEFAULT_ADMIN_USERNAME بیاید؛ رمز باید به‌صورت
+ * ADMIN_PASSWORD یا DEFAULT_ADMIN_PASSWORD از محیط محرمانه تعیین شود.
  *
  * رمز فقط با password_hash() ذخیره می‌شود. اگر حساب از قبل وجود داشته باشد،
  * رمز آن بازنشانی و با افزایش auth_version همه نشست‌های فعال باطل می‌شوند.
@@ -16,7 +15,7 @@ $username = env_value('ADMIN_USERNAME', DEFAULT_ADMIN_USERNAME);
 $customPassword = env_value('ADMIN_PASSWORD');
 $password = $customPassword !== '' ? $customPassword : DEFAULT_ADMIN_PASSWORD;
 
-if (!preg_match('/^[a-zA-Z0-9_.-]{3,80}$/', $username) || ($customPassword !== '' && strlen($password) < 14)) {
+if (!preg_match('/^[a-zA-Z0-9_.-]{3,80}$/', $username) || strlen($password) < 14) {
     fwrite(STDERR, "Set ADMIN_USERNAME and a unique ADMIN_PASSWORD of at least 14 characters in your environment.\n");
     exit(1);
 }

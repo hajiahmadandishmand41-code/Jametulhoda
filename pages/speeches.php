@@ -163,23 +163,23 @@ $speechIds    = array_column($speeches, 'id');
                 <div class="speeches-filter-bar mb-4">
                     <form action="<?= siteUrl('speeches') ?>" method="get" class="row g-2 align-items-end">
                         <div class="col-12 col-md-5">
-                            <label class="form-label small fw-600 mb-1">جستجو در سخنرانی‌ها</label>
+                            <label class="form-label small fw-600 mb-1" for="speech-search">جستجو در سخنرانی‌ها</label>
                             <div class="input-group">
-                                <input type="search" name="q" class="form-control"
+                                <input id="speech-search" type="search" name="q" class="form-control"
                                        placeholder="جستجوی عنوان یا متن..."
                                        value="<?= sanitize($search) ?>">
                             </div>
                         </div>
                         <div class="col-6 col-md-3">
-                            <label class="form-label small fw-600 mb-1">سخنران</label>
-                            <input type="text" name="speaker" class="form-control"
+                            <label class="form-label small fw-600 mb-1" for="speech-speaker">سخنران</label>
+                            <input id="speech-speaker" type="text" name="speaker" class="form-control"
                                    placeholder="نام سخنران..."
                                    value="<?= sanitize($speaker) ?>">
                         </div>
                         <?php if (!empty($availableYears)): ?>
                         <div class="col-6 col-md-2">
-                            <label class="form-label small fw-600 mb-1">سال</label>
-                            <select name="year" class="form-select">
+                            <label class="form-label small fw-600 mb-1" for="speech-year">سال</label>
+                            <select id="speech-year" name="year" class="form-select">
                                 <option value="">همه</option>
                                 <?php foreach ($availableYears as $yr): ?>
                                 <option value="<?= (int)$yr ?>" <?= $year === (int)$yr ? 'selected' : '' ?>>

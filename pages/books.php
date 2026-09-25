@@ -61,7 +61,7 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="py-5">
   <div class="container">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
+    <div class="jhd-page-heading d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
       <div>
         <span class="jhd-eyebrow">مرجع اسناد و نشر آثار اسلامی</span>
         <h1 class="page-title mb-1">
@@ -84,7 +84,7 @@ require_once __DIR__ . '/../includes/header.php';
       <div class="row g-2 align-items-center">
         <div class="col-md-6 col-lg-5">
           <div class="input-group">
-            <input type="text" name="q" class="form-control"
+            <input type="search" name="q" class="form-control" aria-label="جستجو در کتابخانه"
                    placeholder="جستجو در عنوان، نویسنده یا توضیحات کتاب..."
                    value="<?= sanitize($search) ?>">
             <?php if ($topicSlug): ?>

@@ -60,7 +60,7 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="py-5">
   <div class="container">
     <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
+    <div class="jhd-page-heading d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
       <div>
         <span class="jhd-eyebrow">اندیشه و پژوهش‌های دینی</span>
         <h1 class="page-title mb-1">
@@ -83,7 +83,7 @@ require_once __DIR__ . '/../includes/header.php';
       <div class="row g-2 align-items-center">
         <div class="col-md-6 col-lg-5">
           <div class="input-group">
-            <input type="text" name="q" class="form-control"
+            <input type="search" name="q" class="form-control" aria-label="جستجو در عنوان یا متن مقالات"
                    placeholder="جستجو در عنوان یا متن مقالات..."
                    value="<?= sanitize($search) ?>">
             <?php if ($topicSlug): ?>
@@ -127,9 +127,9 @@ require_once __DIR__ . '/../includes/header.php';
       <div class="col-md-6 col-lg-4">
         <article class="article-card h-100">
           <div class="article-card-header">
-            <span class="article-card-author">
-              <i class="bi bi-person ms-1"></i><?= sanitize($p['author_name'] ?? 'هیئت علمی') ?>
-            </span>
+            <?php if (!empty($p['author_name'])): ?>
+            <span class="article-card-author"><i class="bi bi-person ms-1"></i><?= sanitize($p['author_name']) ?></span>
+            <?php endif; ?>
             <span class="article-card-date">
               <i class="bi bi-calendar3 ms-1"></i><?= persianDate($p['published_at'] ?? $p['created_at']) ?>
             </span>
@@ -154,9 +154,7 @@ require_once __DIR__ . '/../includes/header.php';
           <?php endif; ?>
 
           <div class="article-card-footer">
-            <span class="text-muted small">
-              <i class="bi bi-clock ms-1"></i>۵ دقیقه مطالعه
-            </span>
+            <span class="badge badge-article">مقاله</span>
             <a href="<?= $pUrl ?>" class="btn-read-more">
               مطالعه مقاله <i class="bi bi-arrow-left"></i>
             </a>

@@ -187,7 +187,7 @@ Aliases kept for old bookmarks/links: `/dashboard` → `/admin`, `/login` → `/
 |---|---|---|
 | `/assets/css|js|img|fonts|vendor/…` | `router.php` (Apache serves directly when the file exists) | ETag, `Cache-Control`, range requests |
 | `/assets/images/…` | alias → `/assets/img/…` | backwards compatibility for stored settings/cached HTML |
-| `/uploads/<folder>/<file>` | `router.php` | allowlisted extensions only, `Content-Disposition: attachment` for pdf/doc/docx, range requests for A/V |
+| `/uploads/<folder>/<file>` | Apache for allowlisted image/audio/video; otherwise `router.php` | allowlisted extensions only; PDFs/DOC/DOCX are streamed with `Content-Disposition: attachment`; range requests for A/V |
 
 ### 3.5 Must stay 404 (verified by `tests/http.mjs`)
 
@@ -210,8 +210,7 @@ Aliases kept for old bookmarks/links: `/dashboard` → `/admin`, `/login` → `/
 
 ## 5. Credentials policy
 
-* Default administrator: username `admin`, password `JH@2026#Admin`
-  (`DEFAULT_ADMIN_USERNAME` / `DEFAULT_ADMIN_PASSWORD` in `config/config.php`).
+* Administrator username may default to `admin`; there is no published/default password. Installation and CLI account creation require a unique password of at least 14 characters supplied through a secure form/environment.
 * Stored **only** as `password_hash(..., PASSWORD_DEFAULT)`; the plaintext is never
   written to the database, to `config/local.php` or to a log.
 * `php/install.php` and `bin/create-admin.php` create the account when missing and

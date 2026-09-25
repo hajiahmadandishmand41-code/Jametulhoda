@@ -76,7 +76,7 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="py-5">
   <div class="container">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
+    <div class="jhd-page-heading d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
       <div>
         <span class="jhd-eyebrow">تقویم حوزه و مناسبت‌ها</span>
         <h1 class="page-title mb-1">
@@ -98,10 +98,10 @@ require_once __DIR__ . '/../includes/header.php';
     <form method="get" class="mb-4" role="search">
       <div class="row g-2 align-items-center">
         <div class="col-md-5">
-          <input type="text" name="q" class="form-control" placeholder="جستجو در رویدادها..." value="<?= sanitize($search) ?>">
+          <input type="search" name="q" class="form-control" aria-label="جستجو در رویدادها" placeholder="جستجو در رویدادها..." value="<?= sanitize($search) ?>">
         </div>
         <div class="col-md-4">
-          <select name="type" class="form-select" onchange="this.form.submit()">
+          <select name="type" class="form-select" aria-label="فیلتر نوع رویداد" onchange="this.form.submit()">
             <option value="">همه انواع برنامه‌ها</option>
             <option value="program" <?= $type === 'program' ? 'selected' : '' ?>>برنامه‌های رسمی حوزه</option>
             <option value="religious" <?= $type === 'religious' ? 'selected' : '' ?>>مناسبت‌ها و فعالیت‌های دینی</option>
