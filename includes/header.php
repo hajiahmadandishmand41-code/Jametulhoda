@@ -171,30 +171,19 @@ endif; ?>
         <div class="container">
             <ul class="jhd-nav-list mb-0">
                 <li><a href="<?= url() ?>" class="jhd-nav-link <?= $isActiveNav('/') ? 'active' : '' ?>" <?= $isActiveNav('/') ? 'aria-current="page"' : '' ?>><i class="bi bi-house-door ms-1"></i>خانه</a></li>
-                <li><a href="<?= url('news') ?>" class="jhd-nav-link <?= $isActiveNav('news') ? 'active' : '' ?>" <?= $isActiveNav('news') ? 'aria-current="page"' : '' ?>><i class="bi bi-newspaper ms-1"></i>اخبار</a></li>
-                <li><a href="<?= url('articles') ?>" class="jhd-nav-link <?= $isActiveNav('articles') || $isActiveNav('article') ? 'active' : '' ?>" <?= ($isActiveNav('articles') || $isActiveNav('article')) ? 'aria-current="page"' : '' ?>><i class="bi bi-file-text ms-1"></i>مقالات</a></li>
-                <li><a href="<?= url('reports') ?>" class="jhd-nav-link <?= $isActiveNav('reports') || $isActiveNav('report') ? 'active' : '' ?>" <?= ($isActiveNav('reports') || $isActiveNav('report')) ? 'aria-current="page"' : '' ?>><i class="bi bi-card-text ms-1"></i>گزارش‌ها</a></li>
-                <li><a href="<?= url('events') ?>" class="jhd-nav-link <?= $isActiveNav('events') || $isActiveNav('programs') ? 'active' : '' ?>" <?= ($isActiveNav('events') || $isActiveNav('programs')) ? 'aria-current="page"' : '' ?>><i class="bi bi-calendar-event ms-1"></i>رویدادها</a></li>
-                <li><a href="<?= url('books') ?>" class="jhd-nav-link <?= $isActiveNav('books') || $isActiveNav('book') ? 'active' : '' ?>" <?= ($isActiveNav('books') || $isActiveNav('book')) ? 'aria-current="page"' : '' ?>><i class="bi bi-book ms-1"></i>کتاب‌ها</a></li>
-                <li><a href="<?= url('lessons') ?>" class="jhd-nav-link <?= $isActiveNav('lessons') || $isActiveNav('lesson') ? 'active' : '' ?>" <?= ($isActiveNav('lessons') || $isActiveNav('lesson')) ? 'aria-current="page"' : '' ?>><i class="bi bi-mortarboard ms-1"></i>درس‌ها</a></li>
-                <li><a href="<?= url('research') ?>" class="jhd-nav-link <?= $isActiveNav('research') ? 'active' : '' ?>" <?= $isActiveNav('research') ? 'aria-current="page"' : '' ?>><i class="bi bi-journal-richtext ms-1"></i>پژوهش</a></li>
-                <li><a href="<?= url('media') ?>" class="jhd-nav-link <?= $isActiveNav('media') || $isActiveNav('videos') || $isActiveNav('audios') ? 'active' : '' ?>" <?= ($isActiveNav('media') || $isActiveNav('videos') || $isActiveNav('audios')) ? 'aria-current="page"' : '' ?>><i class="bi bi-play-circle ms-1"></i>رسانه</a></li>
+                <?= jhd_render_desktop_nav_item(['route'=>'news','label'=>'اخبار','icon'=>'bi-newspaper','types'=>['news']], $isActiveNav) ?>
+                <?= jhd_render_desktop_nav_item(['route'=>'articles','label'=>'مقالات','icon'=>'bi-file-text','types'=>['article']], $isActiveNav, ['article']) ?>
+                <?= jhd_render_desktop_nav_item(['route'=>'reports','label'=>'گزارش‌ها','icon'=>'bi-card-text','types'=>['report']], $isActiveNav, ['report']) ?>
+                <?= jhd_render_desktop_nav_item(['route'=>'events','label'=>'رویدادها','icon'=>'bi-calendar-event','types'=>['program','religious','announcement']], $isActiveNav, ['programs','announcements','religious-activities']) ?>
+                <?= jhd_render_desktop_nav_item(['route'=>'books','label'=>'کتاب‌ها','icon'=>'bi-book','types'=>[]], $isActiveNav, ['book']) ?>
+                <?= jhd_render_desktop_nav_item(['route'=>'lessons','label'=>'درس‌ها','icon'=>'bi-mortarboard','types'=>[]], $isActiveNav, ['lesson']) ?>
+                <?= jhd_render_desktop_nav_item(['route'=>'research','label'=>'پژوهش','icon'=>'bi-journal-richtext','types'=>['research']], $isActiveNav) ?>
+                <?= jhd_render_desktop_nav_item(['route'=>'media','label'=>'رسانه','icon'=>'bi-play-circle','types'=>[]], $isActiveNav, ['videos','audios']) ?>
                 <li class="jhd-has-sub">
                     <a href="<?= url('topics') ?>" class="jhd-nav-link <?= $isActiveNav('topics') || $isActiveNav('topic') ? 'active' : '' ?>" <?= ($isActiveNav('topics') || $isActiveNav('topic')) ? 'aria-current="page"' : '' ?> aria-haspopup="true"><i class="bi bi-diagram-3 ms-1"></i>موضوعات</a>
                     <?php if ($navTopicTree): ?>
                     <ul class="jhd-subnav" role="menu">
-                        <?php foreach ($navTopicTree as $parentTopic): ?>
-                        <li class="<?= !empty($parentTopic['children']) ? 'jhd-has-sub' : '' ?>">
-                            <a href="<?= topicUrl($parentTopic) ?>"><?= sanitize($parentTopic['name']) ?></a>
-                            <?php if (!empty($parentTopic['children'])): ?>
-                            <ul class="jhd-subnav jhd-subnav-nested">
-                                <?php foreach ($parentTopic['children'] as $childTopic): ?>
-                                <li><a href="<?= topicUrl($childTopic) ?>"><?= sanitize($childTopic['name']) ?></a></li>
-                                <?php endforeach; ?>
-                            </ul>
-                            <?php endif; ?>
-                        </li>
-                        <?php endforeach; ?>
+                        <?= jhd_render_topic_tree_nav($navTopicTree, 'desktop') ?>
                         <li class="jhd-subnav-all"><a href="<?= url('topics') ?>">همه موضوعات</a></li>
                     </ul>
                     <?php endif; ?>
@@ -236,23 +225,23 @@ endif; ?>
     <div class="jhd-drawer-body">
         <div class="drawer-section">ناوبری اصلی</div>
         <a href="<?= url() ?>" class="drawer-link <?= $isActiveNav('/') ? 'active' : '' ?>"><i class="bi bi-house"></i> خانه</a>
-        <a href="<?= url('news') ?>" class="drawer-link <?= $isActiveNav('news') ? 'active' : '' ?>"><i class="bi bi-newspaper"></i> اخبار مدرسه</a>
-        <a href="<?= url('articles') ?>" class="drawer-link <?= $isActiveNav('articles') ? 'active' : '' ?>"><i class="bi bi-file-text"></i> مقالات علمی</a>
-        <a href="<?= url('reports') ?>" class="drawer-link <?= $isActiveNav('reports') ? 'active' : '' ?>"><i class="bi bi-card-text"></i> گزارش‌ها و مناسبت‌ها</a>
-        <a href="<?= url('events') ?>" class="drawer-link <?= $isActiveNav('events') ? 'active' : '' ?>"><i class="bi bi-calendar-event"></i> رویدادها و برنامه‌ها</a>
-        <a href="<?= url('books') ?>" class="drawer-link <?= $isActiveNav('books') ? 'active' : '' ?>"><i class="bi bi-book"></i> کتابخانه دیجیتال</a>
-        <a href="<?= url('lessons') ?>" class="drawer-link <?= $isActiveNav('lessons') ? 'active' : '' ?>"><i class="bi bi-mortarboard"></i> درس‌های حوزوی</a>
-        <a href="<?= url('research') ?>" class="drawer-link <?= $isActiveNav('research') ? 'active' : '' ?>"><i class="bi bi-journal-richtext"></i> پژوهش‌ها</a>
-        <a href="<?= url('media') ?>" class="drawer-link <?= $isActiveNav('media') ? 'active' : '' ?>"><i class="bi bi-play-circle"></i> رسانه (ویدیو و صوت)</a>
-        <a href="<?= url('topics') ?>" class="drawer-link <?= $isActiveNav('topics') ? 'active' : '' ?>"><i class="bi bi-diagram-3"></i> موضوعات دینی</a>
+        <?= jhd_render_drawer_nav_item(['route'=>'news','label'=>'اخبار','icon'=>'bi-newspaper','types'=>['news']], $isActiveNav) ?>
+        <?= jhd_render_drawer_nav_item(['route'=>'articles','label'=>'مقالات','icon'=>'bi-file-text','types'=>['article']], $isActiveNav) ?>
+        <?= jhd_render_drawer_nav_item(['route'=>'reports','label'=>'گزارش‌ها','icon'=>'bi-card-text','types'=>['report']], $isActiveNav) ?>
+        <?= jhd_render_drawer_nav_item(['route'=>'events','label'=>'رویدادها','icon'=>'bi-calendar-event','types'=>['program','religious','announcement']], $isActiveNav) ?>
+        <?= jhd_render_drawer_nav_item(['route'=>'books','label'=>'کتاب‌ها','icon'=>'bi-book','types'=>[]], $isActiveNav) ?>
+        <?= jhd_render_drawer_nav_item(['route'=>'lessons','label'=>'درس‌ها','icon'=>'bi-mortarboard','types'=>[]], $isActiveNav) ?>
+        <?= jhd_render_drawer_nav_item(['route'=>'research','label'=>'پژوهش','icon'=>'bi-journal-richtext','types'=>['research']], $isActiveNav) ?>
+        <?= jhd_render_drawer_nav_item(['route'=>'media','label'=>'رسانه','icon'=>'bi-play-circle','types'=>[]], $isActiveNav) ?>
 
-        <div class="drawer-section">موضوعات منتخب</div>
-        <?php
-        $drawerTopics = getTopics(['active' => 1, 'limit' => 6]);
-        foreach ($drawerTopics as $dt): ?>
-        <a href="<?= topicUrl($dt) ?>" class="drawer-link drawer-topic depth-0"><i class="bi bi-tag"></i> <?= sanitize($dt['name']) ?></a>
-        <?php endforeach; ?>
-        <a href="<?= url('topics') ?>" class="drawer-link drawer-all"><i class="bi bi-grid-3x3-gap"></i> همه موضوعات</a>
+        <div class="drawer-section">موضوعات</div>
+        <details class="jhd-acc" <?= ($isActiveNav('topics') || $isActiveNav('topic')) ? 'open' : '' ?>>
+            <summary><i class="bi bi-diagram-3"></i> موضوعات</summary>
+            <div class="jhd-acc-body">
+                <a href="<?= url('topics') ?>" class="drawer-link drawer-all"><i class="bi bi-grid-3x3-gap"></i> همه موضوعات</a>
+                <?= jhd_render_topic_tree_nav($navTopicTree, 'drawer') ?>
+            </div>
+        </details>
 
         <div class="drawer-section">اطلاعات و تماس</div>
         <a href="<?= url('qa') ?>" class="drawer-link"><i class="bi bi-question-circle"></i> پرسش و پاسخ</a>

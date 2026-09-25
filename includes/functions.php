@@ -1397,3 +1397,7 @@ function safeRichText(?string $html): string {
 function safeExternalUrl(string $url): string {
     return preg_match('~^https://~i', $url) && filter_var($url,FILTER_VALIDATE_URL) && !preg_match('/[<>"\x00-\x20]/', $url) ? $url : '';
 }
+
+if (is_file(__DIR__ . '/cards.php')) {
+    require_once __DIR__ . '/cards.php';
+}

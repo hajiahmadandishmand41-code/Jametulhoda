@@ -102,7 +102,7 @@ document.querySelectorAll('[data-theme-toggle]').forEach(button => {
             return;
         }
         if (e.key !== 'Tab') return;
-        const focusable = [...drawer.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+        const focusable = [...drawer.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), summary, [tabindex]:not([tabindex="-1"])')]
             .filter(element => element.getClientRects().length > 0);
         if (!focusable.length) {
             e.preventDefault();

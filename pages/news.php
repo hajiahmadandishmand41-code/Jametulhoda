@@ -5,7 +5,6 @@
 $pageTitle = 'اخبار';
 $pageDesc = 'اخبار، رویدادها، اطلاعیه‌ها و گزارش‌های جاری مدرسه علمیه جامعه‌الهدی';
 require_once __DIR__ . '/../includes/header.php';
-require_once __DIR__ . '/../includes/media.php';
 
 $search = trim($_GET['q'] ?? '');
 $page   = max(1, (int)($_GET['page'] ?? 1));
@@ -18,19 +17,6 @@ if ($search) $opts['search'] = $search;
 $posts = getPosts($opts);
 $total = countPosts(array_merge(['type' => 'news'], $search ? ['search' => $search] : []));
 $pages = (int)ceil($total / $limit);
-
-// دریافت تعداد ویدیوها بدون N+1 query
-$postIds  = array_column($posts, 'id');
-$videoMap = [];
-if (!empty($postIds)) {
-    try {
-        ensureMediaTable();
-        $ph = implode(',', array_fill(0, count($postIds), '?'));
-        $vstmt = getDB()->prepare("SELECT ref_id, COUNT(*) cnt FROM media_files WHERE ref_type='post' AND kind='video' AND ref_id IN ($ph) GROUP BY ref_id");
-        $vstmt->execute($postIds);
-        foreach ($vstmt->fetchAll() as $r) $videoMap[(int)$r['ref_id']] = (int)$r['cnt'];
-    } catch (PDOException $e) {}
-}
 ?>
 
 <div class="breadcrumb-bar">
@@ -65,6 +51,7 @@ if (!empty($postIds)) {
             </div>
         </form>
 
+        <?= renderCategoryChips(['news'], url('news'), 'همه اخبار') ?>
         <?php if ($search): ?>
         <div class="alert alert-info mb-4">
             نتایج جستجو برای «<strong><?= sanitize($search) ?></strong>» — <?= number_format($total) ?> نتیجه یافت شد.
@@ -81,56 +68,14 @@ if (!empty($postIds)) {
         </div>
         <?php else: ?>
 
-        <!-- لیست اخبار -->
         <div class="row g-4">
             <?php foreach ($posts as $k => $news):
-                $nid = (int)$news['id'];
-                $hasFeatVideo = !empty($news['featured_video']);
-                $hasMediaVideo = !empty($videoMap[$nid]);
-                $hasVideo = $hasMediaVideo || $hasFeatVideo;
-                $newsUrl = postUrl($news);
-            ?>
-            <div class="col-md-6 col-lg-4">
-                <article class="news-card h-100">
-                    <div class="news-card-img-wrap position-relative">
-                        <a href="<?= $newsUrl ?>" aria-label="مشاهده خبر: <?= sanitize($news['title']) ?>">
-                            <?php if ($news['featured_image']): ?>
-                            <img src="<?= imgUrl($news['featured_image']) ?>" alt="<?= sanitize($news['title']) ?>" class="news-card-img" loading="lazy" decoding="async">
-                            <?php else: ?>
-                            <div class="news-card-img-placeholder"><i class="bi bi-newspaper"></i></div>
-                            <?php endif; ?>
-                        </a>
-                        <div class="news-card-badge"><?= postTypeBadge($news['post_type']) ?></div>
-                        <?php if ($hasVideo): ?>
-                        <span class="video-badge-card"><i class="bi bi-camera-video-fill"></i> ویدیو</span>
-                        <?php endif; ?>
-                    </div>
-                    <div class="news-card-body">
-                        <div class="news-card-meta">
-                            <span class="text-muted small"><i class="bi bi-calendar3 ms-1"></i><?= persianDate($news['published_at'] ?? $news['created_at']) ?></span>
-                            <?php if (!empty($news['cat_name'])): ?>
-                            <span class="badge bg-light text-dark border" style="font-size:.70rem"><?= sanitize($news['cat_name']) ?></span>
-                            <?php endif; ?>
-                        </div>
-                        <h2 class="news-card-title h5">
-                            <a href="<?= $newsUrl ?>"><?= sanitize($news['title']) ?></a>
-                        </h2>
-                        <?php if ($news['summary']): ?>
-                        <p class="news-card-summary"><?= sanitize(excerpt($news['summary'], 130)) ?></p>
-                        <?php endif; ?>
-                        <div class="news-card-footer">
-                            <a href="<?= $newsUrl ?>" class="btn-read-more">
-                                ادامه مطلب <i class="bi bi-arrow-left ms-1"></i>
-                            </a>
-                            <button class="btn btn-sm btn-outline-secondary py-0 px-2" title="کپی پیوند خبر"
-                                onclick="navigator.clipboard.writeText('<?= htmlspecialchars(absolute_url($newsUrl), ENT_QUOTES) ?>').then(function(){ if(window.showToast) showToast('پیوند خبر کپی شد!','success'); })">
-                                <i class="bi bi-link-45deg"></i>
-                            </button>
-                        </div>
-                    </div>
-                </article>
-            </div>
-            <?php endforeach; ?>
+                echo renderPostCard($news, [
+                    'featured' => ($k === 0 && !$search && $page === 1),
+                    'cta' => 'ادامه مطلب',
+                    'excerpt' => 130,
+                ]);
+            endforeach; ?>
         </div>
 
         <!-- صفحه‌بندی -->

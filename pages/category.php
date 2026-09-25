@@ -50,23 +50,9 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="text-center py-5"><i class="bi bi-folder display-1 text-muted opacity-25 d-block mb-3"></i><h4 class="text-muted">مطلبی یافت نشد</h4></div>
     <?php else: ?>
     <div class="row g-4">
-        <?php foreach ($posts as $p): ?>
-        <div class="col-md-6 col-lg-4">
-            <article class="news-card h-100">
-                <div class="news-card-img-wrap">
-                    <?php if ($p['featured_image']): ?><img src="<?= imgUrl($p['featured_image']) ?>" alt="<?= sanitize($p['title']) ?>" class="news-card-img" loading="lazy">
-                    <?php else: ?><div class="news-card-img-placeholder"><i class="bi bi-file-text"></i></div><?php endif; ?>
-                    <div class="news-card-badge"><?= postTypeBadge($p['post_type']) ?></div>
-                </div>
-                <div class="news-card-body">
-                    <div class="news-card-meta"><span class="text-muted small"><i class="bi bi-calendar3 ms-1"></i><?= persianDate($p['published_at'] ?? $p['created_at']) ?></span></div>
-                    <h3 class="news-card-title"><a href="<?= postUrl($p) ?>"><?= sanitize($p['title']) ?></a></h3>
-                    <?php if ($p['summary']): ?><p class="news-card-summary"><?= sanitize(excerpt($p['summary'], 120)) ?></p><?php endif; ?>
-                    <div class="news-card-footer"><a href="<?= postUrl($p) ?>" class="btn-read-more">ادامه مطلب <i class="bi bi-arrow-left"></i></a></div>
-                </div>
-            </article>
-        </div>
-        <?php endforeach; ?>
+        <?php foreach ($posts as $k => $p):
+            echo renderPostCard($p, ['featured' => $k === 0, 'cta' => 'ادامه مطلب', 'excerpt' => 120]);
+        endforeach; ?>
     </div>
     <?php if ($pages > 1): ?><div class="mt-5"><?= paginate($total, $limit, $page, categoryUrl($slug) . '?page=%d') ?></div><?php endif; ?>
     <?php endif; ?>

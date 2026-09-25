@@ -39,18 +39,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['delete'])) {
         $desc   = trim($_POST['description'] ?? '');
         $sort   = (int)($_POST['sort_order'] ?? 0);
         $editId = (int)($_POST['edit_id']    ?? 0);
+        $allowedTypes = ['all','news','article','report','research','announcement','speech','program','religious','qa'];
+        $postType = trim($_POST['post_type'] ?? 'all');
+        if (!in_array($postType, $allowedTypes, true)) $postType = 'all';
 
         if (!$name) {
             $error = 'نام دسته‌بندی الزامی است.';
         } else {
             $slug = uniqueSlug('categories', $name, $editId);
             if ($editId) {
-                $db->prepare("UPDATE categories SET name=?, slug=?, description=?, sort_order=?, updated_at=NOW() WHERE id=?")
-                   ->execute([$name, $slug, $desc, $sort, $editId]);
+                $db->prepare("UPDATE categories SET name=?, slug=?, description=?, post_type=?, sort_order=?, updated_at=NOW() WHERE id=?")
+                   ->execute([$name, $slug, $desc, $postType, $sort, $editId]);
                 $success = 'دسته‌بندی با موفقیت ویرایش شد.';
             } else {
-                $db->prepare("INSERT INTO categories (name, slug, description, sort_order) VALUES (?,?,?,?)")
-                   ->execute([$name, $slug, $desc, $sort]);
+                $db->prepare("INSERT INTO categories (name, slug, description, post_type, sort_order) VALUES (?,?,?,?,?)")
+                   ->execute([$name, $slug, $desc, $postType, $sort]);
                 $success = 'دسته‌بندی جدید با موفقیت ایجاد شد.';
             }
             redirect(siteUrl('admin/categories/'));
@@ -105,6 +108,23 @@ $cats = $db->query(
                         <textarea name="description" class="form-control" rows="3"><?= sanitize($editCat['description'] ?? '') ?></textarea>
                     </div>
                     <div class="mb-3">
+                        <label class="form-label">بخش مادر (منوی سایت)</label>
+                        <?php $curType = $editCat['post_type'] ?? 'all'; ?>
+                        <select name="post_type" class="form-select">
+                            <option value="all" <?= $curType==='all'?'selected':'' ?>>عمومی — همه بخش‌ها</option>
+                            <option value="news" <?= $curType==='news'?'selected':'' ?>>اخبار</option>
+                            <option value="article" <?= $curType==='article'?'selected':'' ?>>مقالات</option>
+                            <option value="report" <?= $curType==='report'?'selected':'' ?>>گزارش‌ها</option>
+                            <option value="research" <?= $curType==='research'?'selected':'' ?>>پژوهش</option>
+                            <option value="announcement" <?= $curType==='announcement'?'selected':'' ?>>اطلاعیه‌ها</option>
+                            <option value="speech" <?= $curType==='speech'?'selected':'' ?>>سخنرانی</option>
+                            <option value="program" <?= $curType==='program'?'selected':'' ?>>برنامه‌ها</option>
+                            <option value="religious" <?= $curType==='religious'?'selected':'' ?>>فعالیت مذهبی</option>
+                            <option value="qa" <?= $curType==='qa'?'selected':'' ?>>پرسش و پاسخ</option>
+                        </select>
+                        <div class="form-text">این دسته به‌صورت زیرمنوی همان بخش در منوی همبرگر و نوار دسکتاپ نمایش داده می‌شود.</div>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label">ترتیب نمایش</label>
                         <input type="number" name="sort_order" class="form-control" value="<?= $editCat['sort_order'] ?? 0 ?>" min="0">
                     </div>
@@ -138,6 +158,7 @@ $cats = $db->query(
                             <tr>
                                 <th>#</th>
                                 <th>نام</th>
+                                <th>بخش</th>
                                 <th>مطالب</th>
                                 <th>ترتیب</th>
                                 <th>عملیات</th>
@@ -153,6 +174,11 @@ $cats = $db->query(
                                     <div class="text-muted" style="font-size:.78rem"><?= sanitize(mb_strimwidth($cat['description'],0,50,'...')) ?></div>
                                     <?php endif; ?>
                                     <code style="font-size:.7rem;color:#666"><?= sanitize($cat['slug']) ?></code>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border">
+                                        <?= ($cat['post_type'] ?? 'all') === 'all' ? 'عمومی' : postTypeLabel((string)$cat['post_type']) ?>
+                                    </span>
                                 </td>
                                 <td>
                                     <a href="<?= siteUrl('admin/posts/?') ?>" class="badge bg-primary text-decoration-none">

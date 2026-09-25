@@ -134,7 +134,7 @@ require_once __DIR__ . '/../includes/header.php';
           $cover = $b['cover_image'] ?? '';
       ?>
       <div class="col-6 col-md-4 col-lg-3">
-        <article class="book-card h-100">
+        <article class="book-card jhd-card h-100">
           <div class="book-card-cover">
             <a href="<?= $bookUrl ?>">
               <?php if ($cover): ?>
