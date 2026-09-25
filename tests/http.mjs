@@ -49,7 +49,7 @@ r=await api.get('/admin/books/create.php');csrf=token(await r.text());
 r=await api.post('/admin/books/create.php',{multipart:{csrf_token:csrf,title:'qa-book-'+stamp,description:'کتاب آزمون',pdf_file:{name:'document.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF')}},maxRedirects:0});check('upload PDF + create book',r.status()===303,String(r.status()));
 r=await api.get('/books.php?q=qa-book-'+stamp);
 const bookHtml=await r.text();
-const bookMatch=bookHtml.match(/\/book(?:\.php)?\?(?:id=(\d+)|slug=([^"&]+))/) || bookHtml.match(/\/book\/(\d+)/) || bookHtml.match(/href="[^"]*\/book\/([^"?&]+)/);
+const bookMatch=bookHtml.match(/\/book(?:\.php)?\?(?:id=(\d+)|slug=([^"&]+))/) || bookHtml.match(/\/book\/(\d+)/) || bookHtml.match(/href="[^"]*\/book\/([^"?&]+)/) || bookHtml.match(/[?&]p=book&(?:amp;)?slug=([^"&\s]+)/) || bookHtml.match(/[?&]p=book&(?:amp;)?id=(\d+)/);
 const bookId=bookMatch?.[1] && /^\d+$/.test(bookMatch[1]) ? bookMatch[1] : null;
 const bookSlug=!bookId && (bookMatch?.[2] || bookMatch?.[1]) ? decodeURIComponent(bookMatch[2] || bookMatch[1]) : null;
 check('book linked in library',Boolean(bookId || bookSlug));

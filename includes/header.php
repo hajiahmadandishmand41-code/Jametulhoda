@@ -17,43 +17,28 @@ if (mb_strlen($metaDesc, 'UTF-8') > 160) {
     $metaDesc = mb_substr($metaDesc, 0, 157, 'UTF-8') . '...';
 }
 
-$canonicalPath = $_SERVER['JHD_ROUTE_PATH'] ?? ($_SERVER['SCRIPT_NAME'] ?? '/');
-if (!empty($canonicalOverride)) {
-    $canonicalPath = $canonicalOverride;
-}
-if (basename($canonicalPath) === 'index.php') {
-    $canonicalPath = rtrim(dirname($canonicalPath), '/') . '/';
-}
-$canonicalPath = rawurldecode($canonicalPath);
-$canonicalQuery = [];
-
-if (empty($canonicalOverride)) {
-    $routeSlug = trim($_GET['slug'] ?? '');
-    if ($routeSlug !== '' && !str_ends_with(rtrim($canonicalPath, '/'), '/' . $routeSlug)) {
-        $canonicalQuery['slug'] = $routeSlug;
-    }
-    if ((basename($_SERVER['PHP_SELF'] ?? '') === 'book.php') && !empty($_GET['id']) && !str_contains($canonicalPath, '/' . (int)$_GET['id'])) {
-        $canonicalQuery['id'] = (int)$_GET['id'];
-    }
-    foreach (['collection', 'volume'] as $collectionKey) {
-        $collectionValue = trim($_GET[$collectionKey] ?? '');
-        if ($collectionValue !== '' && !str_contains($canonicalPath, '/' . $collectionValue)) {
-            $canonicalQuery[$collectionKey] = $collectionValue;
+// Canonical URL — always the single public URL for the page, never a physical
+// file (pages/topic.php, router.php, index.php internals). Detail pages set
+// $canonicalOverride to a registry-generated URL; listings derive it from the
+// resolved route. In Query mode the canonical is the ?p=… form; in Pretty mode
+// the /path form — exactly one version, matching what url() generates.
+$responseIs404 = http_response_code() === 404;
+$canonical = '';
+if (SITE_URL && !$responseIs404) {
+    if (!empty($canonicalOverride)) {
+        $canonical = jhd_absolute_url($canonicalOverride);
+    } else {
+        $routeName = isset($_SERVER['JHD_ROUTE_NAME']) ? (string)$_SERVER['JHD_ROUTE_NAME'] : '';
+        if (JHD_PRETTY_URLS) {
+            $routePath = $_SERVER['JHD_ROUTE_PATH'] ?? current_path();
+            $canonical = jhd_absolute_url(ltrim(substr($routePath, strlen(BASE_PATH)), '/'));
+        } else {
+            $canonical = jhd_absolute_url(jhd_query_canonical($routeName));
         }
     }
-    if (!empty($_GET['q'])) {
-        $canonicalQuery['q'] = mb_substr($_GET['q'], 0, 80);
-    }
 }
-
-// Encode path segments
-$canonicalSegments = array_map(static fn($s) => $s === '' ? '' : rawurlencode($s), explode('/', $canonicalPath));
-$canonicalPath = implode('/', $canonicalSegments);
-if ($canonicalQuery) {
-    $canonicalPath .= '?' . http_build_query($canonicalQuery);
-}
-$responseIs404 = http_response_code() === 404;
-$canonical = SITE_URL && !$responseIs404 ? absolute_url(ltrim(substr($canonicalPath, strlen(BASE_PATH)), '/')) : '';
+// Search results and 404s stay out of the index (Query or Pretty spelling).
+$noindexSeo = $responseIs404 || (($_GET['p'] ?? '') === 'search') || (current_path() === '/search');
 $ogType = isset($post) || isset($book) || isset($lesson) ? 'article' : 'website';
 
 // Helper for active navigation link
@@ -72,7 +57,7 @@ $isActiveNav = function(string $route) use ($currentPath): bool {
 <meta name="csrf-token" content="<?= sanitize(generateCsrfToken()) ?>">
 <title><?= sanitize($metaTitle) ?></title>
 <meta name="description" content="<?= sanitize($metaDesc) ?>">
-<?php if ($currentPath === '/search' || $responseIs404): ?><meta name="robots" content="noindex, follow"><?php endif; ?>
+<?php if ($noindexSeo): ?><meta name="robots" content="noindex, follow"><?php endif; ?>
 <?php if ($canonical): ?>
 <link rel="canonical" href="<?= sanitize($canonical) ?>">
 <meta property="og:url" content="<?= sanitize($canonical) ?>">

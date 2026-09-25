@@ -33,34 +33,272 @@ function csrfField(): string {
 
 // ─── URL ─────────────────────────────────────────────────────────────────────
 
+/** Installation base path ('' for a domain-root install). */
+function jhd_base_path(): string {
+    return defined('BASE_PATH') ? rtrim(BASE_PATH, '/') : '';
+}
+
+/**
+ * jhd_routes() — SINGLE SOURCE OF TRUTH for every public route.
+ *
+ * All internal links are generated from this table via url() and the typed
+ * helpers (topicUrl, postUrl, articleUrl, newsUrl, reportUrl, researchUrl,
+ * bookUrl, lessonUrl, mediaUrl, ...). The Query-URL front controller
+ * (index.php / router.php) and the Pretty-URL router both resolve against the
+ * SAME controllers listed here, so no route is ever defined in two places.
+ *
+ * Per-entry fields:
+ *   file          primary controller (the listing page for listing routes, or
+ *                 the detail page for detail-only routes)
+ *   p             value of ?p= in Query mode (defaults to the route key)
+ *   pretty        pretty-URL path segment (defaults to the route key)
+ *   title         human label
+ *   listing       true → ?p=<key> with no slug/id renders `file` as a listing
+ *   detail        (array) optional detail variant used when ?p=<key> carries a
+ *                 slug/id (news & research are both a listing AND a detail):
+ *                   file, expected_type, kind, id_param
+ *                 (bool true) marks a detail-only route whose file/expected_
+ *                 type/kind/id_param live at the top level of the entry
+ *   expected_type post_type guard forwarded to pages/post.php
+ *   kind          'video'|'audio' forwarded to pages/media.php
+ *   id_param      'slug' | 'id' | 'slug_or_id' — how the pretty path carries it
+ *   get           default $_GET values applied on dispatch (e.g. media kind)
+ *   paths         extra exact pretty paths that map to this route
+ */
+function jhd_routes(): array {
+    static $table = null;
+    if ($table !== null) return $table;
+    $table = [
+        'home'   => ['file' => 'index.php', 'p' => 'home', 'pretty' => '', 'title' => 'خانه'],
+
+        // ── Listings ─────────────────────────────────────────────────────
+        'news'     => ['file' => 'pages/news.php',     'p' => 'news',     'pretty' => 'news',     'title' => 'اخبار',     'listing' => true, 'detail' => ['file' => 'pages/post.php', 'expected_type' => 'news', 'id_param' => 'slug']],
+        'articles' => ['file' => 'pages/articles.php', 'p' => 'articles', 'pretty' => 'articles', 'title' => 'مقالات',    'listing' => true],
+        'reports'  => ['file' => 'pages/reports.php',  'p' => 'reports',  'pretty' => 'reports',  'title' => 'گزارش‌ها',   'listing' => true],
+        'research' => ['file' => 'pages/research.php', 'p' => 'research', 'pretty' => 'research', 'title' => 'پژوهش',     'listing' => true, 'detail' => ['file' => 'pages/post.php', 'expected_type' => 'research', 'id_param' => 'slug']],
+        'books'    => ['file' => 'pages/books.php',    'p' => 'books',    'pretty' => 'books',    'title' => 'کتابخانه',  'listing' => true],
+        'lessons'  => ['file' => 'pages/lessons.php',  'p' => 'lessons',  'pretty' => 'lessons',  'title' => 'دروس',      'listing' => true],
+        'topics'   => ['file' => 'pages/topics.php',   'p' => 'topics',   'pretty' => 'topics',   'title' => 'موضوعات',   'listing' => true],
+        'media'    => ['file' => 'pages/media-library.php', 'p' => 'media', 'pretty' => 'media', 'title' => 'رسانه',     'listing' => true, 'paths' => ['/media-library']],
+        'videos'   => ['file' => 'pages/media-library.php', 'p' => 'videos', 'pretty' => 'videos', 'title' => 'ویدیوها', 'listing' => true, 'get' => ['kind' => 'video']],
+        'audios'   => ['file' => 'pages/media-library.php', 'p' => 'audios', 'pretty' => 'audios', 'title' => 'صوت‌ها',  'listing' => true, 'get' => ['kind' => 'audio']],
+        'speeches' => ['file' => 'pages/speeches.php', 'p' => 'speeches', 'pretty' => 'speeches', 'title' => 'سخنرانی‌ها', 'listing' => true],
+        'events'   => ['file' => 'pages/events.php',   'p' => 'events',   'pretty' => 'events',   'title' => 'رویدادها',   'listing' => true],
+        'programs' => ['file' => 'pages/programs.php', 'p' => 'programs', 'pretty' => 'programs', 'title' => 'برنامه‌ها',   'listing' => true],
+        'announcements' => ['file' => 'pages/announcements.php', 'p' => 'announcements', 'pretty' => 'announcements', 'title' => 'اطلاعیه‌ها', 'listing' => true],
+        'religious-activities' => ['file' => 'pages/religious-activities.php', 'p' => 'religious-activities', 'pretty' => 'religious-activities', 'title' => 'فعالیت مذهبی', 'listing' => true],
+        'qa'       => ['file' => 'pages/qa.php',     'p' => 'qa',     'pretty' => 'qa',     'title' => 'پرسش و پاسخ', 'listing' => true],
+        'about'    => ['file' => 'pages/about.php',  'p' => 'about',  'pretty' => 'about',  'title' => 'درباره ما',  'listing' => true],
+        'contact'  => ['file' => 'pages/contact.php','p' => 'contact','pretty' => 'contact','title' => 'تماس با ما', 'listing' => true],
+        'search'   => ['file' => 'pages/search.php', 'p' => 'search', 'pretty' => 'search', 'title' => 'جستجو',      'listing' => true],
+
+        // ── Detail-only routes ───────────────────────────────────────────
+        'article'  => ['file' => 'pages/post.php',   'p' => 'article',  'pretty' => 'article',  'title' => 'مقاله',   'expected_type' => 'article', 'id_param' => 'slug', 'detail' => true],
+        'report'   => ['file' => 'pages/post.php',   'p' => 'report',   'pretty' => 'report',   'title' => 'گزارش',   'expected_type' => 'report',  'id_param' => 'slug', 'detail' => true],
+        'event'    => ['file' => 'pages/post.php',   'p' => 'event',    'pretty' => 'event',    'title' => 'رویداد',   'expected_type' => 'event',   'id_param' => 'slug', 'detail' => true],
+        'post'     => ['file' => 'pages/post.php',   'p' => 'post',     'pretty' => 'post',     'title' => 'مطلب',    'id_param' => 'slug', 'detail' => true],
+        'book'     => ['file' => 'pages/book.php',   'p' => 'book',     'pretty' => 'book',     'title' => 'کتاب',    'id_param' => 'slug_or_id', 'detail' => true],
+        'lesson'   => ['file' => 'pages/lesson.php', 'p' => 'lesson',   'pretty' => 'lesson',   'title' => 'درس',     'id_param' => 'slug', 'detail' => true],
+        'topic'    => ['file' => 'pages/topic.php',  'p' => 'topic',    'pretty' => 'topic',    'title' => 'موضوع',   'id_param' => 'slug', 'detail' => true],
+        'category' => ['file' => 'pages/category.php','p' => 'category','pretty' => 'category','title' => 'دسته‌بندی', 'id_param' => 'slug', 'detail' => true],
+        'speech'   => ['file' => 'pages/speech.php', 'p' => 'speech',   'pretty' => 'speech',   'title' => 'سخنرانی', 'id_param' => 'slug', 'detail' => true],
+        'video'    => ['file' => 'pages/media.php',  'p' => 'video',    'pretty' => 'video',    'title' => 'ویدیو',   'kind' => 'video', 'id_param' => 'id', 'detail' => true],
+        'audio'    => ['file' => 'pages/media.php',  'p' => 'audio',    'pretty' => 'audio',    'title' => 'صوت',     'kind' => 'audio', 'id_param' => 'id', 'detail' => true],
+    ];
+    return $table;
+}
+
+function jhd_route_meta(string $route, ?string $key = null, $default = null) {
+    $meta = jhd_routes()[$route] ?? null;
+    if ($meta === null) return $default;
+    if ($key === null) return $meta;
+    return $meta[$key] ?? $default;
+}
+
+function jhd_route_exists(string $route): bool {
+    return isset(jhd_routes()[$route]);
+}
+
+/** True when a route renders a detail controller (carries a slug/id). */
+function jhd_is_detail_route(array $meta): bool {
+    return isset($meta['detail']) || isset($meta['id_param']);
+}
+
+/**
+ * Logical pretty-style path for a route + request params (e.g. /topic/x,
+ * /video/5, /news). Used for current_path(), active navigation and canonical
+ * regardless of the active URL mode.
+ */
+function jhd_route_path(string $route, array $get): string {
+    if ($route === '' || $route === 'home') return '/';
+    $meta = jhd_routes()[$route] ?? null;
+    if ($meta === null) return '/' . $route;
+    $path = '/' . ($meta['pretty'] ?? $route);
+    if (jhd_is_detail_route($meta)) {
+        if (!empty($get['slug']) && is_string($get['slug'])) {
+            $path .= '/' . rawurldecode($get['slug']);
+        } elseif (!empty($get['id'])) {
+            $path .= '/' . (int)$get['id'];
+        }
+    }
+    return $path;
+}
+
+/**
+ * Reverse lookup: the route name whose pretty path matches a resolved path.
+ * Lets the Pretty router publish the same logical route (and therefore the
+ * same Query-mode canonical / navigation state) as the Query front controller.
+ */
+function jhd_route_name_for_path(string $path): ?string {
+    $path = '/' . trim($path, '/');
+    if ($path === '/' || $path === '') return 'home';
+    foreach (jhd_routes() as $name => $meta) {
+        $pretty = '/' . trim((string)($meta['pretty'] ?? $name), '/');
+        if ($pretty !== '/' && $path === $pretty) return $name;
+        foreach (($meta['paths'] ?? []) as $alias) {
+            if ($path === rtrim((string)$alias, '/')) return $name;
+        }
+        // Detail spelling: /<pretty>/<slug|id> (and the legacy plural /articles/X).
+        if (jhd_is_detail_route($meta) && $pretty !== '/' && str_starts_with($path, $pretty . '/')) {
+            return $name;
+        }
+        if ($name === 'article' && str_starts_with($path, '/articles/')) return 'article';
+    }
+    return null;
+}
+
+/**
+ * Resolve a Query-URL (?p=<route>) into a controller dispatch descriptor.
+ * Returns null for an unknown route (→ real 404, never a soft-404/home).
+ *
+ * @return array{file:string,route:string,get:array,expected_type?:string,kind?:string}|null
+ */
+function jhd_resolve_query(string $p, array $get): ?array {
+    $routes = jhd_routes();
+    if (!isset($routes[$p])) return null;
+    $r = $routes[$p];
+    $hasId = (isset($get['slug']) && (string)$get['slug'] !== '')
+        || (isset($get['id']) && (int)$get['id'] > 0);
+
+    $detail = $r['detail'] ?? null;
+
+    // Detail-only route → always its detail controller.
+    if ($detail === true) {
+        $out = ['file' => $r['file'], 'route' => $p, 'get' => $r['get'] ?? []];
+        if (!empty($r['expected_type'])) $out['expected_type'] = $r['expected_type'];
+        if (!empty($r['kind'])) $out['kind'] = $r['kind'];
+        return $out;
+    }
+
+    // Listing route with an optional detail (news / research): id → detail.
+    if (is_array($detail) && $hasId) {
+        $out = ['file' => $detail['file'], 'route' => $p, 'get' => $r['get'] ?? []];
+        if (!empty($detail['expected_type'])) $out['expected_type'] = $detail['expected_type'];
+        if (!empty($detail['kind'])) $out['kind'] = $detail['kind'];
+        return $out;
+    }
+
+    // Plain listing / static page.
+    return ['file' => $r['file'], 'route' => $p, 'get' => $r['get'] ?? []];
+}
+
 /**
  * Central URL helper for the entire application.
- * Safely resolves root or subdirectory paths and handles query strings.
+ *
+ * Query mode (JHD_PRETTY_URLS = false, the InfinityFree-safe default):
+ *   url('news')                  → index.php?p=news
+ *   url('topic', ['slug'=>'x'])  → index.php?p=topic&slug=x
+ *   url('video', ['id'=>5])      → index.php?p=video&id=5
+ * Pretty mode (JHD_PRETTY_URLS = true):
+ *   url('news')                  → /news
+ *   url('topic', ['slug'=>'x'])  → /topic/x
+ *   url('video', ['id'=>5])      → /video/5
+ *
+ * Admin panel, auth, installer, sitemap/robots and any asset/upload/literal
+ * file path always render as a plain path (they resolve through the router or
+ * as a physical file) and never use ?p=.
  */
-function url(string $path = '', array $query = []): string {
-    if (preg_match('~^https?://~i', $path)) {
-        if (filter_var($path, FILTER_VALIDATE_URL)) {
+function url(string $route = '', array $query = []): string {
+    if (preg_match('~^https?://~i', $route)) {
+        if (filter_var($route, FILTER_VALIDATE_URL)) {
             if (!empty($query)) {
-                $separator = str_contains($path, '?') ? '&' : '?';
-                return $path . $separator . http_build_query($query);
+                $separator = str_contains($route, '?') ? '&' : '?';
+                return $route . $separator . http_build_query($query);
             }
-            return $path;
+            return $route;
         }
         return '';
     }
-    if (preg_match('~^(?:[a-z][a-z0-9+.-]*:|//)~i', $path) || str_contains($path, "\r") || str_contains($path, "\n")) {
+    if (preg_match('~^(?:[a-z][a-z0-9+.-]*:|//)~i', $route) || str_contains($route, "\r") || str_contains($route, "\n")) {
         return '';
     }
-    $cleanPath = ltrim(str_replace(['"', "'", '<', '>'], ['%22','%27','%3C','%3E'], $path), '/');
-    $base = defined('BASE_PATH') ? rtrim(BASE_PATH, '/') : '';
-    $result = $base . '/' . $cleanPath;
-    if ($cleanPath === '' && $base === '') {
-        $result = '/';
+
+    $base = jhd_base_path();
+
+    // Support an inline query string in the first argument (url('lessons?q=x')).
+    if (str_contains($route, '?')) {
+        [$route, $inlineQs] = explode('?', $route, 2);
+        parse_str($inlineQs, $inline);
+        if (is_array($inline) && $inline) $query = array_merge($inline, $query);
     }
-    if (!empty($query)) {
-        $separator = str_contains($result, '?') ? '&' : '?';
-        $result .= $separator . http_build_query($query);
+
+    // Home.
+    if ($route === '' || $route === '/' || $route === 'home') {
+        return JHD_PRETTY_URLS ? ($base ?: '') . '/' : 'index.php';
     }
+
+    // Auth aliases → physical admin paths.
+    $loginMap = ['login' => 'admin/login', 'logout' => 'admin/logout'];
+    if (isset($loginMap[$route])) $route = $loginMap[$route];
+
+    // Path-form routes: admin panel, installer and any literal file/asset path.
+    if (
+        $route === 'admin' || str_starts_with($route, 'admin/') || $route === 'install'
+        || preg_match('~\.[a-z0-9]{1,6}$~i', $route)
+        || str_starts_with($route, 'assets/') || str_starts_with($route, 'uploads/')
+    ) {
+        $result = $base . '/' . ltrim($route, '/');
+        if (!empty($query)) $result .= (str_contains($result, '?') ? '&' : '?') . http_build_query($query);
+        return $result;
+    }
+
+    // Legacy "route/slug" call style → split into route + slug/id param.
+    $segments = explode('/', trim($route, '/'));
+    $name = $segments[0];
+    $embedded = $segments[1] ?? null;
+    if ($embedded !== null && $embedded !== '' && !isset($query['slug']) && !isset($query['id'])) {
+        if (ctype_digit($embedded)) $query['id'] = $embedded;
+        else $query['slug'] = $embedded;
+    }
+
+    $meta = jhd_routes()[$name] ?? null;
+    if ($meta === null) {
+        // Unknown route → plain path fallback (backward compatible).
+        $result = $base . '/' . ltrim($route, '/');
+        if (!empty($query)) $result .= (str_contains($result, '?') ? '&' : '?') . http_build_query($query);
+        return $result;
+    }
+
+    $p = $meta['p'] ?? $name;
+
+    if (!JHD_PRETTY_URLS) {
+        $q = ['p' => $p] + $query;
+        return 'index.php?' . http_build_query($q);
+    }
+
+    // Pretty mode.
+    $path = $meta['pretty'] ?? $name;
+    if (jhd_is_detail_route($meta)) {
+        if (isset($query['slug']) && (string)$query['slug'] !== '') {
+            $path .= '/' . rawurlencode((string)$query['slug']);
+            unset($query['slug']);
+        } elseif (isset($query['id']) && (int)$query['id'] > 0) {
+            $path .= '/' . (int)$query['id'];
+            unset($query['id']);
+        }
+    }
+    $result = $base . '/' . $path;
+    if (!empty($query)) $result .= '?' . http_build_query($query);
     return $result;
 }
 
@@ -84,12 +322,29 @@ function asset(string $path): string {
 
 /**
  * Generate full absolute canonical URL including protocol and host.
+ *
+ * Accepts either a plain route/path (runs it through url()) or an
+ * already-generated relative URL (contains '?' or starts with index.php) which
+ * is prefixed as-is, so a Query-mode canonical stays a single stable URL.
  */
 function absolute_url(string $path = '', array $query = []): string {
-    $relative = url($path, $query);
-    if (preg_match('~^https?://~i', $relative)) {
-        return $relative;
+    $looksGenerated = preg_match('~^https?://~i', $path)
+        || str_contains($path, '?')
+        || str_starts_with($path, 'index.php');
+    if ($looksGenerated) {
+        $relative = $path;
+        if (!empty($query)) {
+            $separator = str_contains($path, '?') ? '&' : '?';
+            $relative = $path . $separator . http_build_query($query);
+        }
+        return jhd_absolute_url($relative);
     }
+    return jhd_absolute_url(url($path, $query));
+}
+
+/** Prefix a site-relative URL with the configured origin (no url() re-entry). */
+function jhd_absolute_url(string $relative): string {
+    if (preg_match('~^https?://~i', $relative)) return $relative;
     $host = '';
     if (defined('SITE_URL') && SITE_URL) {
         $host = rtrim(SITE_URL, '/');
@@ -97,34 +352,61 @@ function absolute_url(string $path = '', array $query = []): string {
             $host = substr($host, 0, -strlen(BASE_PATH));
         }
     } else {
-        $proto = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['SERVER_PORT'] ?? '') == 443) ? 'https://' : 'http://';
+        $proto = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['SERVER_PORT'] ?? '') == 443)) ? 'https://' : 'http://';
         $httpHost = $_SERVER['HTTP_HOST'] ?? 'jametulhoda.gt.tc';
         $host = $proto . $httpHost;
     }
-    return $host . '/' . ltrim($relative, '/');
+    $rel = ltrim($relative, '/');
+    return $rel === '' ? $host . '/' : $host . '/' . $rel;
+}
+
+/** Canonical Query-mode URL for a resolved route (used when no page override). */
+function jhd_query_canonical(string $routeName): string {
+    if ($routeName === '' || $routeName === 'home') return '/';
+    $params = [];
+    foreach (['slug', 'id', 'kind', 'collection', 'volume'] as $k) {
+        if (!empty($_GET[$k]) && is_string($_GET[$k])) $params[$k] = $_GET[$k];
+    }
+    return url($routeName, $params);
 }
 
 /**
  * Return current normalized route path without query string and without BASE_PATH.
+ * Prefers the logical route path resolved by the front controller
+ * ($_SERVER['JHD_ROUTE_PATH']) so navigation, canonical and active-state behave
+ * identically in Query and Pretty URL modes; falls back to ?p= then the raw
+ * request path (physical .php access, admin, assets).
  */
 function current_path(): string {
+    if (!empty($_SERVER['JHD_ROUTE_PATH']) && is_string($_SERVER['JHD_ROUTE_PATH'])) {
+        $path = $_SERVER['JHD_ROUTE_PATH'];
+        if (defined('BASE_PATH') && BASE_PATH !== '') {
+            if ($path === BASE_PATH) return '/';
+            if (str_starts_with($path, BASE_PATH . '/')) $path = substr($path, strlen(BASE_PATH));
+        }
+        return '/' . ltrim($path, '/');
+    }
+    $p = (isset($_GET['p']) && is_string($_GET['p'])) ? trim($_GET['p']) : '';
+    if ($p !== '' && jhd_route_exists($p)) {
+        return jhd_route_path($p, $_GET);
+    }
     $path = rawurldecode(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/');
     if (defined('BASE_PATH') && BASE_PATH !== '') {
         if ($path === BASE_PATH) return '/';
-        if (str_starts_with($path, BASE_PATH . '/')) {
-            $path = substr($path, strlen(BASE_PATH));
-        }
+        if (str_starts_with($path, BASE_PATH . '/')) $path = substr($path, strlen(BASE_PATH));
     }
     return '/' . ltrim($path, '/');
 }
 
 function redirect(string $url): void {
     if (strpbrk($url, "\r\n") !== false) throw new InvalidArgumentException('Unsafe redirect');
-    $base = defined('BASE_PATH') ? rtrim(BASE_PATH, '/') : '';
     $siteUrl = defined('SITE_URL') ? rtrim(SITE_URL, '/') : '';
-    $isRelative = str_starts_with($url, $base . '/') || $url === ($base ?: '/');
     $isSite = $siteUrl !== '' && (str_starts_with($url, $siteUrl . '/') || $url === $siteUrl);
-    if ((!$isRelative && !$isSite) || str_starts_with($url, '//')) {
+    // Any URL without a scheme and not protocol-relative is a safe same-origin
+    // relative redirect (covers Query-mode links like "index.php?p=...").
+    $hasScheme = (bool)preg_match('~^[a-z][a-z0-9+.-]*:~i', $url) || str_starts_with($url, '//');
+    $isRelative = !$hasScheme;
+    if (!$isRelative && !$isSite) {
         throw new InvalidArgumentException('Unsafe redirect');
     }
     header('Location: ' . $url, true, ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' ? 303 : 302);
@@ -136,15 +418,16 @@ function currentUrl(): string {
 }
 
 // ─── Canonical detail URLs ──────────────────────────────────────────────
-// Single source for link generation. Every helper returns a pretty URL that
-// is registered in config/routes.php. Legacy query-style URLs
-// (/post?slug=X, /book?id=N, ...) keep working forever for bookmarks and
+// Single source for link generation. Every helper delegates to url() and the
+// central jhd_routes() registry, so the SAME URL is produced in Query mode
+// (index.php?p=topic&slug=x) and Pretty mode (/topic/x). Legacy query-style
+// URLs (/post?slug=X, /book?id=N, ...) keep working forever for bookmarks and
 // indexed links, but new links must use these helpers.
-/** Detail URL for a post row (typed: /article/X, /news/X, /research/X, /report/X, /speech/X, else /post/X). */
+/** Detail URL for a post row (typed: /article/X, /news/X, /research/X, /report/X, /speech/X, /event/X, else /post/X). */
 function postUrl(array|string $post, string $fallbackType = 'post'): string {
     if (is_string($post)) {
         if ($post === '') return url('articles');
-        return url($fallbackType . '/' . rawurlencode($post));
+        return url($fallbackType, ['slug' => $post]);
     }
     $slug = $post['slug'] ?? '';
     if ($slug === '') return url('articles');
@@ -157,52 +440,72 @@ function postUrl(array|string $post, string $fallbackType = 'post'): string {
         'program', 'religious', 'announcement' => 'event',
         default => 'post',
     };
-    return url($prefix . '/' . rawurlencode($slug));
+    return url($prefix, ['slug' => $slug]);
+}
+/** Detail URL for a news row (/news/X). */
+function newsUrl(array|string $post): string {
+    $slug = is_array($post) ? ($post['slug'] ?? '') : $post;
+    return $slug !== '' ? url('news', ['slug' => $slug]) : url('news');
+}
+/** Detail URL for an article row (/article/X). */
+function articleUrl(array|string $post): string {
+    $slug = is_array($post) ? ($post['slug'] ?? '') : $post;
+    return $slug !== '' ? url('article', ['slug' => $slug]) : url('articles');
+}
+/** Detail URL for a report row (/report/X). */
+function reportUrl(array|string $post): string {
+    $slug = is_array($post) ? ($post['slug'] ?? '') : $post;
+    return $slug !== '' ? url('report', ['slug' => $slug]) : url('reports');
+}
+/** Detail URL for a research row (/research/X). */
+function researchUrl(array|string $post): string {
+    $slug = is_array($post) ? ($post['slug'] ?? '') : $post;
+    return $slug !== '' ? url('research', ['slug' => $slug]) : url('research');
 }
 /** Detail URL for a speech row (/speech/X). */
 function speechUrl(array|string $speech): string {
     $slug = is_array($speech) ? ($speech['slug'] ?? '') : $speech;
     if ($slug === '') return url('speeches');
-    return url('speech/' . rawurlencode($slug));
+    return url('speech', ['slug' => $slug]);
 }
 /** Detail URL for a book row (/book/slug, or /book/id when it has no slug). */
 function bookUrl(array $book): string {
     $slug = trim($book['slug'] ?? '');
-    if ($slug !== '') return url('book/' . rawurlencode($slug));
-    return url('book/' . (int)($book['id'] ?? 0));
+    if ($slug !== '') return url('book', ['slug' => $slug]);
+    return url('book', ['id' => (int)($book['id'] ?? 0)]);
 }
 /** Detail URL for a lesson row (/lesson/X). */
 function lessonUrl(array|string $lesson): string {
     $slug = is_array($lesson) ? ($lesson['slug'] ?? '') : $lesson;
     if ($slug === '') return url('lessons');
-    return url('lesson/' . rawurlencode($slug));
+    return url('lesson', ['slug' => $slug]);
 }
 /** Detail URL for a topic row (/topic/X). */
 function topicUrl(array|string $topic): string {
     $slug = is_array($topic) ? ($topic['slug'] ?? '') : $topic;
     if ($slug === '') return url('topics');
-    return url('topic/' . rawurlencode($slug));
+    return url('topic', ['slug' => $slug]);
 }
 /** Detail URL for a category row (/category/X). */
 function categoryUrl(array|string $category): string {
     $slug = is_array($category) ? ($category['slug'] ?? '') : $category;
     if ($slug === '') return url();
-    return url('category/' . rawurlencode($slug));
+    return url('category', ['slug' => $slug]);
 }
 /** URL for a lesson collection, optionally with a volume (/lessons/X[/Y]). */
 function collectionUrl(array|string $collection, array|string|null $volume = null): string {
     $slug = is_array($collection) ? ($collection['slug'] ?? '') : $collection;
     if ($slug === '') return url('lessons');
-    $path = 'lessons/' . rawurlencode($slug);
+    $query = ['collection' => $slug];
     $volumeSlug = $volume === null ? '' : (is_array($volume) ? ($volume['slug'] ?? '') : $volume);
-    if ($volumeSlug !== '') $path .= '/' . rawurlencode($volumeSlug);
-    return url($path);
+    if ($volumeSlug !== '') $query['volume'] = $volumeSlug;
+    return url('lessons', $query);
 }
 /** Detail URL for a media_files record (/video/{id} or /audio/{id}). */
 function mediaUrl(string $kind, int $id): string {
     $kind = $kind === 'audio' ? 'audio' : 'video';
     if ($id < 1) return url($kind === 'audio' ? 'audios' : 'videos');
-    return url($kind . '/' . $id);
+    return url($kind, ['id' => $id]);
 }
 
 // ─── Slug ─────────────────────────────────────────────────────────────────────
@@ -702,6 +1005,8 @@ function paginate(int $total, int $limit, int $current, string $urlPattern): str
      */
     $pageUrl = static function (int $number) use ($urlPattern): string {
         if (str_contains($urlPattern, '%d')) return str_replace('%d', (string)$number, $urlPattern);
+        // url()'s http_build_query percent-encodes the literal placeholder to %25d.
+        if (str_contains($urlPattern, '%25d')) return str_replace('%25d', (string)$number, $urlPattern);
         try { return sprintf($urlPattern, $number); } catch (Throwable) { return $urlPattern; }
     };
     $html  = '<nav aria-label="صفحه‌بندی"><ul class="pagination justify-content-center flex-wrap">';

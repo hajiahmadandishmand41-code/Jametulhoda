@@ -8,6 +8,10 @@
  *   ۳) ۴۰۴ برای هر چیز دیگر (هیچ فایل PHP دیگری از بیرون قابل اجرا نیست)
  */
 require_once __DIR__ . '/config/config.php';
+// Routing helpers (jhd_routes / jhd_resolve_query / url …) live in functions.php;
+// loading it here is side-effect free (functions only, lazy DB) and lets the
+// router resolve Query and Pretty URLs from one shared registry.
+require_once __DIR__ . '/includes/functions.php';
 
 if (env_value('VERCEL') && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 4 * 1024 * 1024) {
     http_response_code(413);
@@ -307,32 +311,50 @@ if (UPLOAD_STORAGE === 'local' && preg_match('~^/uploads/(?:[a-zA-Z0-9_-]+/)+[a-
 
 // ─── ۲) مسیرهای دقیق و الگوهای پویا ─────────────────────────────────────────
 $definition = require __DIR__ . '/config/routes.php';
-$table = jhdRouteTable($definition['routes'], $definition['aliases']);
-$entry = $table[$path] ?? null;
 
-if ($entry === null) {
-    foreach ($definition['patterns'] as [$pattern, $script, $params]) {
-        if (!preg_match($pattern, $path, $matches)) continue;
-        // `pages/$1.php` — only fixed alternations are captured into the script name.
-        $script = preg_replace_callback('/\$(\d+)/', static fn($m) => $matches[(int)$m[1]] ?? '', $script);
-        foreach ($params as $key => $index) {
-            if (is_int($index)) {
-                if (($matches[$index] ?? '') !== '') $_GET[$key] = $matches[$index];
-            } else {
-                $_GET[$key] = $index;
+// Query-URL mode (index.php?p=news / ?p=topic&slug=x) is resolved first and
+// independently of mod_rewrite: a shared host that cannot rewrite URLs still
+// serves every page because links are generated as ?p=… by url(). Unknown ?p=
+// values fall through to a real 404 (never a soft-404 or the homepage).
+$queryRoute = (isset($_GET['p']) && is_string($_GET['p'])) ? trim($_GET['p']) : '';
+$resolved = null;
+if ($queryRoute !== '') {
+    $resolved = jhd_resolve_query($queryRoute, $_GET);
+    if ($resolved === null) jhdNotFound();
+    $routeName = $queryRoute;
+    foreach ($resolved['get'] as $k => $v) $_GET[$k] ??= $v;
+    if (!empty($resolved['expected_type'])) $_GET['expected_type'] = $resolved['expected_type'];
+    if (!empty($resolved['kind'])) $_GET['kind'] = $resolved['kind'];
+    $target = $resolved['file'];
+} else {
+    $table = jhdRouteTable($definition['routes'], $definition['aliases']);
+    $entry = $table[$path] ?? null;
+
+    if ($entry === null) {
+        foreach ($definition['patterns'] as [$pattern, $script, $params]) {
+            if (!preg_match($pattern, $path, $matches)) continue;
+            // `pages/$1.php` — only fixed alternations are captured into the script name.
+            $script = preg_replace_callback('/\$(\d+)/', static fn($m) => $matches[(int)$m[1]] ?? '', $script);
+            foreach ($params as $key => $index) {
+                if (is_int($index)) {
+                    if (($matches[$index] ?? '') !== '') $_GET[$key] = $matches[$index];
+                } else {
+                    $_GET[$key] = $index;
+                }
             }
+            // Dynamic routes accept a trailing slash, but expose one stable canonical path.
+            $canonicalPath = '/' . trim($path, '/');
+            $entry = ['file' => $script, 'canonical' => $canonicalPath];
+            break;
         }
-        // Dynamic routes accept a trailing slash, but expose one stable canonical path.
-        $canonicalPath = '/' . trim($path, '/');
-        $entry = ['file' => $script, 'canonical' => $canonicalPath];
-        break;
     }
+
+    if ($entry === null) jhdNotFound();
+    foreach ($entry['get'] ?? [] as $key => $value) $_GET[$key] ??= $value;
+
+    $target = $entry['file'];
+    $routeName = jhd_route_name_for_path($entry['canonical']);
 }
-
-if ($entry === null) jhdNotFound();
-foreach ($entry['get'] ?? [] as $key => $value) $_GET[$key] ??= $value;
-
-$target = $entry['file'];
 $file = realpath(__DIR__ . '/' . $target);
 if ($file === false || !str_starts_with($file, realpath(__DIR__) . DIRECTORY_SEPARATOR) || !is_file($file)) {
     jhdNotFound();
@@ -340,7 +362,16 @@ if ($file === false || !str_starts_with($file, realpath(__DIR__) . DIRECTORY_SEP
 
 $_SERVER['SCRIPT_NAME'] = BASE_PATH . '/' . $target;
 $_SERVER['PHP_SELF'] = $_SERVER['SCRIPT_NAME'];
-$_SERVER['JHD_ROUTE_PATH'] = BASE_PATH . $entry['canonical'];
+// Publish the logical route so current_path(), navigation and canonical behave
+// identically in Query and Pretty modes. Fall back to the resolved path when a
+// legacy spelling has no registry route name.
+$routeName = $routeName ?? null;
+if ($routeName !== null && jhd_route_exists($routeName)) {
+    $_SERVER['JHD_ROUTE_NAME'] = $routeName;
+    $_SERVER['JHD_ROUTE_PATH'] = BASE_PATH . jhd_route_path($routeName, $_GET);
+} else {
+    $_SERVER['JHD_ROUTE_PATH'] = BASE_PATH . ($entry['canonical'] ?? ('/' . ltrim($path, '/')));
+}
 
 require $file;
 exit;

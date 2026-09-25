@@ -12,104 +12,97 @@ if (BASE_PATH !== '' && !str_ends_with($__sitemapBase, BASE_PATH)) {
 header('Content-Type: application/xml; charset=utf-8');
 header('Cache-Control: public, max-age=900');
 
-// نشانی‌های تمیز و استاندارد نقشه سایت
-$paths = [
-    ''                      => '',
-    'news'                  => 'news',
-    'articles'              => 'articles',
-    'reports'               => 'reports',
-    'events'                => 'events',
-    'books'                 => 'books',
-    'lessons'               => 'lessons',
-    'research'              => 'research',
-    'media'                 => 'media',
-    'topics'                => 'topics',
-    'about'                 => 'about',
-    'contact'               => 'contact',
-    'speeches'              => 'speeches',
-    'announcements'         => 'announcements',
-    'programs'              => 'programs',
-    'religious-activities'  => 'religious-activities',
-    'videos'                => 'videos',
-    'audios'                => 'audios',
-    'qa'                    => 'qa',
-];
+/**
+ * Sitemap entries are built from the central route registry so every <loc>
+ * matches the site's active URL mode: index.php?p=… in Query mode (works with
+ * or without mod_rewrite) or the /pretty/path form in Pretty mode. This keeps
+ * the sitemap crawlable on InfinityFree where pretty URLs are not guaranteed.
+ */
+$entries = [];
+$add = static function (string $route, array $params, string $priority) use (&$entries): void {
+    $entries[] = ['route' => $route, 'params' => $params, 'priority' => $priority];
+};
+
+$add('', [], '1.0');
+foreach ([
+    'news', 'articles', 'reports', 'events', 'books', 'lessons', 'research',
+    'media', 'topics', 'about', 'contact', 'speeches', 'announcements',
+    'programs', 'religious-activities', 'videos', 'audios', 'qa',
+] as $listing) {
+    $add($listing, [], '0.7');
+}
 
 $db = getDB();
 // Topics
 try {
-    foreach ($db->query("SELECT slug, updated_at FROM topics WHERE is_active=1 ORDER BY id LIMIT 10000") as $row) {
-        $paths['topic:' . $row['slug']] = 'topic/' . rawurlencode($row['slug']);
+    foreach ($db->query("SELECT slug FROM topics WHERE is_active=1 ORDER BY id LIMIT 10000") as $row) {
+        $add('topic', ['slug' => $row['slug']], '0.9');
     }
 } catch (Exception $e) {}
 
-// Posts with typed URLs (same canonical logic as postUrl())
+// Posts with typed detail URLs (same canonical logic as postUrl()).
 try {
-    foreach ($db->query("SELECT slug, post_type, updated_at FROM posts WHERE status='published' ORDER BY id LIMIT 10000") as $row) {
-        $prefix = match($row['post_type']) {
-            'article' => 'article/',
-            'news'    => 'news/',
-            'research'=> 'research/',
-            'report'  => 'report/',
-            'speech'  => 'speech/',
-            'program', 'religious', 'announcement' => 'event/',
-            default   => 'post/',
+    foreach ($db->query("SELECT slug, post_type FROM posts WHERE status='published' ORDER BY id LIMIT 10000") as $row) {
+        $route = match ($row['post_type']) {
+            'article' => 'article',
+            'news' => 'news',
+            'research' => 'research',
+            'report' => 'report',
+            'speech' => 'speech',
+            'program', 'religious', 'announcement' => 'event',
+            default => 'post',
         };
-        $paths['post:' . $row['slug']] = $prefix . rawurlencode($row['slug']);
+        $add($route, ['slug' => $row['slug']], '0.8');
     }
 } catch (Exception $e) {}
 
-// Media detail pages (/video/{id}, /audio/{id})
+// Media detail pages (/video/{id}, /audio/{id}).
 try {
     foreach ($db->query("SELECT m.id, m.kind FROM media_files m LEFT JOIN posts p ON p.id=m.ref_id AND m.ref_type='post' LEFT JOIN lessons l ON l.id=m.ref_id AND m.ref_type='lesson' WHERE (p.status='published' OR l.status='published') ORDER BY m.id LIMIT 10000") as $row) {
-        $paths['media:' . $row['id']] = ($row['kind'] === 'audio' ? 'audio/' : 'video/') . (int)$row['id'];
+        $add($row['kind'] === 'audio' ? 'audio' : 'video', ['id' => (int)$row['id']], '0.6');
     }
 } catch (Exception $e) {}
 
 // Lessons
 try {
-    foreach ($db->query("SELECT slug, updated_at FROM lessons WHERE status='published' ORDER BY id LIMIT 10000") as $row) {
-        $paths['lesson:' . $row['slug']] = 'lesson/' . rawurlencode($row['slug']);
+    foreach ($db->query("SELECT slug FROM lessons WHERE status='published' ORDER BY id LIMIT 10000") as $row) {
+        $add('lesson', ['slug' => $row['slug']], '0.8');
     }
 } catch (Exception $e) {}
 
 // Lesson collections
 try {
     foreach ($db->query("SELECT slug FROM lesson_collections WHERE is_active=1 LIMIT 1000") as $row) {
-        $paths['coll:' . $row['slug']] = 'lessons/' . rawurlencode($row['slug']);
+        $add('lessons', ['collection' => $row['slug']], '0.6');
     }
 } catch (Exception $e) {}
 
 // Books
 try {
-    foreach ($db->query("SELECT id, slug, updated_at FROM books WHERE status='published' ORDER BY id LIMIT 10000") as $row) {
+    foreach ($db->query("SELECT id, slug FROM books WHERE status='published' ORDER BY id LIMIT 10000") as $row) {
         $slug = trim($row['slug'] ?? '');
-        $paths['book:' . $row['id']] = $slug ? 'book/' . rawurlencode($slug) : 'book/' . (int)$row['id'];
+        $add('book', $slug !== '' ? ['slug' => $slug] : ['id' => (int)$row['id']], '0.7');
     }
 } catch (Exception $e) {}
 
 // Categories
 try {
     foreach (getCategories() as $row) {
-        $paths['cat:' . $row['slug']] = 'category/' . rawurlencode($row['slug']);
+        $add('category', ['slug' => $row['slug']], '0.6');
     }
 } catch (Exception $e) {}
 
 echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
 echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
-foreach ($paths as $path) {
-    $loc = rtrim($__sitemapBase, '/') . '/' . ltrim($path, '/');
+foreach ($entries as $entry) {
+    // Home is the bare origin; every other entry uses the central url() helper
+    // so the location is exactly the public URL the site links to.
+    $loc = $entry['route'] === ''
+        ? rtrim($__sitemapBase, '/') . '/'
+        : jhd_absolute_url(url($entry['route'], $entry['params']));
     echo '  <url>' . "\n";
     echo '    <loc>' . htmlspecialchars($loc, ENT_XML1 | ENT_QUOTES, 'UTF-8') . '</loc>' . "\n";
-    if (str_starts_with($path, 'topic/')) {
-        echo '    <priority>0.9</priority>' . "\n";
-    } elseif (str_starts_with($path, 'post/') || str_starts_with($path, 'news/') || str_starts_with($path, 'article/') || str_starts_with($path, 'lesson/')) {
-        echo '    <priority>0.8</priority>' . "\n";
-    } elseif ($path === '') {
-        echo '    <priority>1.0</priority>' . "\n";
-    } else {
-        echo '    <priority>0.7</priority>' . "\n";
-    }
+    echo '    <priority>' . $entry['priority'] . '</priority>' . "\n";
     echo '  </url>' . "\n";
 }
 echo '</urlset>' . "\n";

@@ -23,6 +23,18 @@ function env_value(string $key, string $default = ''): string {
 
 define('APP_ENV', env_value('APP_ENV', env_value('VERCEL') ? 'production' : 'development'));
 define('BASE_PATH', rtrim('/' . trim(env_value('BASE_PATH'), '/'), '/'));
+/**
+ * URL mode.
+ *   false (DEFAULT, InfinityFree-safe): every internal link is a Query URL such
+ *          as index.php?p=topic&slug=oloum-quran. Works with or without
+ *          mod_rewrite, so the site never breaks on a shared host.
+ *   true  (optional): links become Pretty URLs (/topic/oloum-quran) which need
+ *          mod_rewrite (router.php + .htaccess). Purely a cosmetic upgrade.
+ * The router RESOLVES both spellings regardless of this flag; it only controls
+ * which form url()/the typed helpers GENERATE and which form <link canonical>
+ * declares. See includes/functions.php (jhd_routes / url).
+ */
+define('JHD_PRETTY_URLS', filter_var(env_value('JHD_PRETTY_URLS', 'false'), FILTER_VALIDATE_BOOLEAN));
 /** Absolute project root (the directory that holds router.php). */
 define('BASE_DIR', dirname(__DIR__));
 define('STORAGE_DIR', BASE_DIR . '/storage');

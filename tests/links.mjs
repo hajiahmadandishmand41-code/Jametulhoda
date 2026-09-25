@@ -17,8 +17,9 @@ while(queue.length && seen.size<180) {
       for await (const chunk of response.body) { void chunk; }
     }
     if(response.status>=400) { errors.push({path,status:response.status}); continue; }
-    for(const match of html.matchAll(/(?:href|src)="(\/[^"#]*)"/g)) {
-      const link=match[1].replaceAll('&amp;','&');
+    for(const match of html.matchAll(/(?:href|src)="(\/[^"#]*|index\.php\?[^"#]*)"/g)) {
+      let link=match[1].replaceAll('&amp;','&');
+      if(!link.startsWith('/')) link='/'+link;
       if(link.startsWith('//') || link.startsWith('/admin/')) continue;
       if(!seen.has(link)) queue.push(link);
     }
