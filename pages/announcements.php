@@ -32,26 +32,11 @@ require_once __DIR__ . '/../includes/header.php';
     <?php if (empty($posts)): ?>
     <div class="text-center py-5 border rounded" style="background:var(--jhd-surface)"><i class="bi bi-megaphone display-1 text-muted opacity-25 d-block mb-3"></i><h4 class="text-muted">اطلاعیه‌ای یافت نشد</h4></div>
     <?php else: ?>
+    <?= renderCategoryChips(['announcement'], url('announcements'), 'همه اطلاعیه‌ها') ?>
     <div class="row g-4">
-        <?php foreach ($posts as $p): $pUrl = postUrl($p); ?>
-        <div class="col-12">
-            <div class="card p-3 p-md-4">
-                <div class="d-flex gap-3 align-items-start">
-                    <div class="topic-card-icon" style="width:52px;height:52px;font-size:1.4rem;border-radius:10px;margin-bottom:0">
-                        <i class="bi bi-megaphone-fill"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
-                            <h2 class="h5 mb-0 fw-bold"><a href="<?= $pUrl ?>" class="text-reset text-decoration-none"><?= sanitize($p['title']) ?></a></h2>
-                            <span class="text-muted small"><i class="bi bi-calendar3 ms-1"></i><?= persianDate($p['published_at'] ?? $p['created_at']) ?></span>
-                        </div>
-                        <?php if ($p['summary']): ?><p class="text-muted mb-3"><?= sanitize(excerpt($p['summary'], 220)) ?></p><?php endif; ?>
-                        <a href="<?= $pUrl ?>" class="btn-read-more">ادامه مطلب و جزییات <i class="bi bi-arrow-left"></i></a>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <?php endforeach; ?>
+        <?php foreach ($posts as $p):
+            echo renderPostCard($p, ['col' => 'col-12 col-lg-6', 'cta' => 'ادامه مطلب و جزییات', 'excerpt' => 180]);
+        endforeach; ?>
     </div>
     <?php if ($pages > 1): ?><div class="mt-5"><?= paginate($total, $limit, $page, url('announcements', ['page' => '%d'])) ?></div><?php endif; ?>
     <?php endif; ?>

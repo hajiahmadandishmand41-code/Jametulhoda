@@ -20,7 +20,20 @@ const leaksInternal = (u) => /(^|\/)(pages|admin|includes|config|bin|tests|datab
 const check = (label, ok, detail = '') => { results.push({ label, ok, detail }); console.log(`${ok ? 'PASS' : 'FAIL'} ${label}${detail ? ' | ' + detail : ''}`); if (!ok) failures.push({ label, detail }); };
 
 async function get(path) {
-  const res = await fetch(base + path, { redirect: 'manual', signal: AbortSignal.timeout(30000) });
+  const url = base + path;
+  let res = await fetch(url, { redirect: 'manual', signal: AbortSignal.timeout(30000) });
+  if (res.status === 301 || res.status === 302 || res.status === 308) {
+    const location = res.headers.get('location') || '';
+    try {
+      const next = new URL(location, url);
+      const current = new URL(url);
+      const slashFixup = next.pathname.replace(/\/+$/, '') === current.pathname.replace(/\/+$/, '')
+        && next.origin === current.origin;
+      if (slashFixup) {
+        res = await fetch(next, { redirect: 'manual', signal: AbortSignal.timeout(30000) });
+      }
+    } catch { /* keep original */ }
+  }
   const body = res.status === 200 ? await res.text() : '';
   return { status: res.status, body, headers: res.headers };
 }
@@ -43,6 +56,8 @@ const listings = [
   ['about', '/about', 'درباره'],
   ['contact', '/contact', 'تماس'],
   ['search', '/search', 'جستجو'],
+  ['login', '/login', 'ورود'],
+  ['register', '/register', 'ثبت‌نام'],
 ];
 
 let prettySupported = true;

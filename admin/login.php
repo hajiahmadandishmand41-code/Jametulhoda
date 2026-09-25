@@ -10,7 +10,7 @@ startSecureSession();
 
 // Redirect if already logged in
 if (isLoggedIn()) {
-    redirect(siteUrl('admin/'));
+    redirect(adminUrl());
 }
 
 $error = '';
@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'نام کاربری و رمز عبور را وارد کنید.';
         } elseif (loginAdmin($username, $password)) {
             $_SESSION['login_attempts'] = 0;
-            redirect(siteUrl('admin/'));
+            redirect(adminUrl());
         } else {
             $loginAttempts++;
             $_SESSION['login_attempts'] = $loginAttempts;
@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <title>ورود به سامانه مدیریت | <?= sanitize(SITE_NAME) ?></title>
 <meta name="description" content="ورود امن مدیران و ویراستاران جامعة‌الهدی به سامانه مدیریت محتوا.">
 <meta name="robots" content="noindex, nofollow">
-<link rel="canonical" href="<?= sanitize(absolute_url('login')) ?>">
+<link rel="canonical" href="<?= sanitize(absolute_url('admin/login')) ?>">
 <link rel="stylesheet" href="<?= siteUrl('assets/vendor/bootstrap.rtl.min.css') ?>">
 <link rel="stylesheet" href="<?= siteUrl('assets/vendor/icons/bootstrap-icons.min.css') ?>">
 
@@ -103,7 +103,7 @@ html[data-theme="dark"] .back-link a { color: #83e2bf; }
         <?php if ($error): ?>
         <div class="alert alert-danger mb-3"><i class="bi bi-exclamation-triangle ms-2"></i><?= sanitize($error) ?></div>
         <?php endif; ?>
-        <form method="post" autocomplete="off">
+        <form method="post" action="<?= adminLoginUrl() ?>" autocomplete="off">
             <?= csrfField() ?>
             <div class="mb-3">
                 <label class="form-label" for="username">نام کاربری</label>
@@ -121,7 +121,10 @@ html[data-theme="dark"] .back-link a { color: #83e2bf; }
             </div>
             <button type="submit" class="btn-login"><i class="bi bi-box-arrow-in-right ms-2"></i>ورود به پنل</button>
         </form>
-        <div class="back-link"><a href="<?= siteUrl() ?>"><i class="bi bi-arrow-right ms-1"></i>بازگشت به سایت</a></div>
+        <div class="back-link">
+            <a href="<?= url() ?>"><i class="bi bi-arrow-right ms-1"></i>بازگشت به سایت</a>
+            <div class="mt-2"><a href="<?= loginUrl() ?>">ورود اعضای سایت</a></div>
+        </div>
     </div>
 </div>
 </body>

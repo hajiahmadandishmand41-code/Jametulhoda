@@ -113,8 +113,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
 
                 // همگام‌سازی موضوعات (ستون فقرات)
-                $db->prepare("DELETE FROM post_topics WHERE post_id=?")->execute([$id]);
-                if($topicIds){ $ins=$db->prepare("INSERT INTO post_topics (post_id, topic_id) VALUES (?,?) ON CONFLICT DO NOTHING"); foreach($topicIds as $tid) $ins->execute([$id,$tid]); }
+                $primaryTopicId = (int)($_POST['primary_topic_id'] ?? 0);
+                setPostTopics($id, $topicIds, $primaryTopicId > 0 ? $primaryTopicId : null);
 
                 // تصاویر اضافی
                 if (!empty($_FILES['images']['name'][0])) {
@@ -420,7 +420,17 @@ $existingVideo = getMediaFor('post', $id, 'video');
                             <span class="form-check-label small"><?= sanitize($t['name']) ?></span>
                         </label>
                         <?php endforeach; endif; ?>
-                    </div></div>
+                    </div>
+                    <div class="mt-2">
+                        <label class="form-label small">موضوع اصلی</label>
+                        <select name="primary_topic_id" class="form-select form-select-sm">
+                            <option value="">— اولین موضوع انتخاب‌شده —</option>
+                            <?php foreach ($allTopics as $t): ?>
+                            <option value="<?= (int)$t['id'] ?>" <?= (!empty($curTopicIds) && (int)$curTopicIds[0] === (int)$t['id']) ? 'selected' : '' ?>><?= sanitize($t['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    </div>
                     <div>
                         <label class="form-label">دسته‌بندی قدیمی (اختیاری)</label>
                         <select name="category_id" class="form-select">

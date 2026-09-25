@@ -80,6 +80,7 @@ require_once __DIR__ . '/../includes/header.php';
 
     <!-- Search & Filter Form -->
     <form method="get" class="mb-4" role="search">
+    <?= queryKeepFields() ?>
       <div class="row g-2 align-items-center">
         <div class="col-md-6 col-lg-5">
           <div class="input-group">
@@ -122,46 +123,11 @@ require_once __DIR__ . '/../includes/header.php';
       </a>
     </div>
     <?php else: ?>
+    <?= renderCategoryChips(['article'], url('articles'), 'همه مقالات') ?>
     <div class="row g-4">
-      <?php foreach ($posts as $p): $pUrl = postUrl($p); ?>
-      <div class="col-md-6 col-lg-4">
-        <article class="article-card h-100">
-          <div class="article-card-header">
-            <?php if (!empty($p['author_name'])): ?>
-            <span class="article-card-author"><i class="bi bi-person ms-1"></i><?= sanitize($p['author_name']) ?></span>
-            <?php endif; ?>
-            <span class="article-card-date">
-              <i class="bi bi-calendar3 ms-1"></i><?= persianDate($p['published_at'] ?? $p['created_at']) ?>
-            </span>
-          </div>
-
-          <h2 class="article-card-title h5">
-            <a href="<?= $pUrl ?>"><?= sanitize($p['title']) ?></a>
-          </h2>
-
-          <p class="article-card-summary">
-            <?= sanitize(excerpt($p['summary'] ?? $p['content'], 120)) ?>
-          </p>
-
-          <?php $pt = getTopicsForPost((int)$p['id']); if (!empty($pt)): ?>
-          <div class="d-flex flex-wrap gap-1 mb-3">
-            <?php foreach (array_slice($pt, 0, 2) as $tp): ?>
-            <a href="<?= topicUrl($tp) ?>" class="badge badge-article text-decoration-none">
-              #<?= sanitize($tp['name']) ?>
-            </a>
-            <?php endforeach; ?>
-          </div>
-          <?php endif; ?>
-
-          <div class="article-card-footer">
-            <span class="badge badge-article">مقاله</span>
-            <a href="<?= $pUrl ?>" class="btn-read-more">
-              مطالعه مقاله <i class="bi bi-arrow-left"></i>
-            </a>
-          </div>
-        </article>
-      </div>
-      <?php endforeach; ?>
+      <?php foreach ($posts as $k => $p):
+        echo renderPostCard($p, ['featured' => $k === 0 && empty($search), 'cta' => 'مطالعه مقاله', 'excerpt' => 120]);
+      endforeach; ?>
     </div>
 
     <!-- صفحه‌بندی -->

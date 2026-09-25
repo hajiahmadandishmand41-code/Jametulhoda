@@ -69,6 +69,7 @@ require_once __DIR__ . '/../includes/header.php';
 
     <!-- Search Form -->
     <form method="get" class="mb-4" role="search">
+    <?= queryKeepFields() ?>
       <div class="input-group" style="max-width:480px">
         <input type="search" name="q" class="form-control" aria-label="جستجو در پژوهش‌ها"
                placeholder="جستجو در عنوان یا متن پژوهش‌ها..."
@@ -95,36 +96,11 @@ require_once __DIR__ . '/../includes/header.php';
       </a>
     </div>
     <?php else: ?>
+    <?= renderCategoryChips(['research'], url('research'), 'همه پژوهش‌ها') ?>
     <div class="row g-4">
-      <?php foreach ($posts as $p): $pUrl = postUrl($p); ?>
-      <div class="col-md-6 col-lg-4">
-        <article class="article-card h-100">
-          <div class="article-card-header">
-            <span class="article-card-author">
-              <i class="bi bi-person ms-1"></i><?= sanitize($p['author_name'] ?? 'مرکز پژوهش حوزه') ?>
-            </span>
-            <span class="article-card-date">
-              <i class="bi bi-calendar3 ms-1"></i><?= persianDate($p['published_at'] ?? $p['created_at']) ?>
-            </span>
-          </div>
-
-          <h2 class="article-card-title h5">
-            <a href="<?= $pUrl ?>"><?= sanitize($p['title']) ?></a>
-          </h2>
-
-          <p class="article-card-summary">
-            <?= sanitize(excerpt($p['summary'] ?? $p['content'], 130)) ?>
-          </p>
-
-          <div class="article-card-footer">
-            <span class="badge badge-article">پژوهش علمی</span>
-            <a href="<?= $pUrl ?>" class="btn-read-more">
-              مطالعه متن تحقیق <i class="bi bi-arrow-left"></i>
-            </a>
-          </div>
-        </article>
-      </div>
-      <?php endforeach; ?>
+      <?php foreach ($posts as $k => $p):
+        echo renderPostCard($p, ['featured' => $k === 0 && empty($search), 'cta' => 'مطالعه متن تحقیق', 'excerpt' => 130]);
+      endforeach; ?>
     </div>
 
     <!-- صفحه‌بندی -->

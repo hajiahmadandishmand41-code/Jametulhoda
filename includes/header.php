@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/functions.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/member-auth.php';
 startSecureSession();
 
 $siteName = getSetting('site_name', SITE_NAME);
@@ -9,7 +10,10 @@ if ($siteName === 'مدرسه علمیه جامعه‌الهدی') $siteName = S
 $siteSlogan = getSetting('site_slogan', SITE_SLOGAN);
 if ($siteSlogan === 'علم، معرفت و تهذیب در پرتو قرآن و عترت') $siteSlogan = SITE_SLOGAN; // normalize the legacy installation default
 $currentPath = current_path();
-$isLoggedIn = isLoggedIn();
+$isAdminLoggedIn = isLoggedIn();
+$isMemberLoggedIn = isMemberLoggedIn();
+$isLoggedIn = $isAdminLoggedIn; // backward compatible for existing templates
+$navTopicTree = getTopicTree();
 
 $metaTitle = !empty($pageTitle) ? $pageTitle . ' | ' . $siteName : $siteName . ' | ' . $siteSlogan;
 $metaDesc = $pageDesc ?? $siteSlogan;
@@ -38,7 +42,15 @@ if (SITE_URL && !$responseIs404) {
     }
 }
 // Search results and 404s stay out of the index (Query or Pretty spelling).
-$noindexSeo = $responseIs404 || (($_GET['p'] ?? '') === 'search') || (current_path() === '/search');
+$authRoutes = ['login', 'register', 'logout', 'account', 'profile', 'password-change'];
+$routeNameForRobots = isset($_SERVER['JHD_ROUTE_NAME']) ? (string)$_SERVER['JHD_ROUTE_NAME'] : (string)($_GET['p'] ?? '');
+$authNoindex = in_array($routeNameForRobots, $authRoutes, true)
+    || preg_match('~^/(login|register|logout|account|profile|password-change)(/|$)~', $currentPath);
+$noindexSeo = !empty($noindexSeo)
+    || $responseIs404
+    || $authNoindex
+    || $routeNameForRobots === 'search'
+    || $currentPath === '/search';
 $ogType = isset($post) || isset($book) || isset($lesson) ? 'article' : 'website';
 
 // Helper for active navigation link
@@ -97,7 +109,7 @@ endif; ?>
 <link rel="stylesheet" href="<?= asset('css/design-system.css') ?>">
 <script src="<?= asset('js/interface.js') ?>" defer></script>
 </head>
-<body class="jhd-public-site">
+<body class="jhd-public-site<?= !empty($authNoindex) ? ' jhd-login-site' : '' ?>">
 <a class="skip-link" href="#main-content">رفتن به محتوای اصلی</a>
 
 <!-- Header اصلی -->
@@ -113,7 +125,8 @@ endif; ?>
         </a>
 
         <!-- فرم جستجوی دسکتاپ -->
-        <form class="jhd-search d-none d-lg-flex" action="<?= url('search') ?>" method="get" role="search">
+        <form class="jhd-search d-none d-lg-flex" action="<?= formUrl('search') ?>" method="get" role="search">
+            <?= formRouteFields('search') ?>
             <label class="visually-hidden" for="header-search">جستجو در مقالات، اخبار، دروس و کتاب‌ها</label>
             <input id="header-search" name="q" type="search" placeholder="جستجو در اخبار، مقالات، کتاب‌ها، دروس..." maxlength="200" value="<?= sanitize($_GET['q'] ?? '') ?>">
             <button type="submit" aria-label="جستجو"><i class="bi bi-search"></i></button>
@@ -125,17 +138,29 @@ endif; ?>
 
             <button class="jhd-icon-btn" data-theme-toggle aria-label="تغییر پوسته روشن و تیره" aria-pressed="false"><i class="bi bi-moon"></i></button>
 
-            <?php if ($isLoggedIn): ?>
-            <a class="btn btn-sm btn-outline-primary d-none d-md-inline-flex align-items-center gap-1" href="<?= url('admin') ?>">
+            <div class="jhd-account-cluster d-none d-md-flex">
+            <?php if ($isAdminLoggedIn): ?>
+            <a class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" href="<?= adminUrl() ?>">
                 <i class="bi bi-speedometer2"></i>
                 <span>پنل مدیریت</span>
             </a>
+            <?php elseif ($isMemberLoggedIn): ?>
+            <a class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" href="<?= accountUrl() ?>">
+                <i class="bi bi-person-circle"></i>
+                <span>حساب من</span>
+            </a>
             <?php else: ?>
-            <a class="btn btn-sm btn-outline-secondary d-none d-md-inline-flex align-items-center gap-1" href="<?= url('login') ?>">
+            <a class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1" href="<?= loginUrl() ?>">
                 <i class="bi bi-box-arrow-in-left"></i>
                 <span>ورود</span>
             </a>
+            <a class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" href="<?= registerUrl() ?>">
+                <i class="bi bi-person-plus"></i>
+                <span>ثبت‌نام</span>
+            </a>
+            <a class="jhd-admin-login-link" href="<?= adminLoginUrl() ?>">ورود مدیر</a>
             <?php endif; ?>
+            </div>
 
             <button type="button" id="menuToggle" class="jhd-icon-btn jhd-menu-toggle" aria-label="باز کردن منو" aria-expanded="false" aria-controls="siteDrawer"><i class="bi bi-list"></i></button>
         </div>
@@ -146,15 +171,23 @@ endif; ?>
         <div class="container">
             <ul class="jhd-nav-list mb-0">
                 <li><a href="<?= url() ?>" class="jhd-nav-link <?= $isActiveNav('/') ? 'active' : '' ?>" <?= $isActiveNav('/') ? 'aria-current="page"' : '' ?>><i class="bi bi-house-door ms-1"></i>خانه</a></li>
-                <li><a href="<?= url('news') ?>" class="jhd-nav-link <?= $isActiveNav('news') ? 'active' : '' ?>" <?= $isActiveNav('news') ? 'aria-current="page"' : '' ?>><i class="bi bi-newspaper ms-1"></i>اخبار</a></li>
-                <li><a href="<?= url('articles') ?>" class="jhd-nav-link <?= $isActiveNav('articles') || $isActiveNav('article') ? 'active' : '' ?>" <?= ($isActiveNav('articles') || $isActiveNav('article')) ? 'aria-current="page"' : '' ?>><i class="bi bi-file-text ms-1"></i>مقالات</a></li>
-                <li><a href="<?= url('reports') ?>" class="jhd-nav-link <?= $isActiveNav('reports') || $isActiveNav('report') ? 'active' : '' ?>" <?= ($isActiveNav('reports') || $isActiveNav('report')) ? 'aria-current="page"' : '' ?>><i class="bi bi-card-text ms-1"></i>گزارش‌ها</a></li>
-                <li><a href="<?= url('events') ?>" class="jhd-nav-link <?= $isActiveNav('events') || $isActiveNav('programs') ? 'active' : '' ?>" <?= ($isActiveNav('events') || $isActiveNav('programs')) ? 'aria-current="page"' : '' ?>><i class="bi bi-calendar-event ms-1"></i>رویدادها</a></li>
-                <li><a href="<?= url('books') ?>" class="jhd-nav-link <?= $isActiveNav('books') || $isActiveNav('book') ? 'active' : '' ?>" <?= ($isActiveNav('books') || $isActiveNav('book')) ? 'aria-current="page"' : '' ?>><i class="bi bi-book ms-1"></i>کتاب‌ها</a></li>
-                <li><a href="<?= url('lessons') ?>" class="jhd-nav-link <?= $isActiveNav('lessons') || $isActiveNav('lesson') ? 'active' : '' ?>" <?= ($isActiveNav('lessons') || $isActiveNav('lesson')) ? 'aria-current="page"' : '' ?>><i class="bi bi-mortarboard ms-1"></i>درس‌ها</a></li>
-                <li><a href="<?= url('research') ?>" class="jhd-nav-link <?= $isActiveNav('research') ? 'active' : '' ?>" <?= $isActiveNav('research') ? 'aria-current="page"' : '' ?>><i class="bi bi-journal-richtext ms-1"></i>پژوهش</a></li>
-                <li><a href="<?= url('media') ?>" class="jhd-nav-link <?= $isActiveNav('media') || $isActiveNav('videos') || $isActiveNav('audios') ? 'active' : '' ?>" <?= ($isActiveNav('media') || $isActiveNav('videos') || $isActiveNav('audios')) ? 'aria-current="page"' : '' ?>><i class="bi bi-play-circle ms-1"></i>رسانه</a></li>
-                <li><a href="<?= url('topics') ?>" class="jhd-nav-link <?= $isActiveNav('topics') || $isActiveNav('topic') ? 'active' : '' ?>" <?= ($isActiveNav('topics') || $isActiveNav('topic')) ? 'aria-current="page"' : '' ?>><i class="bi bi-diagram-3 ms-1"></i>موضوعات</a></li>
+                <?= jhd_render_desktop_nav_item(['route'=>'news','label'=>'اخبار','icon'=>'bi-newspaper','types'=>['news']], $isActiveNav) ?>
+                <?= jhd_render_desktop_nav_item(['route'=>'articles','label'=>'مقالات','icon'=>'bi-file-text','types'=>['article']], $isActiveNav, ['article']) ?>
+                <?= jhd_render_desktop_nav_item(['route'=>'reports','label'=>'گزارش‌ها','icon'=>'bi-card-text','types'=>['report']], $isActiveNav, ['report']) ?>
+                <?= jhd_render_desktop_nav_item(['route'=>'events','label'=>'رویدادها','icon'=>'bi-calendar-event','types'=>['program','religious','announcement']], $isActiveNav, ['programs','announcements','religious-activities']) ?>
+                <?= jhd_render_desktop_nav_item(['route'=>'books','label'=>'کتاب‌ها','icon'=>'bi-book','types'=>[]], $isActiveNav, ['book']) ?>
+                <?= jhd_render_desktop_nav_item(['route'=>'lessons','label'=>'درس‌ها','icon'=>'bi-mortarboard','types'=>[]], $isActiveNav, ['lesson']) ?>
+                <?= jhd_render_desktop_nav_item(['route'=>'research','label'=>'پژوهش','icon'=>'bi-journal-richtext','types'=>['research']], $isActiveNav) ?>
+                <?= jhd_render_desktop_nav_item(['route'=>'media','label'=>'رسانه','icon'=>'bi-play-circle','types'=>[]], $isActiveNav, ['videos','audios']) ?>
+                <li class="jhd-has-sub">
+                    <a href="<?= url('topics') ?>" class="jhd-nav-link <?= $isActiveNav('topics') || $isActiveNav('topic') ? 'active' : '' ?>" <?= ($isActiveNav('topics') || $isActiveNav('topic')) ? 'aria-current="page"' : '' ?> aria-haspopup="true"><i class="bi bi-diagram-3 ms-1"></i>موضوعات</a>
+                    <?php if ($navTopicTree): ?>
+                    <ul class="jhd-subnav" role="menu">
+                        <?= jhd_render_topic_tree_nav($navTopicTree, 'desktop') ?>
+                        <li class="jhd-subnav-all"><a href="<?= url('topics') ?>">همه موضوعات</a></li>
+                    </ul>
+                    <?php endif; ?>
+                </li>
             </ul>
         </div>
     </nav>
@@ -181,7 +214,8 @@ endif; ?>
     </div>
 
     <div class="jhd-drawer-search">
-        <form action="<?= url('search') ?>" method="get" role="search">
+        <form action="<?= formUrl('search') ?>" method="get" role="search">
+            <?= formRouteFields('search') ?>
             <label class="visually-hidden" for="drawer-search">جستجو در محتوا</label>
             <input id="drawer-search" name="q" type="search" placeholder="جستجو در محتوا..." maxlength="200" value="<?= sanitize($_GET['q'] ?? '') ?>">
             <button type="submit" aria-label="جستجو"><i class="bi bi-search"></i></button>
@@ -191,23 +225,23 @@ endif; ?>
     <div class="jhd-drawer-body">
         <div class="drawer-section">ناوبری اصلی</div>
         <a href="<?= url() ?>" class="drawer-link <?= $isActiveNav('/') ? 'active' : '' ?>"><i class="bi bi-house"></i> خانه</a>
-        <a href="<?= url('news') ?>" class="drawer-link <?= $isActiveNav('news') ? 'active' : '' ?>"><i class="bi bi-newspaper"></i> اخبار مدرسه</a>
-        <a href="<?= url('articles') ?>" class="drawer-link <?= $isActiveNav('articles') ? 'active' : '' ?>"><i class="bi bi-file-text"></i> مقالات علمی</a>
-        <a href="<?= url('reports') ?>" class="drawer-link <?= $isActiveNav('reports') ? 'active' : '' ?>"><i class="bi bi-card-text"></i> گزارش‌ها و مناسبت‌ها</a>
-        <a href="<?= url('events') ?>" class="drawer-link <?= $isActiveNav('events') ? 'active' : '' ?>"><i class="bi bi-calendar-event"></i> رویدادها و برنامه‌ها</a>
-        <a href="<?= url('books') ?>" class="drawer-link <?= $isActiveNav('books') ? 'active' : '' ?>"><i class="bi bi-book"></i> کتابخانه دیجیتال</a>
-        <a href="<?= url('lessons') ?>" class="drawer-link <?= $isActiveNav('lessons') ? 'active' : '' ?>"><i class="bi bi-mortarboard"></i> درس‌های حوزوی</a>
-        <a href="<?= url('research') ?>" class="drawer-link <?= $isActiveNav('research') ? 'active' : '' ?>"><i class="bi bi-journal-richtext"></i> پژوهش‌ها</a>
-        <a href="<?= url('media') ?>" class="drawer-link <?= $isActiveNav('media') ? 'active' : '' ?>"><i class="bi bi-play-circle"></i> رسانه (ویدیو و صوت)</a>
-        <a href="<?= url('topics') ?>" class="drawer-link <?= $isActiveNav('topics') ? 'active' : '' ?>"><i class="bi bi-diagram-3"></i> موضوعات دینی</a>
+        <?= jhd_render_drawer_nav_item(['route'=>'news','label'=>'اخبار','icon'=>'bi-newspaper','types'=>['news']], $isActiveNav) ?>
+        <?= jhd_render_drawer_nav_item(['route'=>'articles','label'=>'مقالات','icon'=>'bi-file-text','types'=>['article']], $isActiveNav) ?>
+        <?= jhd_render_drawer_nav_item(['route'=>'reports','label'=>'گزارش‌ها','icon'=>'bi-card-text','types'=>['report']], $isActiveNav) ?>
+        <?= jhd_render_drawer_nav_item(['route'=>'events','label'=>'رویدادها','icon'=>'bi-calendar-event','types'=>['program','religious','announcement']], $isActiveNav) ?>
+        <?= jhd_render_drawer_nav_item(['route'=>'books','label'=>'کتاب‌ها','icon'=>'bi-book','types'=>[]], $isActiveNav) ?>
+        <?= jhd_render_drawer_nav_item(['route'=>'lessons','label'=>'درس‌ها','icon'=>'bi-mortarboard','types'=>[]], $isActiveNav) ?>
+        <?= jhd_render_drawer_nav_item(['route'=>'research','label'=>'پژوهش','icon'=>'bi-journal-richtext','types'=>['research']], $isActiveNav) ?>
+        <?= jhd_render_drawer_nav_item(['route'=>'media','label'=>'رسانه','icon'=>'bi-play-circle','types'=>[]], $isActiveNav) ?>
 
-        <div class="drawer-section">موضوعات منتخب</div>
-        <?php
-        $drawerTopics = getTopics(['active' => 1, 'limit' => 6]);
-        foreach ($drawerTopics as $dt): ?>
-        <a href="<?= topicUrl($dt) ?>" class="drawer-link drawer-topic depth-0"><i class="bi bi-tag"></i> <?= sanitize($dt['name']) ?></a>
-        <?php endforeach; ?>
-        <a href="<?= url('topics') ?>" class="drawer-link drawer-all"><i class="bi bi-grid-3x3-gap"></i> همه موضوعات</a>
+        <div class="drawer-section">موضوعات</div>
+        <details class="jhd-acc" <?= ($isActiveNav('topics') || $isActiveNav('topic')) ? 'open' : '' ?>>
+            <summary><i class="bi bi-diagram-3"></i> موضوعات</summary>
+            <div class="jhd-acc-body">
+                <a href="<?= url('topics') ?>" class="drawer-link drawer-all"><i class="bi bi-grid-3x3-gap"></i> همه موضوعات</a>
+                <?= jhd_render_topic_tree_nav($navTopicTree, 'drawer') ?>
+            </div>
+        </details>
 
         <div class="drawer-section">اطلاعات و تماس</div>
         <a href="<?= url('qa') ?>" class="drawer-link"><i class="bi bi-question-circle"></i> پرسش و پاسخ</a>
@@ -215,11 +249,17 @@ endif; ?>
         <a href="<?= url('contact') ?>" class="drawer-link"><i class="bi bi-envelope"></i> ارتباط با ما</a>
 
         <div class="drawer-section">حساب کاربری</div>
-        <?php if ($isLoggedIn): ?>
-        <a href="<?= url('admin') ?>" class="drawer-link"><i class="bi bi-speedometer2"></i> پنل مدیریت</a>
-        <a href="<?= url('admin/logout') ?>" class="drawer-link text-danger" data-confirm="آیا از خروج از سیستم اطمینان دارید؟"><i class="bi bi-box-arrow-right"></i> خروج از حساب</a>
+        <?php if ($isAdminLoggedIn): ?>
+        <a href="<?= adminUrl() ?>" class="drawer-link"><i class="bi bi-speedometer2"></i> پنل مدیریت</a>
+        <a href="<?= url('admin/logout') ?>" class="drawer-link text-danger" data-confirm="آیا از خروج از سیستم اطمینان دارید؟"><i class="bi bi-box-arrow-right"></i> خروج مدیر</a>
+        <?php elseif ($isMemberLoggedIn): ?>
+        <a href="<?= accountUrl() ?>" class="drawer-link"><i class="bi bi-person-circle"></i> حساب کاربری</a>
+        <a href="<?= url('password-change') ?>" class="drawer-link"><i class="bi bi-key"></i> تغییر رمز</a>
+        <a href="<?= logoutUrl() ?>" class="drawer-link text-danger"><i class="bi bi-box-arrow-right"></i> خروج</a>
         <?php else: ?>
-        <a href="<?= url('login') ?>" class="drawer-link"><i class="bi bi-box-arrow-in-left"></i> ورود به پنل</a>
+        <a href="<?= loginUrl() ?>" class="drawer-link"><i class="bi bi-box-arrow-in-left"></i> ورود</a>
+        <a href="<?= registerUrl() ?>" class="drawer-link"><i class="bi bi-person-plus"></i> ثبت‌نام</a>
+        <a href="<?= adminLoginUrl() ?>" class="drawer-link"><i class="bi bi-shield-lock"></i> ورود مدیر</a>
         <?php endif; ?>
     </div>
 </aside>

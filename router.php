@@ -25,6 +25,14 @@ foreach ($_GET as $value) {
 }
 
 $path = rawurldecode(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/');
+// ErrorDocument 404 /router.php (InfinityFree without mod_rewrite): recover the
+// original pretty path so /admin/login still reaches the login controller.
+if ($path === '/router.php' || str_ends_with($path, '/router.php')) {
+    $redirected = (string)($_SERVER['REDIRECT_URL'] ?? $_SERVER['REDIRECT_URI'] ?? '');
+    if ($redirected !== '') {
+        $path = rawurldecode(parse_url($redirected, PHP_URL_PATH) ?: $redirected);
+    }
+}
 if (BASE_PATH) {
     if ($path === BASE_PATH) $path = '/';
     elseif (str_starts_with($path, BASE_PATH . '/')) $path = substr($path, strlen(BASE_PATH));

@@ -96,6 +96,7 @@ require_once __DIR__ . '/../includes/header.php';
 
     <!-- فیلترها و جستجو -->
     <form method="get" class="mb-4" role="search">
+    <?= queryKeepFields() ?>
       <div class="row g-2 align-items-center">
         <div class="col-md-5">
           <input type="search" name="q" class="form-control" aria-label="جستجو در رویدادها" placeholder="جستجو در رویدادها..." value="<?= sanitize($search) ?>">
@@ -124,50 +125,11 @@ require_once __DIR__ . '/../includes/header.php';
       <a href="<?= url('events') ?>" class="btn btn-outline-primary btn-sm mt-2">همه رویدادها</a>
     </div>
     <?php else: ?>
+    <?= renderCategoryChips(['program','religious','announcement'], url('events'), 'همه رویدادها') ?>
     <div class="row g-4">
-      <?php foreach ($events as $ev): $evUrl = postUrl($ev); ?>
-      <div class="col-md-6 col-lg-4">
-        <article class="news-card h-100">
-          <!-- Like every other card list (docs/UI_CONTRACT.md): the image slot is
-               always rendered, with an icon placeholder when there is no image. -->
-          <div class="news-card-img-wrap position-relative">
-            <a href="<?= $evUrl ?>" tabindex="-1" aria-hidden="true">
-              <?php if (!empty($ev['featured_image'])): ?>
-              <img src="<?= imgUrl($ev['featured_image']) ?>" alt="<?= sanitize($ev['title']) ?>" class="news-card-img" loading="lazy" decoding="async">
-              <?php else: ?>
-              <div class="news-card-img-placeholder"><i class="bi bi-calendar-event"></i></div>
-              <?php endif; ?>
-            </a>
-            <div class="news-card-badge"><?= postTypeBadge($ev['post_type']) ?></div>
-          </div>
-
-          <div class="news-card-body">
-            <div class="news-card-meta">
-              <span><i class="bi bi-calendar3 ms-1"></i><?= persianDate($ev['published_at'] ?? $ev['created_at']) ?></span>
-              <?php if (!empty($ev['category_name'])): ?>
-              <span>• <?= sanitize($ev['category_name']) ?></span>
-              <?php endif; ?>
-            </div>
-
-            <h2 class="news-card-title h5">
-              <a href="<?= $evUrl ?>"><?= sanitize($ev['title']) ?></a>
-            </h2>
-
-            <?php if (!empty($ev['summary'])): ?>
-            <p class="news-card-summary">
-              <?= sanitize(excerpt($ev['summary'], 110)) ?>
-            </p>
-            <?php endif; ?>
-
-            <div class="news-card-footer">
-              <a href="<?= $evUrl ?>" class="btn-read-more">
-                مشاهده جزییات برنامه <i class="bi bi-arrow-left"></i>
-              </a>
-            </div>
-          </div>
-        </article>
-      </div>
-      <?php endforeach; ?>
+      <?php foreach ($events as $k => $ev):
+        echo renderPostCard($ev, ['featured' => $k === 0 && empty($search), 'cta' => 'مشاهده جزییات برنامه', 'excerpt' => 110]);
+      endforeach; ?>
     </div>
 
     <!-- صفحه‌بندی -->

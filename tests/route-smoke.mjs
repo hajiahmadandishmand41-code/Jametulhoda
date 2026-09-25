@@ -34,10 +34,30 @@ const failures = [];
 const errors = /(Warning|Fatal error|Parse error|Deprecated|Notice):|Uncaught (Error|Exception)|شناسه پیگیری/;
 const leaksInternal = (u) => /(^|\/)(pages|admin|includes|config|bin|tests)\/.+\.php|router\.php/i.test(u);
 
+async function fetchPublic(path) {
+  const url = base + path;
+  let response = await fetch(url, { redirect: 'manual', signal: AbortSignal.timeout(30000) });
+  // Apache DirectorySlash may 301 /login → /login/ when a physical stub directory
+  // exists. Follow only that same-path slash fixup so the pretty URL still 200s.
+  if (response.status === 301 || response.status === 302 || response.status === 308) {
+    const location = response.headers.get('location') || '';
+    try {
+      const next = new URL(location, url);
+      const current = new URL(url);
+      const slashFixup = next.pathname.replace(/\/+$/, '') === current.pathname.replace(/\/+$/, '')
+        && next.origin === current.origin;
+      if (slashFixup) {
+        response = await fetch(next, { redirect: 'manual', signal: AbortSignal.timeout(30000) });
+      }
+    } catch { /* keep the original response */ }
+  }
+  return response;
+}
+
 for (const [path, marker] of cases) {
   let response;
   try {
-    response = await fetch(base + path, { redirect: 'manual', signal: AbortSignal.timeout(30000) });
+    response = await fetchPublic(path);
     const body = await response.text();
     const canonical = body.match(/<link rel="canonical" href="([^"]+)"/)?.[1] || '';
     const description = body.match(/<meta name="description" content="([^"]+)"/)?.[1] || '';

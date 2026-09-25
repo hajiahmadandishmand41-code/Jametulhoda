@@ -14,6 +14,7 @@ const publicPaths=['/','/index.php',
  '/about','/about.php','/contact','/contact.php','/news','/news.php','/articles','/articles.php',
  '/reports','/reports.php','/events','/books','/books.php','/lessons','/lessons.php',
  '/research','/research.php','/media','/videos','/audios','/topics','/topics.php','/search','/qa','/login',
+ '/login.php','/register','/register.php','/admin/login','/admin/login.php',
  '/speeches','/speeches.php','/programs','/programs.php','/religious-activities','/religious-activities.php',
  '/announcements','/announcements.php','/search?q=test','/search.php?q=test',
  '/category?slug=fiqh-osul','/category.php?slug=fiqh-osul','/topic','/reports.php','/qa.php',
@@ -106,6 +107,26 @@ r=await editor.get('/admin/users.php');check('editor forbidden from users',r.sta
 await editor.dispose();
 r=await api.get('/contact.php');csrf=token(await r.text());r=await api.post('/contact.php',{form:{csrf_token:csrf,name:'آزمون تماس',email:'qa@example.test',subject:'آزمون محلی',message:'این پیام برای بررسی فرم تماس ایجاد شده است.'}});check('contact submit',r.status()===200 && /موفقیت|تعداد پیام‌های ارسالی بیش از حد مجاز/.test(await r.text()));
 r=await api.get('/admin/logout.php');csrf=token(await r.text());r=await api.post('/admin/logout.php',{form:{csrf_token:csrf},maxRedirects:0});check('logout',r.status()===302||r.status()===303);r=await api.get('/admin/',{maxRedirects:0});check('logged out cannot access admin',r.status()===302);
+// Public member auth is separate from admin. Members must never reach the panel.
+const guest=await request.newContext({baseURL:base});
+r=await guest.get('/login');check('public login page',r.status()===200 && (await r.text()).includes('ورود'));
+r=await guest.get('/register');check('public register page',r.status()===200 && (await r.text()).includes('ثبت‌نام'));
+r=await guest.get('/account',{maxRedirects:0});
+if ([301,308].includes(r.status()) && /\/account\/?$/.test(r.headers()['location'] || '')) r=await guest.get(r.headers()['location'],{maxRedirects:0});
+check('account requires member login',r.status()===302,String(r.status()));
+r=await guest.get('/register');csrf=token(await r.text());
+const memberPhone='700'+String(stamp).slice(-8);
+r=await guest.post('/register',{form:{csrf_token:csrf,full_name:'عضو آزمون',country:'AF',phone:memberPhone,email:'',password:creds.password,password_confirm:creds.password,agreed_terms:'1'},maxRedirects:0});
+check('public register',r.status()===303||r.status()===302,String(r.status()));
+r=await guest.get('/account');check('member account',r.status()===200,String(r.status()));
+r=await guest.get('/admin/',{maxRedirects:0});check('member cannot open admin',r.status()===302,String(r.status()));
+r=await guest.get('/register');check('duplicate register blocked while logged in',r.status()===302||r.status()===200,String(r.status()));
+await guest.dispose();
+const dup=await request.newContext({baseURL:base});
+r=await dup.get('/register');csrf=token(await r.text());
+r=await dup.post('/register',{form:{csrf_token:csrf,full_name:'عضو تکراری',country:'AF',phone:memberPhone,password:creds.password,password_confirm:creds.password,agreed_terms:'1'}});
+check('duplicate phone rejected',r.status()===200 && (await r.text()).includes('امکان ایجاد حساب'));
+await dup.dispose();
 fs.writeFileSync('test-results/http-results.json',JSON.stringify(results,null,2));
 fs.writeFileSync('test-results/browser-detail-routes.json',JSON.stringify([...new Set(browserDetailRoutes)]));
 await api.dispose();

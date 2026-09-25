@@ -81,6 +81,7 @@ require_once __DIR__ . '/../includes/header.php';
 
     <!-- Search Form -->
     <form method="get" class="mb-4" role="search">
+    <?= queryKeepFields() ?>
       <div class="row g-2 align-items-center">
         <div class="col-md-6 col-lg-5">
           <div class="input-group">
@@ -133,7 +134,7 @@ require_once __DIR__ . '/../includes/header.php';
           $cover = $b['cover_image'] ?? '';
       ?>
       <div class="col-6 col-md-4 col-lg-3">
-        <article class="book-card h-100">
+        <article class="book-card jhd-card h-100">
           <div class="book-card-cover">
             <a href="<?= $bookUrl ?>">
               <?php if ($cover): ?>

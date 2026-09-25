@@ -81,6 +81,7 @@ require_once __DIR__ . '/../includes/header.php';
 
     <!-- Search Form -->
     <form method="get" class="mb-4" role="search">
+    <?= queryKeepFields() ?>
       <div class="row g-2 align-items-center">
         <div class="col-md-6 col-lg-5">
           <div class="input-group">
@@ -122,55 +123,11 @@ require_once __DIR__ . '/../includes/header.php';
       </a>
     </div>
     <?php else: ?>
+    <?= renderCategoryChips(['report'], url('reports'), 'همه گزارش‌ها') ?>
     <div class="row g-4">
-      <?php foreach ($posts as $p): $pUrl = postUrl($p); ?>
-      <div class="col-md-6 col-lg-4">
-        <article class="news-card report-card h-100">
-          <div class="news-card-img-wrap">
-            <a href="<?= $pUrl ?>">
-              <?php if (!empty($p['featured_image'])): ?>
-              <img src="<?= imgUrl($p['featured_image']) ?>" alt="<?= sanitize($p['title']) ?>" class="news-card-img" loading="lazy">
-              <?php else: ?>
-              <div class="news-card-placeholder"><i class="bi bi-camera"></i></div>
-              <?php endif; ?>
-            </a>
-            <div class="report-card-badge"><i class="bi bi-camera-fill ms-1"></i>گزارش</div>
-          </div>
-
-          <div class="news-card-body">
-            <div class="news-card-meta">
-              <span><i class="bi bi-calendar3 ms-1"></i><?= persianDate($p['published_at'] ?? $p['created_at']) ?></span>
-            </div>
-
-            <h2 class="news-card-title h5">
-              <a href="<?= $pUrl ?>"><?= sanitize($p['title']) ?></a>
-            </h2>
-
-            <?php if (!empty($p['summary'])): ?>
-            <p class="news-card-summary">
-              <?= sanitize(excerpt($p['summary'], 110)) ?>
-            </p>
-            <?php endif; ?>
-
-            <?php $pt = getTopicsForPost((int)$p['id']); if (!empty($pt)): ?>
-            <div class="d-flex flex-wrap gap-1 mb-2">
-              <?php foreach (array_slice($pt, 0, 2) as $tp): ?>
-              <a href="<?= topicUrl($tp) ?>" class="badge badge-news text-decoration-none" style="font-size:0.72rem">
-                #<?= sanitize($tp['name']) ?>
-              </a>
-              <?php endforeach; ?>
-            </div>
-            <?php endif; ?>
-
-            <div class="news-card-footer">
-              <a href="<?= $pUrl ?>" class="btn-read-more">
-                مشاهده متن کامل گزارش <i class="bi bi-arrow-left"></i>
-              </a>
-            </div>
-          </div>
-        </article>
-      </div>
-      <?php endforeach; ?>
+      <?php foreach ($posts as $k => $p):
+        echo renderPostCard($p, ['featured' => $k === 0 && empty($search), 'cta' => 'مشاهده گزارش', 'excerpt' => 110]);
+      endforeach; ?>
     </div>
 
     <!-- صفحه‌بندی -->

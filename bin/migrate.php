@@ -49,7 +49,7 @@ function applyDatabaseSchema(PDO $db, string $schemaPath): int {
             // MySQL has no IF NOT EXISTS for indexes; re-running the migrator
             // must not fail on objects that already exist (idempotent installs).
             $message = $e->getMessage();
-            if (preg_match('/already exists|duplicate key name|duplicate entry/i', $message)) continue;
+            if (preg_match('/already exists|duplicate key name|duplicate entry|duplicate column/i', $message)) continue;
             throw $e;
         }
     }

@@ -353,6 +353,41 @@ CREATE TABLE IF NOT EXISTS pending_uploads (
  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE INDEX pending_uploads_due ON pending_uploads(not_before);
 
+CREATE TABLE IF NOT EXISTS members (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  full_name VARCHAR(120) NOT NULL,
+  country VARCHAR(80) NOT NULL DEFAULT '',
+  country_code VARCHAR(8) NOT NULL DEFAULT '',
+  phone VARCHAR(32) NOT NULL,
+  phone_normalized VARCHAR(32) NOT NULL,
+  email VARCHAR(180) NULL,
+  password VARCHAR(255) NOT NULL,
+  is_active SMALLINT NOT NULL DEFAULT 1,
+  agreed_terms SMALLINT NOT NULL DEFAULT 0,
+  auth_version INT NOT NULL DEFAULT 1,
+  last_login DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY members_phone_unique (phone_normalized),
+  UNIQUE KEY members_email_unique (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE post_topics ADD COLUMN is_primary SMALLINT NOT NULL DEFAULT 0;
+
+INSERT IGNORE INTO topics (name, slug, description, intro, sort_order, is_featured) VALUES
+('حدیث', 'hadith', 'علوم حدیث و درایت', 'شناخت روایات اهل بیت', 7, 0),
+('سیره', 'sireh', 'سیره پیامبر و اهل بیت', 'سبک زندگی معصومان', 8, 0),
+('اندیشه اسلامی', 'andishe-islami', 'کلام، فلسفه و اندیشه معاصر', 'پرسش‌های بنیادین دین', 9, 0);
+
+INSERT IGNORE INTO topics (parent_id, name, slug, description, sort_order) VALUES
+((SELECT id FROM topics WHERE slug='quran-hadith' LIMIT 1), 'تاریخ قرآن', 'tarikh-quran', 'تاریخ جمع و کتابت قرآن', 4),
+((SELECT id FROM topics WHERE slug='quran-hadith' LIMIT 1), 'پژوهش‌های قرآنی', 'pazhuhesh-qurani', 'پژوهش‌های معاصر قرآنی', 5),
+((SELECT id FROM topics WHERE slug='akhlaq-tarbiat' LIMIT 1), 'اخلاق فردی', 'akhlaq-fardi', 'تهذیب نفس', 1),
+((SELECT id FROM topics WHERE slug='akhlaq-tarbiat' LIMIT 1), 'اخلاق اجتماعی', 'akhlaq-ejtemai', 'روابط اجتماعی', 2),
+((SELECT id FROM topics WHERE slug='akhlaq-tarbiat' LIMIT 1), 'تهذیب نفس', 'tahzib-nafs', 'سیر و سلوک', 3),
+((SELECT id FROM topics WHERE slug='fiqh-osool' LIMIT 1), 'فقه', 'fiqh', 'احکام فقهی', 1),
+((SELECT id FROM topics WHERE slug='fiqh-osool' LIMIT 1), 'اصول', 'osool', 'اصول فقه', 2),
+((SELECT id FROM topics WHERE slug='mahdaviat' LIMIT 1), 'آخرالزمان', 'akharozzaman', 'نشانه‌های آخرالزمان', 5);
+
 CREATE INDEX posts_public_listing ON posts(status,post_type,published_at DESC);
 CREATE INDEX lessons_public_listing ON lessons(status,created_at DESC);
 CREATE INDEX media_ordered_reference ON media_files(ref_type,ref_id,kind,sort_order,id);

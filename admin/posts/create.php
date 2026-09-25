@@ -74,11 +74,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
                 $postId = (int)$db->lastInsertId();
 
-                // اتصال موضوعات (ستون فقرات)
-                if($topicIds){
-                    $ins=$db->prepare("INSERT INTO post_topics (post_id, topic_id) VALUES (?,?) ON CONFLICT DO NOTHING");
-                    foreach($topicIds as $tid) $ins->execute([$postId,$tid]);
-                }
+                $primaryTopicId = (int)($_POST['primary_topic_id'] ?? 0);
+                setPostTopics($postId, $topicIds, $primaryTopicId > 0 ? $primaryTopicId : null);
 
                 if (!empty($_FILES['images']['name'][0])) {
                     foreach ($_FILES['images']['name'] as $k => $name) {
@@ -266,6 +263,15 @@ if(!is_array($selectedTopicIds)) $selectedTopicIds=[$selectedTopicIds];
                             <span class="form-check-label small"><?= sanitize($t['name']) ?></span>
                         </label>
                         <?php endforeach; endif; ?>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label small fw-bold">موضوع اصلی</label>
+                        <select name="primary_topic_id" class="form-select form-select-sm">
+                            <option value="">— اولین موضوع انتخاب‌شده —</option>
+                            <?php foreach ($allTopics as $t): ?>
+                            <option value="<?= (int)$t['id'] ?>"><?= sanitize($t['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
                     <div class="form-text mt-2">اتصال به موضوعات باعث نمایش در صفحهٔ موضوع و پیوند داخلی می‌شود.</div>
                     <div class="mt-3">

@@ -245,42 +245,11 @@ require_once __DIR__ . '/includes/header.php';
         <?php if (empty($latestNews)): ?>
         <div class="jhd-empty-state"><i class="bi bi-newspaper" aria-hidden="true"></i><p>هنوز خبری برای نمایش منتشر نشده است.</p></div>
         <?php else: ?>
+        <?= renderCategoryChips(['news'], url('news'), 'همه اخبار') ?>
         <div class="row g-4">
-            <?php foreach ($latestNews as $item): $nUrl = postUrl($item); ?>
-            <div class="col-md-6 col-lg-4">
-                <article class="news-card h-100">
-                    <div class="news-card-img-wrap">
-                        <a href="<?= $nUrl ?>">
-                            <?php if (!empty($item['featured_image'])): ?>
-                            <img src="<?= imgUrl($item['featured_image']) ?>" alt="<?= sanitize($item['title']) ?>" class="news-card-img" loading="lazy">
-                            <?php else: ?>
-                            <div class="news-card-placeholder"><i class="bi bi-newspaper"></i></div>
-                            <?php endif; ?>
-                        </a>
-                        <div class="news-card-badge"><?= postTypeBadge($item['post_type']) ?></div>
-                    </div>
-                    <div class="news-card-body">
-                        <div class="news-card-meta">
-                            <span><i class="bi bi-calendar3 ms-1"></i><?= persianDate($item['published_at'] ?? $item['created_at']) ?></span>
-                            <?php if (!empty($item['views_count'])): ?>
-                            <span>• <i class="bi bi-eye ms-1"></i><?= number_format((int)$item['views_count']) ?></span>
-                            <?php endif; ?>
-                        </div>
-                        <h3 class="news-card-title">
-                            <a href="<?= $nUrl ?>"><?= sanitize($item['title']) ?></a>
-                        </h3>
-                        <?php if (!empty($item['summary'])): ?>
-                        <p class="news-card-summary"><?= sanitize(excerpt($item['summary'], 110)) ?></p>
-                        <?php endif; ?>
-                        <div class="news-card-footer">
-                            <a href="<?= $nUrl ?>" class="btn-read-more">
-                                ادامه مطلب <i class="bi bi-arrow-left"></i>
-                            </a>
-                        </div>
-                    </div>
-                </article>
-            </div>
-            <?php endforeach; ?>
+            <?php foreach ($latestNews as $k => $item):
+                echo renderPostCard($item, ['featured' => $k === 0, 'cta' => 'ادامه مطلب', 'excerpt' => 110]);
+            endforeach; ?>
         </div>
         <?php endif; ?>
     </div>
@@ -305,33 +274,11 @@ require_once __DIR__ . '/includes/header.php';
         <?php if (empty($latestArticles)): ?>
         <div class="jhd-empty-state"><i class="bi bi-file-text" aria-hidden="true"></i><p>مقاله‌ای برای نمایش در این بخش ثبت نشده است.</p></div>
         <?php else: ?>
+        <?= renderCategoryChips(['article'], url('articles'), 'همه مقالات') ?>
         <div class="row g-4">
-            <?php foreach ($latestArticles as $art): $aUrl = postUrl($art); ?>
-            <div class="col-md-6 col-lg-4">
-                <article class="article-card h-100">
-                    <div class="article-card-header">
-                        <?php if (!empty($art['author_name'])): ?>
-                        <span class="article-card-author"><i class="bi bi-person ms-1"></i><?= sanitize($art['author_name']) ?></span>
-                        <?php endif; ?>
-                        <span class="article-card-date">
-                            <i class="bi bi-calendar3 ms-1"></i><?= persianDate($art['published_at'] ?? $art['created_at']) ?>
-                        </span>
-                    </div>
-                    <h3 class="article-card-title">
-                        <a href="<?= $aUrl ?>"><?= sanitize($art['title']) ?></a>
-                    </h3>
-                    <p class="article-card-summary">
-                        <?= sanitize(excerpt($art['summary'] ?? $art['content'], 120)) ?>
-                    </p>
-                    <div class="article-card-footer">
-                        <span class="badge badge-article">مقاله تحلیلی</span>
-                        <a href="<?= $aUrl ?>" class="btn-read-more">
-                            مطالعه کامل مقاله <i class="bi bi-arrow-left"></i>
-                        </a>
-                    </div>
-                </article>
-            </div>
-            <?php endforeach; ?>
+            <?php foreach ($latestArticles as $k => $art):
+                echo renderPostCard($art, ['featured' => $k === 0, 'cta' => 'مطالعه کامل مقاله', 'excerpt' => 120]);
+            endforeach; ?>
         </div>
         <?php endif; ?>
     </div>
@@ -356,39 +303,11 @@ require_once __DIR__ . '/includes/header.php';
         <?php if (empty($latestReports)): ?>
         <div class="jhd-empty-state"><i class="bi bi-card-text" aria-hidden="true"></i><p>گزارشی برای نمایش در این بخش ثبت نشده است.</p></div>
         <?php else: ?>
+        <?= renderCategoryChips(['report'], url('reports'), 'همه گزارش‌ها') ?>
         <div class="row g-4">
-            <?php foreach ($latestReports as $rep): $rUrl = postUrl($rep); ?>
-            <div class="col-md-6 col-lg-4">
-                <article class="news-card report-card h-100">
-                    <div class="news-card-img-wrap">
-                        <a href="<?= $rUrl ?>">
-                            <?php if (!empty($rep['featured_image'])): ?>
-                            <img src="<?= imgUrl($rep['featured_image']) ?>" alt="<?= sanitize($rep['title']) ?>" class="news-card-img" loading="lazy">
-                            <?php else: ?>
-                            <div class="news-card-placeholder"><i class="bi bi-camera"></i></div>
-                            <?php endif; ?>
-                        </a>
-                        <div class="report-card-badge"><i class="bi bi-images ms-1"></i>گزارش</div>
-                    </div>
-                    <div class="news-card-body">
-                        <div class="news-card-meta">
-                            <span><i class="bi bi-calendar3 ms-1"></i><?= persianDate($rep['published_at'] ?? $rep['created_at']) ?></span>
-                        </div>
-                        <h3 class="news-card-title">
-                            <a href="<?= $rUrl ?>"><?= sanitize($rep['title']) ?></a>
-                        </h3>
-                        <p class="news-card-summary">
-                            <?= sanitize(excerpt($rep['summary'] ?? '', 100)) ?>
-                        </p>
-                        <div class="news-card-footer">
-                            <a href="<?= $rUrl ?>" class="btn-read-more">
-                                مشاهده گزارش <i class="bi bi-arrow-left"></i>
-                            </a>
-                        </div>
-                    </div>
-                </article>
-            </div>
-            <?php endforeach; ?>
+            <?php foreach ($latestReports as $k => $rep):
+                echo renderPostCard($rep, ['featured' => $k === 0, 'cta' => 'مشاهده گزارش', 'excerpt' => 100]);
+            endforeach; ?>
         </div>
         <?php endif; ?>
     </div>
@@ -465,30 +384,11 @@ require_once __DIR__ . '/includes/header.php';
         <?php if (empty($latestEvents)): ?>
         <div class="jhd-empty-state"><i class="bi bi-calendar-event" aria-hidden="true"></i><p>رویدادی برای نمایش ثبت نشده است.</p></div>
         <?php else: ?>
+        <?= renderCategoryChips(['program','religious','announcement'], url('events'), 'همه رویدادها') ?>
         <div class="row g-4">
-            <?php foreach ($latestEvents as $ev): $evUrl = postUrl($ev); ?>
-            <div class="col-md-6 col-lg-4">
-                <article class="news-card h-100">
-                    <div class="news-card-body">
-                        <div class="d-flex align-items-center justify-content-between mb-2">
-                            <span class="badge bg-secondary"><?= postTypeLabel($ev['post_type']) ?></span>
-                            <span class="text-muted small"><i class="bi bi-calendar3 ms-1"></i><?= persianDate($ev['published_at'] ?? $ev['created_at']) ?></span>
-                        </div>
-                        <h3 class="news-card-title">
-                            <a href="<?= $evUrl ?>"><?= sanitize($ev['title']) ?></a>
-                        </h3>
-                        <p class="news-card-summary">
-                            <?= sanitize(excerpt($ev['summary'] ?? '', 110)) ?>
-                        </p>
-                        <div class="news-card-footer">
-                            <a href="<?= $evUrl ?>" class="btn-read-more">
-                                جزییات برنامه <i class="bi bi-arrow-left"></i>
-                            </a>
-                        </div>
-                    </div>
-                </article>
-            </div>
-            <?php endforeach; ?>
+            <?php foreach ($latestEvents as $ev):
+                echo renderPostCard($ev, ['cta' => 'جزییات برنامه', 'excerpt' => 110]);
+            endforeach; ?>
         </div>
         <?php endif; ?>
     </div>
@@ -512,30 +412,9 @@ require_once __DIR__ . '/includes/header.php';
         </div>
 
         <div class="row g-4">
-            <?php foreach ($latestBooks as $b): ?>
-            <div class="col-6 col-md-3">
-                <div class="book-card h-100">
-                    <div class="book-card-cover">
-                        <a href="<?= bookUrl($b) ?>">
-                            <?php if (!empty($b['cover_image'])): ?>
-                            <img src="<?= imgUrl($b['cover_image']) ?>" alt="<?= sanitize($b['title']) ?>" loading="lazy">
-                            <?php else: ?>
-                            <div class="h-100 d-flex align-items-center justify-content-center text-muted"><i class="bi bi-book fs-1"></i></div>
-                            <?php endif; ?>
-                        </a>
-                    </div>
-                    <h3 class="book-card-title">
-                        <a href="<?= bookUrl($b) ?>"><?= sanitize($b['title']) ?></a>
-                    </h3>
-                    <?php if (!empty($b['author'])): ?>
-                    <div class="book-card-author"><i class="bi bi-person ms-1"></i><?= sanitize($b['author']) ?></div>
-                    <?php endif; ?>
-                    <a href="<?= bookUrl($b) ?>" class="btn btn-sm btn-outline-primary w-100 mt-auto">
-                        معرفی و دریافت
-                    </a>
-                </div>
-            </div>
-            <?php endforeach; ?>
+            <?php foreach ($latestBooks as $b):
+                echo renderBookCard($b, ['col' => 'col-6 col-md-3']);
+            endforeach; ?>
         </div>
     </div>
 </section>

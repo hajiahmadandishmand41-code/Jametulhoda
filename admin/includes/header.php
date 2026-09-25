@@ -261,7 +261,15 @@ html[data-theme="dark"] .admin-content .text-muted { color: var(--admin-muted) !
     <div class="sidebar-section">سیستم و دسترسی</div>
     <?php if ($isSuperAdmin): ?>
     <a href="<?= url('admin/users') ?>" class="sidebar-link <?= ($currentAdminDir === 'users') ? 'active' : '' ?>">
-      <i class="bi bi-people"></i>مدیریت کاربران
+      <i class="bi bi-people"></i>مدیران و ویراستاران
+    </a>
+    <?php endif; ?>
+    <?php if ($isAdminRole): ?>
+    <a href="<?= url('admin/members') ?>" class="sidebar-link <?= ($currentAdminDir === 'members') ? 'active' : '' ?>">
+      <i class="bi bi-person-badge"></i>اعضای سایت
+    </a>
+    <a href="<?= url('admin/diagnostics') ?>" class="sidebar-link <?= ($currentAdminPage === 'diagnostics.php') ? 'active' : '' ?>">
+      <i class="bi bi-heart-pulse"></i>وضعیت سامانه
     </a>
     <?php endif; ?>
     <?php if ($isAdminRole): ?>

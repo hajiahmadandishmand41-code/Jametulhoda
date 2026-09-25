@@ -17,23 +17,47 @@ function sessionCookieSecure(): bool {
     return strtolower($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
 }
 
+function ensureCoreAuthTables(): void {
+    static $done = false;
+    if ($done) return;
+    $done = true;
+    try {
+        $db = getDB();
+        $driver = databaseDriver();
+        if ($driver === 'mysql') {
+            $db->exec("CREATE TABLE IF NOT EXISTS app_sessions (id VARCHAR(128) PRIMARY KEY, data TEXT NOT NULL, expires_at DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            $db->exec("CREATE TABLE IF NOT EXISTS login_limits (limit_key VARCHAR(64) PRIMARY KEY, attempts INTEGER NOT NULL DEFAULT 0, expires_at DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        } elseif ($driver === 'sqlite') {
+            $db->exec("CREATE TABLE IF NOT EXISTS app_sessions (id TEXT PRIMARY KEY, data TEXT NOT NULL, expires_at TEXT NOT NULL)");
+            $db->exec("CREATE TABLE IF NOT EXISTS login_limits (limit_key TEXT PRIMARY KEY, attempts INTEGER NOT NULL DEFAULT 0, expires_at TEXT NOT NULL)");
+        } else {
+            $db->exec("CREATE TABLE IF NOT EXISTS app_sessions (id VARCHAR(128) PRIMARY KEY, data TEXT NOT NULL, expires_at TIMESTAMPTZ NOT NULL)");
+            $db->exec("CREATE TABLE IF NOT EXISTS login_limits (limit_key VARCHAR(64) PRIMARY KEY, attempts INTEGER NOT NULL DEFAULT 0, expires_at TIMESTAMPTZ NOT NULL)");
+        }
+    } catch (Throwable $e) {
+        error_log('Auth table ensure failed: ' . get_class($e));
+    }
+}
+
 function startSecureSession(): void {
     if (session_status() === PHP_SESSION_NONE) {
         ini_set('session.use_strict_mode', '1');
         ini_set('session.use_only_cookies', '1');
         if (env_value('SESSION_DRIVER', 'database') === 'database') {
+            ensureCoreAuthTables();
             require_once __DIR__ . '/session.php';
             session_set_save_handler(new DatabaseSessionHandler(), true);
         } elseif (APP_ENV === 'production' || env_value('VERCEL')) {
             throw new RuntimeException('Production requires database sessions.');
         }
         session_name(SESSION_NAME);
+        $cookiePath = (defined('BASE_PATH') && BASE_PATH !== '') ? BASE_PATH . '/' : '/';
         session_set_cookie_params([
             'lifetime' => SESSION_LIFETIME,
-            'path'     => BASE_PATH . '/',
+            'path'     => $cookiePath,
             'secure'   => sessionCookieSecure(),
             'httponly' => true,
-            'samesite' => 'Strict',
+            'samesite' => 'Lax',
         ]);
         session_start();
     }
@@ -56,7 +80,7 @@ function isLoggedIn(): bool {
 
 function requireLogin(): void {
     if (!isLoggedIn()) {
-        header('Location: ' . siteUrl('admin/login'));
+        header('Location: ' . adminLoginUrl());
         exit;
     }
 }
@@ -84,41 +108,84 @@ function recordLoginAttempt(PDO $db, string $key): int {
     return (int)$limit->fetchColumn();
 }
 
+function jhd_password_is_hash(string $stored): bool {
+    if ($stored === '' || strlen($stored) < 50) return false;
+    $info = password_get_info($stored);
+    return !empty($info['algo']);
+}
+
 function loginAdmin(string $username, string $password): bool {
     require_once __DIR__ . '/../config/database.php';
     if (strlen($username)>80 || strlen($password)>4096) return false;
     $db   = getDB();
+    ensureCoreAuthTables();
     // Atomic shared limiter survives cookie resets and concurrent requests.
-    $key = hash('sha256', mb_strtolower(trim($username)));
+    $key = hash('sha256', 'admin:' . mb_strtolower(trim($username)));
     if (recordLoginAttempt($db, hash('sha256', 'ip:' . clientIp())) > 50) return false;
     if (recordLoginAttempt($db, $key) > 5) return false;
-    $stmt = $db->prepare("SELECT * FROM users WHERE username = ? AND is_active = 1 LIMIT 1");
+    $stmt = $db->prepare("SELECT * FROM users WHERE username = ? LIMIT 1");
     $stmt->execute([trim($username)]);
     $user = $stmt->fetch();
-    if ($user && in_array($user['role'], ['superadmin','admin','editor'], true) && password_verify($password, $user['password'])) {
-        startSecureSession();
-        session_regenerate_id(true);
-        $_SESSION = [];
-        $_SESSION['last_activity'] = time();
-        $_SESSION['auth_version'] = (int)$user['auth_version'];
-        $_SESSION['admin_id']   = $user['id'];
-        $_SESSION['admin_user'] = $user['username'];
-        $_SESSION['admin_name'] = $user['full_name'];
-        $_SESSION['admin_role'] = $user['role'];
-        $db->prepare('DELETE FROM login_limits WHERE limit_key=?')->execute([$key]);
-        // Update last login
-        $db->prepare("UPDATE users SET last_login = NOW() WHERE id = ?")->execute([$user['id']]);
-        return true;
+    if (!$user) {
+        password_verify($password, '$2y$10$usesomesillystringfore7wTCnyKPeogVA6awaz8iYupZHBMjqZ');
+        return false;
     }
-    return false;
+    if ((int)$user['is_active'] !== 1) {
+        error_log('Admin login denied: inactive account id=' . (int)$user['id']);
+        return false;
+    }
+    if (!in_array($user['role'], ['superadmin','admin','editor'], true)) {
+        error_log('Admin login denied: invalid role for id=' . (int)$user['id']);
+        return false;
+    }
+    $stored = (string)($user['password'] ?? '');
+    if (!jhd_password_is_hash($stored)) {
+        error_log('Admin login denied: password is not a password_hash() digest for id=' . (int)$user['id']);
+        return false;
+    }
+    if (!password_verify($password, $stored)) {
+        return false;
+    }
+    if (password_needs_rehash($stored, PASSWORD_DEFAULT)) {
+        try {
+            $db->prepare('UPDATE users SET password=? WHERE id=?')->execute([password_hash($password, PASSWORD_DEFAULT), $user['id']]);
+        } catch (Throwable $e) {
+            error_log('Admin password rehash skipped: ' . get_class($e));
+        }
+    }
+    startSecureSession();
+    $keepCsrf = $_SESSION[CSRF_TOKEN_NAME] ?? null;
+    $keepMember = [
+        'member_id' => $_SESSION['member_id'] ?? null,
+        'member_name' => $_SESSION['member_name'] ?? null,
+        'member_auth_version' => $_SESSION['member_auth_version'] ?? null,
+        'last_member_activity' => $_SESSION['last_member_activity'] ?? null,
+    ];
+    session_regenerate_id(true);
+    $_SESSION = [];
+    if (is_string($keepCsrf) && $keepCsrf !== '') $_SESSION[CSRF_TOKEN_NAME] = $keepCsrf;
+    foreach ($keepMember as $k => $v) {
+        if ($v !== null) $_SESSION[$k] = $v;
+    }
+    $_SESSION['last_activity'] = time();
+    $_SESSION['auth_version'] = (int)($user['auth_version'] ?? 1);
+    $_SESSION['admin_id']   = $user['id'];
+    $_SESSION['admin_user'] = $user['username'];
+    $_SESSION['admin_name'] = $user['full_name'];
+    $_SESSION['admin_role'] = $user['role'];
+    $db->prepare('DELETE FROM login_limits WHERE limit_key=?')->execute([$key]);
+    $nowSql = databaseDriver() === 'sqlite' ? "datetime('now')" : 'NOW()';
+    $db->prepare("UPDATE users SET last_login = $nowSql WHERE id = ?")->execute([$user['id']]);
+    return true;
 }
 
 function logoutAdmin(): void {
     startSecureSession();
     $_SESSION = [];
-    setcookie(SESSION_NAME, '', ['expires'=>time()-3600, 'path'=>BASE_PATH.'/', 'secure'=>sessionCookieSecure(), 'httponly'=>true, 'samesite'=>'Strict']);
+    $cookiePath = (defined('BASE_PATH') && BASE_PATH !== '') ? BASE_PATH . '/' : '/';
+    setcookie(SESSION_NAME, '', ['expires'=>time()-3600, 'path'=>$cookiePath, 'secure'=>sessionCookieSecure(), 'httponly'=>true, 'samesite'=>'Lax']);
     session_destroy();
-    header('Location: ' . siteUrl('admin/login'));
+    header('Location: ' . adminLoginUrl());
     exit;
 }
 

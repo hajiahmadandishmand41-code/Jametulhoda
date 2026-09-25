@@ -71,7 +71,7 @@ require_once __DIR__ . '/../includes/header.php';
           $topUrl = topicUrl($top);
       ?>
       <div class="col-lg-6">
-        <div class="card h-100 p-3">
+        <div class="card jhd-card h-100 p-3">
           <div class="d-flex gap-3 align-items-start">
             <?php if (!empty($top['cover_image'])): ?>
             <img src="<?= imgUrl($top['cover_image']) ?>" alt="<?= sanitize($top['name']) ?>"

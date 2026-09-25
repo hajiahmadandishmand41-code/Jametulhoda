@@ -7,7 +7,7 @@ $isHomePage = (($currentPage ?? '') === 'index.php')
     || in_array($jhdCurrentPath === '' ? '/' : $jhdCurrentPath, ['/', '/index.php'], true);
 ?>
 <?php if ($isHomePage): ?>
-<div class="container"><section class="jhd-invitation"><div><h2>آغاز یک مسیر روشن علمی و معرفتی</h2><p>برای آشنایی با برنامه‌های آموزشی و شرایط پذیرش در مدرسه علمیه جامعه‌الهدی، با ما در ارتباط باشید.</p></div><a class="jhd-button" href="<?= url('contact') ?>">گفت‌وگو با مدرسه <i class="bi bi-arrow-left"></i></a></section></div>
+<div class="container"><section class="jhd-invitation"><div><h2>آغاز یک مسیر روشن علمی و معرفتی</h2><p>برای پیگیری مطالب علمی و آموزشی عضو شوید یا با مدرسه در ارتباط باشید.</p></div><div class="d-flex flex-wrap gap-2"><a class="jhd-button" href="<?= registerUrl() ?>">ثبت‌نام <i class="bi bi-arrow-left"></i></a><a class="jhd-button jhd-button-ghost" href="<?= url('contact') ?>">گفت‌وگو با مدرسه</a></div></section></div>
 <?php endif; ?>
 </main>
 <?php
