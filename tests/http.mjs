@@ -111,7 +111,9 @@ r=await api.get('/admin/logout.php');csrf=token(await r.text());r=await api.post
 const guest=await request.newContext({baseURL:base});
 r=await guest.get('/login');check('public login page',r.status()===200 && (await r.text()).includes('ورود'));
 r=await guest.get('/register');check('public register page',r.status()===200 && (await r.text()).includes('ثبت‌نام'));
-r=await guest.get('/account',{maxRedirects:0});check('account requires member login',r.status()===302,String(r.status()));
+r=await guest.get('/account',{maxRedirects:0});
+if ([301,308].includes(r.status()) && /\/account\/?$/.test(r.headers()['location'] || '')) r=await guest.get(r.headers()['location'],{maxRedirects:0});
+check('account requires member login',r.status()===302,String(r.status()));
 r=await guest.get('/register');csrf=token(await r.text());
 const memberPhone='700'+String(stamp).slice(-8);
 r=await guest.post('/register',{form:{csrf_token:csrf,full_name:'عضو آزمون',country:'AF',phone:memberPhone,email:'',password:creds.password,password_confirm:creds.password,agreed_terms:'1'},maxRedirects:0});

@@ -12,8 +12,16 @@ DirectoryIndex index.php
 # file, AllowOverride limits, or a host without rewrite): missing pretty paths
 # such as /admin/login are handed to router.php instead of the platform 404.
 # Directory stubs (login/index.php, admin/login/index.php) cover POST.
+#
+# DirectorySlash must stay Off whenever rewrite is active. Physical stubs
+# (login/, register/, admin/login/, …) would otherwise 301 /login → /login/
+# before RewriteRule runs, which breaks clients and tests that do not follow
+# redirects. Without rewrite, Apache keeps the default (On) so /login still
+# reaches login/index.php via DirectoryIndex.
 <IfModule mod_dir.c>
-    DirectorySlash On
+    <IfModule mod_rewrite.c>
+        DirectorySlash Off
+    </IfModule>
 </IfModule>
 ErrorDocument 404 /router.php
 

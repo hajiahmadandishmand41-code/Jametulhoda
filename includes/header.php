@@ -109,7 +109,7 @@ endif; ?>
 <link rel="stylesheet" href="<?= asset('css/design-system.css') ?>">
 <script src="<?= asset('js/interface.js') ?>" defer></script>
 </head>
-<body class="jhd-public-site">
+<body class="jhd-public-site<?= !empty($authNoindex) ? ' jhd-login-site' : '' ?>">
 <a class="skip-link" href="#main-content">رفتن به محتوای اصلی</a>
 
 <!-- Header اصلی -->
