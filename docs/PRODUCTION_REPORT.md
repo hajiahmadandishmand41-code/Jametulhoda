@@ -185,3 +185,25 @@ resolves — a pre‑existing gap), and the `/login` canonical now uses the clea
 around one registry + one `url()`; Query mode is the InfinityFree‑safe default and Pretty mode
 is a validated opt‑in; allowlist‑only routing closes the traversal/internal‑PHP surface; and the
 full dual‑mode suite plus the container runtime pass in CI.
+
+---
+
+## Post‑CI verification audit
+
+After the green run, a source‑level audit confirmed the invariants hold everywhere (not just
+where a test happens to look):
+
+| Check | Result |
+|-------|--------|
+| Hard‑coded `index.php?p=…` in public templates | **none** — every link goes through `url()` |
+| Hard‑coded pretty hrefs (`href="/news"` …) in templates | **none** |
+| `redirect()` | rejects `\r\n` (header injection), schemes and protocol‑relative `//`; allows same‑origin absolute + scheme‑less relative (Query‑mode `index.php?p=…`); 303 for POST, 302 otherwise |
+| `robots.php` | `Sitemap:` → `/sitemap.xml`, whose `<loc>` set is mode‑aware |
+| 404 + search | `<meta name="robots" content="noindex, follow">`; 404 page also self‑noindexes |
+| 404 page links | deliberately **absolute** (`BASE_PATH.'/news'`) — a 404 can render at any path depth, where Query‑mode *relative* links would mis‑resolve; absolute paths are correct in both modes |
+| Admin "view public page" links | `postUrl()` / `url('admin/…')` — centralized, never a raw `pages/*.php` |
+| `paginate()` | substitutes `%d` **and** `%25d` (url()'s percent‑encoded placeholder), with a guarded `sprintf` fallback |
+| `url('login')` / `url('logout')` | clean `/login` `/logout` aliases (resolve to `admin/login.php` / `admin/logout.php`) |
+
+These, together with the green CI (21/21 steps success), are the evidence that the build meets
+the production‑readiness bar for InfinityFree.
