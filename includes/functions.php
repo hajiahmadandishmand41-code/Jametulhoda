@@ -247,10 +247,6 @@ function url(string $route = '', array $query = []): string {
         return JHD_PRETTY_URLS ? ($base ?: '') . '/' : 'index.php';
     }
 
-    // Auth aliases → physical admin paths.
-    $loginMap = ['login' => 'admin/login', 'logout' => 'admin/logout'];
-    if (isset($loginMap[$route])) $route = $loginMap[$route];
-
     // Path-form routes: admin panel, installer and any literal file/asset path.
     if (
         $route === 'admin' || str_starts_with($route, 'admin/') || $route === 'install'
