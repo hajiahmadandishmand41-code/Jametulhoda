@@ -7,7 +7,7 @@ $checks=0;
 putenv('JHD_EMPTY_TEST=');
 function check(bool $ok,string $label): void { global $checks; if(!$ok)throw new RuntimeException($label);$checks++; }
 check(env_value('JHD_EMPTY_TEST','default')==='default','empty environment uses safe defaults');
-check(siteUrl('news')===BASE_PATH.'/news','clean public URL');
+check(siteUrl('news')===(JHD_PRETTY_URLS ? BASE_PATH.'/news' : 'index.php?p=news'),'clean public URL');
 check(siteUrl('admin/users')===BASE_PATH.'/admin/users','clean admin URL');
 check(siteUrl('//evil.example')==='','protocol relative URL rejected');
 check(siteUrl("javascript:alert(1)")==='','unsafe scheme rejected');

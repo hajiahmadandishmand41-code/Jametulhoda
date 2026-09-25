@@ -68,14 +68,32 @@ jobs:
           curl --retry 10 --retry-connrefused --retry-delay 1 --fail --silent http://127.0.0.1:8080/ > /dev/null
           npm run test:http 2>&1 | tee /tmp/http-tests.log
           node tests/route-smoke.mjs 2>&1 | tee /tmp/route-smoke.log
+          node tests/route-matrix.mjs 2>&1 | tee /tmp/route-matrix.log
           npm run test:browser 2>&1 | tee /tmp/browser-tests.log
           node tests/links.mjs 2>&1 | tee /tmp/link-tests.log
           if grep -Ei "PHP (Warning|Fatal|Parse)|Application failure|Upload failed" test-server.log; then exit 1; fi
           # `tee` swallows the suite exit codes, so a FAIL line has to be caught here too
           # (the container step below already does the same for Apache).
-          for log in /tmp/http-tests.log /tmp/route-smoke.log /tmp/browser-tests.log /tmp/link-tests.log; do
+          for log in /tmp/http-tests.log /tmp/route-smoke.log /tmp/route-matrix.log /tmp/browser-tests.log /tmp/link-tests.log; do
             if grep -q "FAIL" "$log"; then
               echo "::error title=Integration FAIL::$(grep FAIL "$log" | head -n 20 | tr '\n' ' ' | cut -c1-800)"
+              exit 1
+            fi
+          done
+      - name: Pretty URL mode verification
+        run: |
+          # JHD_PRETTY_URLS=true exercises the mod-rewrite URL scheme: url() emits
+          # pretty paths and router.php must resolve every route without ever
+          # leaking an internal PHP file. Query mode remains the guaranteed
+          # contract; this proves the optional pretty scheme is equally sound.
+          JHD_PRETTY_URLS=true php -S 0.0.0.0:8082 router.php > pretty-server.log 2>&1 &
+          curl --retry 10 --retry-connrefused --retry-delay 1 --fail --silent http://127.0.0.1:8082/ > /dev/null
+          TEST_BASE_URL=http://127.0.0.1:8082 node tests/route-matrix.mjs 2>&1 | tee /tmp/route-matrix-pretty.log
+          TEST_BASE_URL=http://127.0.0.1:8082 node tests/route-smoke.mjs 2>&1 | tee /tmp/route-smoke-pretty.log
+          if grep -Ei "PHP (Warning|Fatal|Parse)|Application failure|Upload failed" pretty-server.log; then exit 1; fi
+          for log in /tmp/route-matrix-pretty.log /tmp/route-smoke-pretty.log; do
+            if grep -q "FAIL" "$log"; then
+              echo "::error title=Pretty URL FAIL::$(grep FAIL "$log" | head -n 20 | tr '\n' ' ' | cut -c1-800)"
               exit 1
             fi
           done
@@ -84,7 +102,7 @@ jobs:
         run: |
           python3 - <<'PYTHON'
           import pathlib
-          for name in ['/tmp/http-tests.log','/tmp/route-smoke.log','/tmp/browser-tests.log','/tmp/link-tests.log','test-server.log']:
+          for name in ['/tmp/http-tests.log','/tmp/route-smoke.log','/tmp/route-matrix.log','/tmp/browser-tests.log','/tmp/link-tests.log','test-server.log']:
               path=pathlib.Path(name)
               if path.exists():
                   lines=[line for line in path.read_text().splitlines() if any(word in line for word in ['FAIL','Fatal','Warning','Error','failure','exceeded','status','path','checked'])]
@@ -138,5 +156,6 @@ jobs:
           path: |
             test-results/
             test-server.log
+            pretty-server.log
             container-server.log
             composer.lock

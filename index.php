@@ -21,6 +21,45 @@ require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/auth.php';
 startSecureSession();
 
+// ─── Query-URL front controller ────────────────────────────────────────────
+// index.php?p=news / index.php?p=topic&slug=x must work even when mod_rewrite
+// is unavailable (InfinityFree). This is the same allowlist dispatch router.php
+// uses for ?p=, so both entry points converge on one controller per route and
+// nothing is ever include()d from user input. No ?p= → fall through to home.
+$__p = (isset($_GET['p']) && is_string($_GET['p'])) ? trim($_GET['p']) : '';
+if ($__p !== '') {
+    $__resolved = jhd_resolve_query($__p, $_GET);
+    if ($__resolved === null) {
+        http_response_code(404);
+        header('Content-Type: text/html; charset=utf-8');
+        echo '<!doctype html><html lang="fa" dir="rtl"><meta charset="utf-8">'
+            . '<meta name="viewport" content="width=device-width"><title>۴۰۴ — صفحه پیدا نشد</title>'
+            . '<style>body{font-family:Tahoma,system-ui,sans-serif;background:#f6f7f4;color:#182d39;margin:0;display:flex;min-height:100vh;align-items:center;justify-content:center}'
+            . 'main{max-width:520px;padding:32px;background:#fff;border:1px solid #e2e6e2;border-radius:16px;text-align:center;line-height:2}'
+            . 'a{color:#245c4c}h1{font-size:1.4rem;margin:.4rem 0}</style>'
+            . '<main><div style="font-size:3rem;font-weight:900;color:#245c4c">۴۰۴</div>'
+            . '<h1>صفحه مورد نظر یافت نشد</h1><p class="text-muted">نشانی وارد شده معتبر نیست.</p>'
+            . '<p><a href="' . htmlspecialchars(url(), ENT_QUOTES, 'UTF-8') . '">بازگشت به صفحه اصلی</a></p></main></html>';
+        exit;
+    }
+    foreach ($__resolved['get'] as $__k => $__v) $_GET[$__k] ??= $__v;
+    if (!empty($__resolved['expected_type'])) $_GET['expected_type'] = $__resolved['expected_type'];
+    if (!empty($__resolved['kind'])) $_GET['kind'] = $__resolved['kind'];
+    $_SERVER['JHD_ROUTE_NAME'] = $__p;
+    $_SERVER['JHD_ROUTE_PATH'] = BASE_PATH . jhd_route_path($__p, $_GET);
+    $__file = realpath(__DIR__ . '/' . $__resolved['file']);
+    if ($__file !== false && str_starts_with($__file, realpath(__DIR__) . DIRECTORY_SEPARATOR) && is_file($__file)) {
+        require $__file;
+        exit;
+    }
+    http_response_code(404);
+    header('Content-Type: text/html; charset=utf-8');
+    echo '<!doctype html><html lang="fa" dir="rtl"><meta charset="utf-8"><title>۴۰۴</title>'
+        . '<main style="font-family:Tahoma;padding:40px;text-align:center">صفحه پیدا نشد — '
+        . '<a href="' . htmlspecialchars(url(), ENT_QUOTES, 'UTF-8') . '">صفحه اصلی</a></main></html>';
+    exit;
+}
+
 $db = getDB();
 
 // ─── ۱. هیرو محتوایی ──────────────────────────────────────────────────────────
