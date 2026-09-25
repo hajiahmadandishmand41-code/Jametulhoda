@@ -43,6 +43,8 @@ const listings = [
   ['about', '/about', 'درباره'],
   ['contact', '/contact', 'تماس'],
   ['search', '/search', 'جستجو'],
+  ['login', '/login', 'ورود'],
+  ['register', '/register', 'ثبت‌نام'],
 ];
 
 let prettySupported = true;

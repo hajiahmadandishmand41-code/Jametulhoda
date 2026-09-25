@@ -8,10 +8,18 @@
 Options -Indexes -MultiViews
 DirectoryIndex index.php
 
+# Fallback when mod_rewrite is unavailable (InfinityFree mis-upload of this
+# file, AllowOverride limits, or a host without rewrite): missing pretty paths
+# such as /admin/login are handed to router.php instead of the platform 404.
+# Directory stubs (login/index.php, admin/login/index.php) cover POST.
+<IfModule mod_dir.c>
+    DirectorySlash On
+</IfModule>
+ErrorDocument 404 /router.php
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    # RewriteBase is intentionally omitted: `router.php` is a relative substitution,
-    # so Apache resolves it beside this .htaccess at both domain root and subdirectory installs.
+    RewriteBase /
 
     # 1. Trusted static assets are served directly by Apache (no PHP process).
     #    Uploaded image/audio/video files are bypassed only for a media allowlist;
@@ -20,20 +28,20 @@ DirectoryIndex index.php
     #    The optional path prefix also supports a site installed in a subdirectory.
     RewriteCond %{REQUEST_URI} ^/(?:[^/]+/)*assets/ [NC]
     RewriteCond %{REQUEST_FILENAME} -f
-    RewriteRule ^ - [END]
+    RewriteRule ^ - [L]
 
     RewriteCond %{REQUEST_URI} ^/(?:[^/]+/)*uploads/.+\.(?:jpe?g|png|gif|webp|mp3|ogg|wav|m4a|mp4|webm|mov|mkv)$ [NC]
     RewriteCond %{REQUEST_FILENAME} -f
-    RewriteRule ^ - [END]
+    RewriteRule ^ - [L]
 
     # 2. The front controller itself is never rewritten again.
-    RewriteRule ^router\.php$ - [END]
+    RewriteRule ^router\.php$ - [L]
 
     # 3. Everything else (including real directories such as admin/ and any
     #    physical .php file) goes through router.php, so the route allowlist and
-    #    the security gates can never be bypassed. [END] stops the per-directory
-    #    rewrite loop without a second pass.
-    RewriteRule ^ router.php [END,QSA]
+    #    the security gates can never be bypassed.
+    #    [L] (not [END]) is used for InfinityFree / LiteSpeed compatibility.
+    RewriteRule ^ router.php [L,QSA]
 </IfModule>
 
 <IfModule mod_headers.c>

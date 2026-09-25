@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/functions.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/member-auth.php';
 startSecureSession();
 
 $siteName = getSetting('site_name', SITE_NAME);
@@ -9,7 +10,10 @@ if ($siteName === 'مدرسه علمیه جامعه‌الهدی') $siteName = S
 $siteSlogan = getSetting('site_slogan', SITE_SLOGAN);
 if ($siteSlogan === 'علم، معرفت و تهذیب در پرتو قرآن و عترت') $siteSlogan = SITE_SLOGAN; // normalize the legacy installation default
 $currentPath = current_path();
-$isLoggedIn = isLoggedIn();
+$isAdminLoggedIn = isLoggedIn();
+$isMemberLoggedIn = isMemberLoggedIn();
+$isLoggedIn = $isAdminLoggedIn; // backward compatible for existing templates
+$navTopicTree = getTopicTree();
 
 $metaTitle = !empty($pageTitle) ? $pageTitle . ' | ' . $siteName : $siteName . ' | ' . $siteSlogan;
 $metaDesc = $pageDesc ?? $siteSlogan;
@@ -38,7 +42,15 @@ if (SITE_URL && !$responseIs404) {
     }
 }
 // Search results and 404s stay out of the index (Query or Pretty spelling).
-$noindexSeo = $responseIs404 || (($_GET['p'] ?? '') === 'search') || (current_path() === '/search');
+$authRoutes = ['login', 'register', 'logout', 'account', 'profile', 'password-change'];
+$routeNameForRobots = isset($_SERVER['JHD_ROUTE_NAME']) ? (string)$_SERVER['JHD_ROUTE_NAME'] : (string)($_GET['p'] ?? '');
+$authNoindex = in_array($routeNameForRobots, $authRoutes, true)
+    || preg_match('~^/(login|register|logout|account|profile|password-change)(/|$)~', $currentPath);
+$noindexSeo = !empty($noindexSeo)
+    || $responseIs404
+    || $authNoindex
+    || $routeNameForRobots === 'search'
+    || $currentPath === '/search';
 $ogType = isset($post) || isset($book) || isset($lesson) ? 'article' : 'website';
 
 // Helper for active navigation link
@@ -113,7 +125,8 @@ endif; ?>
         </a>
 
         <!-- فرم جستجوی دسکتاپ -->
-        <form class="jhd-search d-none d-lg-flex" action="<?= url('search') ?>" method="get" role="search">
+        <form class="jhd-search d-none d-lg-flex" action="<?= formUrl('search') ?>" method="get" role="search">
+            <?= formRouteFields('search') ?>
             <label class="visually-hidden" for="header-search">جستجو در مقالات، اخبار، دروس و کتاب‌ها</label>
             <input id="header-search" name="q" type="search" placeholder="جستجو در اخبار، مقالات، کتاب‌ها، دروس..." maxlength="200" value="<?= sanitize($_GET['q'] ?? '') ?>">
             <button type="submit" aria-label="جستجو"><i class="bi bi-search"></i></button>
@@ -125,17 +138,29 @@ endif; ?>
 
             <button class="jhd-icon-btn" data-theme-toggle aria-label="تغییر پوسته روشن و تیره" aria-pressed="false"><i class="bi bi-moon"></i></button>
 
-            <?php if ($isLoggedIn): ?>
-            <a class="btn btn-sm btn-outline-primary d-none d-md-inline-flex align-items-center gap-1" href="<?= url('admin') ?>">
+            <div class="jhd-account-cluster d-none d-md-flex">
+            <?php if ($isAdminLoggedIn): ?>
+            <a class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" href="<?= adminUrl() ?>">
                 <i class="bi bi-speedometer2"></i>
                 <span>پنل مدیریت</span>
             </a>
+            <?php elseif ($isMemberLoggedIn): ?>
+            <a class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" href="<?= accountUrl() ?>">
+                <i class="bi bi-person-circle"></i>
+                <span>حساب من</span>
+            </a>
             <?php else: ?>
-            <a class="btn btn-sm btn-outline-secondary d-none d-md-inline-flex align-items-center gap-1" href="<?= url('login') ?>">
+            <a class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1" href="<?= loginUrl() ?>">
                 <i class="bi bi-box-arrow-in-left"></i>
                 <span>ورود</span>
             </a>
+            <a class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" href="<?= registerUrl() ?>">
+                <i class="bi bi-person-plus"></i>
+                <span>ثبت‌نام</span>
+            </a>
+            <a class="jhd-admin-login-link" href="<?= adminLoginUrl() ?>">ورود مدیر</a>
             <?php endif; ?>
+            </div>
 
             <button type="button" id="menuToggle" class="jhd-icon-btn jhd-menu-toggle" aria-label="باز کردن منو" aria-expanded="false" aria-controls="siteDrawer"><i class="bi bi-list"></i></button>
         </div>
@@ -154,7 +179,26 @@ endif; ?>
                 <li><a href="<?= url('lessons') ?>" class="jhd-nav-link <?= $isActiveNav('lessons') || $isActiveNav('lesson') ? 'active' : '' ?>" <?= ($isActiveNav('lessons') || $isActiveNav('lesson')) ? 'aria-current="page"' : '' ?>><i class="bi bi-mortarboard ms-1"></i>درس‌ها</a></li>
                 <li><a href="<?= url('research') ?>" class="jhd-nav-link <?= $isActiveNav('research') ? 'active' : '' ?>" <?= $isActiveNav('research') ? 'aria-current="page"' : '' ?>><i class="bi bi-journal-richtext ms-1"></i>پژوهش</a></li>
                 <li><a href="<?= url('media') ?>" class="jhd-nav-link <?= $isActiveNav('media') || $isActiveNav('videos') || $isActiveNav('audios') ? 'active' : '' ?>" <?= ($isActiveNav('media') || $isActiveNav('videos') || $isActiveNav('audios')) ? 'aria-current="page"' : '' ?>><i class="bi bi-play-circle ms-1"></i>رسانه</a></li>
-                <li><a href="<?= url('topics') ?>" class="jhd-nav-link <?= $isActiveNav('topics') || $isActiveNav('topic') ? 'active' : '' ?>" <?= ($isActiveNav('topics') || $isActiveNav('topic')) ? 'aria-current="page"' : '' ?>><i class="bi bi-diagram-3 ms-1"></i>موضوعات</a></li>
+                <li class="jhd-has-sub">
+                    <a href="<?= url('topics') ?>" class="jhd-nav-link <?= $isActiveNav('topics') || $isActiveNav('topic') ? 'active' : '' ?>" <?= ($isActiveNav('topics') || $isActiveNav('topic')) ? 'aria-current="page"' : '' ?> aria-haspopup="true"><i class="bi bi-diagram-3 ms-1"></i>موضوعات</a>
+                    <?php if ($navTopicTree): ?>
+                    <ul class="jhd-subnav" role="menu">
+                        <?php foreach ($navTopicTree as $parentTopic): ?>
+                        <li class="<?= !empty($parentTopic['children']) ? 'jhd-has-sub' : '' ?>">
+                            <a href="<?= topicUrl($parentTopic) ?>"><?= sanitize($parentTopic['name']) ?></a>
+                            <?php if (!empty($parentTopic['children'])): ?>
+                            <ul class="jhd-subnav jhd-subnav-nested">
+                                <?php foreach ($parentTopic['children'] as $childTopic): ?>
+                                <li><a href="<?= topicUrl($childTopic) ?>"><?= sanitize($childTopic['name']) ?></a></li>
+                                <?php endforeach; ?>
+                            </ul>
+                            <?php endif; ?>
+                        </li>
+                        <?php endforeach; ?>
+                        <li class="jhd-subnav-all"><a href="<?= url('topics') ?>">همه موضوعات</a></li>
+                    </ul>
+                    <?php endif; ?>
+                </li>
             </ul>
         </div>
     </nav>
@@ -181,7 +225,8 @@ endif; ?>
     </div>
 
     <div class="jhd-drawer-search">
-        <form action="<?= url('search') ?>" method="get" role="search">
+        <form action="<?= formUrl('search') ?>" method="get" role="search">
+            <?= formRouteFields('search') ?>
             <label class="visually-hidden" for="drawer-search">جستجو در محتوا</label>
             <input id="drawer-search" name="q" type="search" placeholder="جستجو در محتوا..." maxlength="200" value="<?= sanitize($_GET['q'] ?? '') ?>">
             <button type="submit" aria-label="جستجو"><i class="bi bi-search"></i></button>
@@ -215,11 +260,17 @@ endif; ?>
         <a href="<?= url('contact') ?>" class="drawer-link"><i class="bi bi-envelope"></i> ارتباط با ما</a>
 
         <div class="drawer-section">حساب کاربری</div>
-        <?php if ($isLoggedIn): ?>
-        <a href="<?= url('admin') ?>" class="drawer-link"><i class="bi bi-speedometer2"></i> پنل مدیریت</a>
-        <a href="<?= url('admin/logout') ?>" class="drawer-link text-danger" data-confirm="آیا از خروج از سیستم اطمینان دارید؟"><i class="bi bi-box-arrow-right"></i> خروج از حساب</a>
+        <?php if ($isAdminLoggedIn): ?>
+        <a href="<?= adminUrl() ?>" class="drawer-link"><i class="bi bi-speedometer2"></i> پنل مدیریت</a>
+        <a href="<?= url('admin/logout') ?>" class="drawer-link text-danger" data-confirm="آیا از خروج از سیستم اطمینان دارید؟"><i class="bi bi-box-arrow-right"></i> خروج مدیر</a>
+        <?php elseif ($isMemberLoggedIn): ?>
+        <a href="<?= accountUrl() ?>" class="drawer-link"><i class="bi bi-person-circle"></i> حساب کاربری</a>
+        <a href="<?= url('password-change') ?>" class="drawer-link"><i class="bi bi-key"></i> تغییر رمز</a>
+        <a href="<?= logoutUrl() ?>" class="drawer-link text-danger"><i class="bi bi-box-arrow-right"></i> خروج</a>
         <?php else: ?>
-        <a href="<?= url('login') ?>" class="drawer-link"><i class="bi bi-box-arrow-in-left"></i> ورود به پنل</a>
+        <a href="<?= loginUrl() ?>" class="drawer-link"><i class="bi bi-box-arrow-in-left"></i> ورود</a>
+        <a href="<?= registerUrl() ?>" class="drawer-link"><i class="bi bi-person-plus"></i> ثبت‌نام</a>
+        <a href="<?= adminLoginUrl() ?>" class="drawer-link"><i class="bi bi-shield-lock"></i> ورود مدیر</a>
         <?php endif; ?>
     </div>
 </aside>

@@ -30,7 +30,7 @@ $edit=null;
 if (!empty($_GET['edit'])) { $s=$db->prepare('SELECT id,username,full_name,email,role,is_active FROM users WHERE id=?');$s->execute([(int)$_GET['edit']]);$edit=$s->fetch(); }
 $users=$db->query('SELECT id,username,full_name,role,is_active FROM users ORDER BY id DESC LIMIT 200')->fetchAll();
 ?>
-<h1 class="h4">مدیریت کاربران</h1><p class="text-muted">حساب‌های این بخش مخصوص کارکنان هستند. حذف اطلاعات انجام نمی‌شود؛ دسترسی کاربر را می‌توانید غیرفعال کنید.</p>
+<h1 class="h4">مدیریت کاربران</h1><p class="text-muted">حساب‌های این بخش مخصوص کارکنان (superadmin / admin / editor) هستند و از اعضای عمومی سایت جدا نگه داشته می‌شوند. اعضای ثبت‌نام‌شده را در <a href="<?= url('admin/members') ?>">اعضای سایت</a> ببینید. حذف اطلاعات انجام نمی‌شود؛ دسترسی را می‌توانید غیرفعال کنید.</p>
 <?php if($error): ?><div class="alert alert-danger"><?= sanitize($error) ?></div><?php endif; ?>
 <?php if($success): ?><div class="alert alert-success"><?= sanitize($success) ?></div><?php endif; ?>
 <form method="post" class="admin-card p-4 mb-4 admin-form">

@@ -48,6 +48,14 @@ return [
         '/speeches'             => 'pages/speeches.php',
         '/topic'                => 'pages/topic.php',
         '/topics'               => 'pages/topics.php',
+
+        // ─── احراز هویت عمومی (جدا از پنل مدیر) ──────────────────────────
+        '/login'                => 'pages/login.php',
+        '/register'             => 'pages/register.php',
+        '/logout'               => 'pages/logout.php',
+        '/account'              => 'pages/account.php',
+        '/profile'              => 'pages/account.php',
+        '/password-change'      => 'pages/password-change.php',
         '/sitemap.xml'          => 'sitemap.php',
         '/sitemap.php'          => 'sitemap.php',
         '/robots.txt'           => 'robots.php',
@@ -69,6 +77,8 @@ return [
         '/admin/content'             => 'admin/posts/index.php',
         '/admin/users'               => 'admin/users/index.php',
         '/admin/users/new'           => 'admin/users/index.php',
+        '/admin/members'             => 'admin/members/index.php',
+        '/admin/diagnostics'         => 'admin/diagnostics.php',
         '/admin/messages'            => 'admin/messages/index.php',
         '/admin/media'               => 'admin/media/index.php',
         '/admin/categories'          => 'admin/categories/index.php',
@@ -108,8 +118,6 @@ return [
         '/library'   => '/books',
         '/files'     => '/books',
         '/dashboard' => '/admin',
-        '/login'     => '/admin/login',
-        '/logout'    => '/admin/logout',
         '/event'     => '/events',
         // نشانی کوتاه نصاب. aliasها فقط با همان نوشتار (به‌علاوهٔ اسلش پایانی)
         // پاسخ می‌دهند، پس `/install.php` همچنان ۴۰۴ می‌ماند.
@@ -135,8 +143,8 @@ return [
         // ─── رسانه (شناسه عددی ویدیو / صوت / مدیا) ─────────────────────
         ['~^/(video|audio|media)/(\d+)/?$~D',                              'pages/media.php',           ['kind' => 1, 'id' => 2]],
 
-        // ─── موضوعات (مفرد و جمع) ──────────────────────────────────────
-        ['~^/topics?/([^/]+)/?$~uD',                                       'pages/topic.php',           ['slug' => 1]],
+        // ─── موضوعات (مفرد و جمع، والد/فرزند) ──────────────────────────
+        ['~^/topics?/((?:[^/]+)(?:/[^/]+)*)/?$~uD',                        'pages/topic.php',           ['slug' => 1]],
 
         // ─── جزئیات درس، سخنرانی، دسته‌بندی و پست متفرقه ───────────────
         ['~^/lesson/([^/]+)/?$~uD',                                        'pages/lesson.php',          ['slug' => 1]],

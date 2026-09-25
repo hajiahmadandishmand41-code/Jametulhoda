@@ -96,6 +96,7 @@ require_once __DIR__ . '/../includes/header.php';
 
     <!-- فیلترها و جستجو -->
     <form method="get" class="mb-4" role="search">
+    <?= queryKeepFields() ?>
       <div class="row g-2 align-items-center">
         <div class="col-md-5">
           <input type="search" name="q" class="form-control" aria-label="جستجو در رویدادها" placeholder="جستجو در رویدادها..." value="<?= sanitize($search) ?>">

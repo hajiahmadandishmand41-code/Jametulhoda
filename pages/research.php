@@ -69,6 +69,7 @@ require_once __DIR__ . '/../includes/header.php';
 
     <!-- Search Form -->
     <form method="get" class="mb-4" role="search">
+    <?= queryKeepFields() ?>
       <div class="input-group" style="max-width:480px">
         <input type="search" name="q" class="form-control" aria-label="جستجو در پژوهش‌ها"
                placeholder="جستجو در عنوان یا متن پژوهش‌ها..."

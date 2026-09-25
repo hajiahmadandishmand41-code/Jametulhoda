@@ -161,7 +161,8 @@ $speechIds    = array_column($speeches, 'id');
 
                 <!-- فرم جستجو و فیلتر -->
                 <div class="speeches-filter-bar mb-4">
-                    <form action="<?= siteUrl('speeches') ?>" method="get" class="row g-2 align-items-end">
+                    <form action="<?= formUrl('speeches') ?>" method="get" class="row g-2 align-items-end">
+                    <?= formRouteFields('speeches') ?>
                         <div class="col-12 col-md-5">
                             <label class="form-label small fw-600 mb-1" for="speech-search">جستجو در سخنرانی‌ها</label>
                             <div class="input-group">

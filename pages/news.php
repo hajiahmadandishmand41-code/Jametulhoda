@@ -54,6 +54,7 @@ if (!empty($postIds)) {
 
         <!-- جستجو در اخبار -->
         <form method="get" class="mb-4" role="search">
+            <?= queryKeepFields() ?>
             <div class="input-group" style="max-width:440px">
                 <label class="visually-hidden" for="news-search">جستجو در اخبار</label>
                 <input id="news-search" type="search" name="q" class="form-control" placeholder="جستجو در اخبار..." value="<?= sanitize($search) ?>">

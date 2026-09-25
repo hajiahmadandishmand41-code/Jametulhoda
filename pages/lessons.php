@@ -175,6 +175,7 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
       <h2 class="h5 fw-bold mb-0">جدیدترین جلسات درسی</h2>
       <form method="get" class="d-flex gap-2 flex-wrap">
+      <?= queryKeepFields() ?>
         <input type="search" name="q" class="form-control form-control-sm" aria-label="جستجو در درس‌ها" placeholder="جستجو در درس‌ها..." value="<?= sanitize($search) ?>" style="max-width:200px">
         <select name="level" class="form-select form-select-sm" aria-label="فیلتر سطح درس" style="max-width:130px">
           <option value="">همه سطوح</option>

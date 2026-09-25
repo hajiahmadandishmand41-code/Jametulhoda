@@ -65,6 +65,7 @@ require_once __DIR__ . '/../includes/header.php';
 
     <!-- فرم جستجو -->
     <form method="get" class="mb-5" role="search">
+      <?= queryKeepFields() ?>
       <div class="input-group input-group-lg" style="max-width:640px">
         <input type="search" name="q" class="form-control" aria-label="جستجو در آرشیو محتوا" placeholder="مثلاً: مهدویت، فلسفه، اصول فقه، کلام..." value="<?= sanitize($q) ?>" autofocus>
         <button type="submit" class="btn btn-primary"><i class="bi bi-search ms-1"></i>جستجو</button>

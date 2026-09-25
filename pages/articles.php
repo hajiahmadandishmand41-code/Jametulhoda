@@ -80,6 +80,7 @@ require_once __DIR__ . '/../includes/header.php';
 
     <!-- Search & Filter Form -->
     <form method="get" class="mb-4" role="search">
+    <?= queryKeepFields() ?>
       <div class="row g-2 align-items-center">
         <div class="col-md-6 col-lg-5">
           <div class="input-group">

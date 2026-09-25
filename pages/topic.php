@@ -307,9 +307,9 @@ require_once __DIR__ . '/../includes/header.php';
 <?php
 $totalCount = count($newsList) + count($articles) + count($researches) + count($reports) + count($books) + count($lessons) + count($videos);
 if ($totalCount === 0): ?>
-<div class="text-center py-5 border rounded" style="background:var(--jhd-paper)">
+<div class="jhd-empty-state">
     <i class="bi bi-inbox display-4 d-block mb-2 opacity-25"></i>
-    <p class="text-muted">هنوز محتوایی برای این موضوع ثبت نشده است.</p>
+    <p class="mb-2">هنوز محتوایی برای این موضوع ثبت نشده است.</p>
     <a href="<?= url('topics') ?>" class="btn btn-outline-secondary btn-sm mt-2">مشاهده سایر موضوعات</a>
 </div>
 <?php endif; ?>

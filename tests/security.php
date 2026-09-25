@@ -7,8 +7,11 @@ $checks=0;
 putenv('JHD_EMPTY_TEST=');
 function check(bool $ok,string $label): void { global $checks; if(!$ok)throw new RuntimeException($label);$checks++; }
 check(env_value('JHD_EMPTY_TEST','default')==='default','empty environment uses safe defaults');
-check(siteUrl('news')===(JHD_PRETTY_URLS ? BASE_PATH.'/news' : 'index.php?p=news'),'clean public URL');
-check(siteUrl('admin/users')===BASE_PATH.'/admin/users','clean admin URL');
+check(siteUrl('news')===(JHD_PRETTY_URLS ? BASE_PATH.'/news' : BASE_PATH.'/index.php?p=news'),'clean public URL');
+check(siteUrl('admin/users')===(JHD_PRETTY_URLS ? BASE_PATH.'/admin/users' : BASE_PATH.'/admin/users/index.php'),'clean admin URL');
+check(siteUrl('login')===(JHD_PRETTY_URLS ? BASE_PATH.'/login' : BASE_PATH.'/index.php?p=login'),'public login URL');
+check(siteUrl('admin/login')===BASE_PATH.'/admin/login','admin login URL');
+check(siteUrl('')=== (BASE_PATH==='' ? '/' : BASE_PATH.'/'),'home URL is root-relative');
 check(siteUrl('//evil.example')==='','protocol relative URL rejected');
 check(siteUrl("javascript:alert(1)")==='','unsafe scheme rejected');
 check(siteUrl("news\r\nX-Test:bad")==='','header injection rejected');

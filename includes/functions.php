@@ -92,6 +92,14 @@ function jhd_routes(): array {
         'contact'  => ['file' => 'pages/contact.php','p' => 'contact','pretty' => 'contact','title' => 'تماس با ما', 'listing' => true],
         'search'   => ['file' => 'pages/search.php', 'p' => 'search', 'pretty' => 'search', 'title' => 'جستجو',      'listing' => true],
 
+        // ── Public authentication (never aliases to admin) ───────────────
+        'login'            => ['file' => 'pages/login.php',            'p' => 'login',            'pretty' => 'login',            'title' => 'ورود',           'listing' => true],
+        'register'         => ['file' => 'pages/register.php',         'p' => 'register',         'pretty' => 'register',         'title' => 'ثبت‌نام',         'listing' => true],
+        'logout'           => ['file' => 'pages/logout.php',           'p' => 'logout',           'pretty' => 'logout',           'title' => 'خروج',           'listing' => true],
+        'account'          => ['file' => 'pages/account.php',          'p' => 'account',          'pretty' => 'account',          'title' => 'حساب کاربری',    'listing' => true, 'paths' => ['/profile']],
+        'profile'          => ['file' => 'pages/account.php',          'p' => 'profile',          'pretty' => 'profile',          'title' => 'حساب کاربری',    'listing' => true],
+        'password-change'  => ['file' => 'pages/password-change.php',  'p' => 'password-change',  'pretty' => 'password-change',  'title' => 'تغییر رمز عبور', 'listing' => true],
+
         // ── Detail-only routes ───────────────────────────────────────────
         'article'  => ['file' => 'pages/post.php',   'p' => 'article',  'pretty' => 'article',  'title' => 'مقاله',   'expected_type' => 'article', 'id_param' => 'slug', 'detail' => true],
         'report'   => ['file' => 'pages/post.php',   'p' => 'report',   'pretty' => 'report',   'title' => 'گزارش',   'expected_type' => 'report',  'id_param' => 'slug', 'detail' => true],
@@ -132,11 +140,20 @@ function jhd_is_detail_route(array $meta): bool {
 function jhd_route_path(string $route, array $get): string {
     if ($route === '' || $route === 'home') return '/';
     $meta = jhd_routes()[$route] ?? null;
-    if ($meta === null) return '/' . $route;
+    if ($meta === null) {
+        if (str_starts_with($route, 'admin')) return '/' . trim($route, '/');
+        return '/' . $route;
+    }
     $path = '/' . ($meta['pretty'] ?? $route);
     if (jhd_is_detail_route($meta)) {
         if (!empty($get['slug']) && is_string($get['slug'])) {
-            $path .= '/' . rawurldecode($get['slug']);
+            $segments = preg_split('~/+~', trim(rawurldecode($get['slug']), '/')) ?: [];
+            $clean = [];
+            foreach ($segments as $seg) {
+                if ($seg === '' || $seg === '.' || $seg === '..') continue;
+                $clean[] = $seg;
+            }
+            if ($clean) $path .= '/' . implode('/', $clean);
         } elseif (!empty($get['id'])) {
             $path .= '/' . (int)$get['id'];
         }
@@ -174,8 +191,15 @@ function jhd_route_name_for_path(string $path): ?string {
  * @return array{file:string,route:string,get:array,expected_type?:string,kind?:string}|null
  */
 function jhd_resolve_query(string $p, array $get): ?array {
+    $p = trim($p, '/');
     $routes = jhd_routes();
-    if (!isset($routes[$p])) return null;
+    if (!isset($routes[$p])) {
+        if ($p === 'admin' || str_starts_with($p, 'admin/')) {
+            $file = jhd_admin_file_for($p);
+            if ($file !== null) return ['file' => $file, 'route' => $p, 'get' => []];
+        }
+        return null;
+    }
     $r = $routes[$p];
     $hasId = (isset($get['slug']) && (string)$get['slug'] !== '')
         || (isset($get['id']) && (int)$get['id'] > 0);
@@ -206,9 +230,11 @@ function jhd_resolve_query(string $p, array $get): ?array {
  * Central URL helper for the entire application.
  *
  * Query mode (JHD_PRETTY_URLS = false, the InfinityFree-safe default):
- *   url('news')                  → index.php?p=news
- *   url('topic', ['slug'=>'x'])  → index.php?p=topic&slug=x
- *   url('video', ['id'=>5])      → index.php?p=video&id=5
+ *   url('news')                  → /index.php?p=news
+ *   url('topic', ['slug'=>'x'])  → /index.php?p=topic&slug=x
+ *   url('video', ['id'=>5])      → /index.php?p=video&id=5
+ *   url('login')                 → /index.php?p=login
+ *   url('admin/login')           → /admin/login  (directory stub, no rewrite needed)
  * Pretty mode (JHD_PRETTY_URLS = true):
  *   url('news')                  → /news
  *   url('topic', ['slug'=>'x'])  → /topic/x
@@ -233,8 +259,6 @@ function url(string $route = '', array $query = []): string {
         return '';
     }
 
-    $base = jhd_base_path();
-
     // Support an inline query string in the first argument (url('lessons?q=x')).
     if (str_contains($route, '?')) {
         [$route, $inlineQs] = explode('?', $route, 2);
@@ -242,35 +266,49 @@ function url(string $route = '', array $query = []): string {
         if (is_array($inline) && $inline) $query = array_merge($inline, $query);
     }
 
-    // Home.
+    $route = ltrim($route, '/');
+
+    // Home — always the site root. `/` works with or without mod_rewrite
+    // (DirectoryIndex). Never emit a relative `index.php` (that would resolve
+    // to /admin/index.php when the visitor is on /admin/login.php).
     if ($route === '' || $route === '/' || $route === 'home') {
-        return JHD_PRETTY_URLS ? ($base ?: '') . '/' : 'index.php';
+        return jhd_web_path('');
     }
 
-    // Path-form routes: admin panel, installer and any literal file/asset path.
+    // Literal files, assets and uploads — always a root-relative physical path.
     if (
-        $route === 'admin' || str_starts_with($route, 'admin/') || $route === 'install'
-        || preg_match('~\.[a-z0-9]{1,6}$~i', $route)
-        || str_starts_with($route, 'assets/') || str_starts_with($route, 'uploads/')
+        preg_match('~\.[a-z0-9]{1,6}$~i', $route)
+        || str_starts_with($route, 'assets/')
+        || str_starts_with($route, 'uploads/')
     ) {
-        $result = $base . '/' . ltrim($route, '/');
+        $result = jhd_web_path($route);
         if (!empty($query)) $result .= (str_contains($result, '?') ? '&' : '?') . http_build_query($query);
         return $result;
     }
 
+    // Installer.
+    if ($route === 'install' || $route === 'php/install' || $route === 'php/install.php') {
+        return JHD_PRETTY_URLS ? jhd_web_path('php/install') : jhd_web_path('php/install.php');
+    }
+
+    // Admin panel: pretty paths when enabled; otherwise the physical controller
+    // file from config/routes.php so InfinityFree works without mod_rewrite.
+    if ($route === 'admin' || str_starts_with($route, 'admin/')) {
+        return jhd_admin_url($route, $query);
+    }
+
     // Legacy "route/slug" call style → split into route + slug/id param.
-    $segments = explode('/', trim($route, '/'));
+    $segments = explode('/', $route);
     $name = $segments[0];
     $embedded = $segments[1] ?? null;
     if ($embedded !== null && $embedded !== '' && !isset($query['slug']) && !isset($query['id'])) {
         if (ctype_digit($embedded)) $query['id'] = $embedded;
-        else $query['slug'] = $embedded;
+        else $query['slug'] = implode('/', array_slice($segments, 1));
     }
 
     $meta = jhd_routes()[$name] ?? null;
     if ($meta === null) {
-        // Unknown route → plain path fallback (backward compatible).
-        $result = $base . '/' . ltrim($route, '/');
+        $result = jhd_web_path($route);
         if (!empty($query)) $result .= (str_contains($result, '?') ? '&' : '?') . http_build_query($query);
         return $result;
     }
@@ -279,22 +317,81 @@ function url(string $route = '', array $query = []): string {
 
     if (!JHD_PRETTY_URLS) {
         $q = ['p' => $p] + $query;
-        return 'index.php?' . http_build_query($q);
+        return jhd_web_path('index.php?' . http_build_query($q));
     }
 
     // Pretty mode.
     $path = $meta['pretty'] ?? $name;
     if (jhd_is_detail_route($meta)) {
         if (isset($query['slug']) && (string)$query['slug'] !== '') {
-            $path .= '/' . rawurlencode((string)$query['slug']);
+            $parts = preg_split('~/+~', str_replace('\\', '/', (string)$query['slug'])) ?: [];
+            $encoded = [];
+            foreach ($parts as $seg) {
+                $seg = trim($seg);
+                if ($seg === '' || $seg === '.' || $seg === '..') continue;
+                $encoded[] = rawurlencode($seg);
+            }
+            if ($encoded) $path .= '/' . implode('/', $encoded);
             unset($query['slug']);
         } elseif (isset($query['id']) && (int)$query['id'] > 0) {
             $path .= '/' . (int)$query['id'];
             unset($query['id']);
         }
     }
-    $result = $base . '/' . $path;
+    $result = jhd_web_path($path);
     if (!empty($query)) $result .= '?' . http_build_query($query);
+    return $result;
+}
+
+/** Root-relative path: `/x` or `/subdir/x`. Never a page-relative URL. */
+function jhd_web_path(string $suffix = ''): string {
+    $base = jhd_base_path();
+    $suffix = ltrim($suffix, '/');
+    if ($suffix === '') {
+        return $base === '' ? '/' : $base . '/';
+    }
+    return ($base === '' ? '' : $base) . '/' . $suffix;
+}
+
+/** Map of canonical admin paths → controller files from config/routes.php. */
+function jhd_admin_routes(): array {
+    static $map = null;
+    if ($map !== null) return $map;
+    $map = [];
+    $definition = require BASE_DIR . '/config/routes.php';
+    foreach ($definition['routes'] as $path => $target) {
+        if ($path !== '/admin' && !str_starts_with((string)$path, '/admin/')) continue;
+        $file = is_array($target) ? (string)($target['file'] ?? '') : (string)$target;
+        if ($file === '') continue;
+        $map[trim((string)$path, '/')] = $file;
+    }
+    return $map;
+}
+
+/** Controller file for an admin route, or null when unknown. */
+function jhd_admin_file_for(string $route): ?string {
+    $key = trim($route, '/');
+    if ($key === '') $key = 'admin';
+    if (!str_starts_with($key, 'admin')) $key = 'admin/' . $key;
+    $map = jhd_admin_routes();
+    if (isset($map[$key])) return $map[$key];
+    if (preg_match('~\.php$~i', $key) && is_file(BASE_DIR . '/' . $key)) return $key;
+    return null;
+}
+
+function jhd_admin_url(string $route, array $query = []): string {
+    $key = trim($route, '/');
+    if ($key === '') $key = 'admin';
+    // Login/logout have directory stubs so the pretty path works without
+    // mod_rewrite and never appears in public HTML as admin/*.php.
+    $prettyAlways = in_array($key, ['admin', 'admin/login', 'admin/logout'], true);
+    if (JHD_PRETTY_URLS || $prettyAlways) {
+        $result = jhd_web_path($key);
+    } else {
+        $file = jhd_admin_file_for($key);
+        $result = jhd_web_path($file ?: ($key . (str_ends_with($key, '.php') ? '' : '.php')));
+    }
+    if (!empty($query)) $result .= (str_contains($result, '?') ? '&' : '?') . http_build_query($query);
     return $result;
 }
 
@@ -326,7 +423,8 @@ function asset(string $path): string {
 function absolute_url(string $path = '', array $query = []): string {
     $looksGenerated = preg_match('~^https?://~i', $path)
         || str_contains($path, '?')
-        || str_starts_with($path, 'index.php');
+        || str_starts_with($path, 'index.php')
+        || str_starts_with($path, '/index.php');
     if ($looksGenerated) {
         $relative = $path;
         if (!empty($query)) {
@@ -476,11 +574,30 @@ function lessonUrl(array|string $lesson): string {
     if ($slug === '') return url('lessons');
     return url('lesson', ['slug' => $slug]);
 }
-/** Detail URL for a topic row (/topic/X). */
+/** Hierarchical slug path parent/child for a topic row. */
+function jhd_topic_slug_path(array $topic): string {
+    $own = trim((string)($topic['slug'] ?? ''));
+    if ($own === '') return '';
+    if (empty($topic['id'])) return $own;
+    $crumbs = getTopicBreadcrumbs((int)$topic['id']);
+    if (!$crumbs) return $own;
+    $parts = [];
+    foreach ($crumbs as $crumb) {
+        $s = trim((string)($crumb['slug'] ?? ''));
+        if ($s !== '') $parts[] = $s;
+    }
+    return $parts ? implode('/', $parts) : $own;
+}
+
+/** Detail URL for a topic row (/topic/parent/child or ?p=topic&slug=…). */
 function topicUrl(array|string $topic): string {
-    $slug = is_array($topic) ? ($topic['slug'] ?? '') : $topic;
-    if ($slug === '') return url('topics');
-    return url('topic', ['slug' => $slug]);
+    if (is_string($topic)) {
+        if ($topic === '') return url('topics');
+        return url('topic', ['slug' => $topic]);
+    }
+    $path = jhd_topic_slug_path($topic);
+    if ($path === '') return url('topics');
+    return url('topic', ['slug' => $path]);
 }
 /** Detail URL for a category row (/category/X). */
 function categoryUrl(array|string $category): string {
@@ -502,6 +619,55 @@ function mediaUrl(string $kind, int $id): string {
     $kind = $kind === 'audio' ? 'audio' : 'video';
     if ($id < 1) return url($kind === 'audio' ? 'audios' : 'videos');
     return url($kind, ['id' => $id]);
+}
+
+function loginUrl(): string { return url('login'); }
+function registerUrl(): string { return url('register'); }
+function logoutUrl(): string { return url('logout'); }
+function accountUrl(): string { return url('account'); }
+function adminLoginUrl(): string { return url('admin/login'); }
+function adminUrl(string $path = '', array $query = []): string {
+    $route = trim($path) === '' ? 'admin' : 'admin/' . ltrim($path, '/');
+    return url($route, $query);
+}
+function searchUrl(string $q = '', array $query = []): string {
+    if ($q !== '') $query['q'] = $q;
+    return url('search', $query);
+}
+function videoUrl(int|string $id): string { return mediaUrl('video', (int)$id); }
+function audioUrl(int|string $id): string { return mediaUrl('audio', (int)$id); }
+
+/**
+ * GET forms in Query mode must not rely on `action="index.php?p=search"`:
+ * browsers replace the query string with the form fields and drop `p`.
+ * Use formUrl() as action and formRouteFields() inside the form.
+ */
+function formUrl(string $route = '', array $query = []): string {
+    if (JHD_PRETTY_URLS) return url($route, $query);
+    if ($route === 'admin' || str_starts_with($route, 'admin/')) return jhd_admin_url($route, $query);
+    return jhd_web_path('index.php');
+}
+
+function formRouteFields(string $route, array $extra = []): string {
+    if (JHD_PRETTY_URLS) return '';
+    if ($route === 'admin' || str_starts_with($route, 'admin/')) return '';
+    $meta = jhd_routes()[$route] ?? null;
+    $p = is_array($meta) ? (string)($meta['p'] ?? $route) : $route;
+    $html = '<input type="hidden" name="p" value="' . htmlspecialchars($p, ENT_QUOTES, 'UTF-8') . '">';
+    $defaults = is_array($meta) ? ($meta['get'] ?? []) : [];
+    foreach ($defaults + $extra as $k => $v) {
+        if ($k === 'p' || !is_scalar($v)) continue;
+        $html .= '<input type="hidden" name="' . htmlspecialchars((string)$k, ENT_QUOTES, 'UTF-8') . '" value="' . htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8') . '">';
+    }
+    return $html;
+}
+
+/** Hidden `p` so listing-page GET filters keep the current Query-mode route. */
+function queryKeepFields(): string {
+    if (JHD_PRETTY_URLS) return '';
+    $p = (isset($_GET['p']) && is_string($_GET['p'])) ? trim($_GET['p']) : (string)($_SERVER['JHD_ROUTE_NAME'] ?? '');
+    if ($p === '' || $p === 'home') return '';
+    return '<input type="hidden" name="p" value="' . htmlspecialchars($p, ENT_QUOTES, 'UTF-8') . '">';
 }
 
 // ─── Slug ─────────────────────────────────────────────────────────────────────
@@ -736,6 +902,22 @@ function getTopics(array $opts = []): array {
 
 function getTopicBySlug(string $slug): ?array {
     try {
+        $slug = trim(str_replace('\\', '/', rawurldecode($slug)), '/');
+        if ($slug === '') return null;
+        if (str_contains($slug, '/')) {
+            $parts = array_values(array_filter(explode('/', $slug), static fn($s) => $s !== '' && $s !== '.' && $s !== '..'));
+            $leaf = $parts ? (string)end($parts) : '';
+            $topic = $leaf !== '' ? getTopicBySlug($leaf) : null;
+            if (!$topic) return null;
+            if (count($parts) > 1) {
+                $crumbs = getTopicBreadcrumbs((int)$topic['id']);
+                $crumbSlugs = array_map(static fn($c) => (string)($c['slug'] ?? ''), $crumbs);
+                if ($crumbSlugs && $crumbSlugs !== $parts) {
+                    // Parent path is advisory: the leaf slug is canonical and unique.
+                }
+            }
+            return $topic;
+        }
         $db=getDB();
         $stmt=$db->prepare("SELECT * FROM topics WHERE slug=? LIMIT 1");
         $stmt->execute([$slug]);
@@ -789,7 +971,7 @@ function getTopicBreadcrumbs(int $topicId): array {
 function getTopicsForPost(int $postId): array {
     try{
         $db=getDB();
-        $stmt=$db->prepare("SELECT t.* FROM topics t JOIN post_topics pt ON pt.topic_id=t.id WHERE pt.post_id=? ORDER BY t.sort_order");
+        $stmt=$db->prepare("SELECT t.* FROM topics t JOIN post_topics pt ON pt.topic_id=t.id WHERE pt.post_id=? ORDER BY t.sort_order, t.id");
         $stmt->execute([$postId]); return $stmt->fetchAll();
     }catch(PDOException $e){ return []; }
 }
@@ -808,11 +990,22 @@ function getTopicsForBook(int $bookId): array {
     }catch(PDOException $e){ return []; }
 }
 
-function setPostTopics(int $postId, array $topicIds): void {
+function setPostTopics(int $postId, array $topicIds, ?int $primaryId = null): void {
     $db=getDB();
     $db->prepare("DELETE FROM post_topics WHERE post_id=?")->execute([$postId]);
-    foreach(array_unique(array_filter(array_map('intval',$topicIds))) as $tid){
-        $db->prepare("INSERT INTO post_topics (post_id, topic_id) VALUES (?,?) ON CONFLICT DO NOTHING")->execute([$postId,$tid]);
+    $ids = array_values(array_unique(array_filter(array_map('intval', $topicIds))));
+    if ($primaryId && $primaryId > 0 && !in_array($primaryId, $ids, true)) {
+        array_unshift($ids, $primaryId);
+    }
+    $first = true;
+    foreach ($ids as $tid) {
+        $isPrimary = $primaryId ? ($tid === $primaryId) : $first;
+        try {
+            $db->prepare("INSERT INTO post_topics (post_id, topic_id, is_primary) VALUES (?,?,?) ON CONFLICT DO NOTHING")->execute([$postId, $tid, $isPrimary ? 1 : 0]);
+        } catch (PDOException $e) {
+            $db->prepare("INSERT INTO post_topics (post_id, topic_id) VALUES (?,?) ON CONFLICT DO NOTHING")->execute([$postId, $tid]);
+        }
+        $first = false;
     }
 }
 function setLessonTopics(int $lessonId, array $topicIds): void {
