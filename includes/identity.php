@@ -223,18 +223,39 @@ function jhd_user_column_definitions(): array {
 function jhd_drop_user_check_constraints(PDO $db): void {
     if (databaseDriver() !== 'mysql') return;
     try {
-        $stmt = $db->prepare("SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND CONSTRAINT_TYPE = 'CHECK'");
+        $stmt = $db->prepare(
+            "SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = 'users'
+               AND CONSTRAINT_TYPE = 'CHECK'"
+        );
         $stmt->execute();
         foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $name) {
-            if (!preg_match('/^[A-Za-z0-9_$]+$/', (string)$name)) continue;
-            try {
-                $db->exec('ALTER TABLE users DROP CHECK `' . $name . '`');
-            } catch (Throwable $e) {
-                try { $db->exec('ALTER TABLE users DROP CONSTRAINT `' . $name . '`'); } catch (Throwable $e2) { /* MariaDB variants */ }
+            $name = (string)$name;
+            if ($name === '' || strlen($name) > 255) continue;
+            // Constraint names come from information_schema (not user input).
+            // Escape backticks so names such as users.role can be addressed.
+            $quoted = str_replace(chr(96), chr(96) . chr(96), $name);
+            $dropped = false;
+            foreach ([
+                "ALTER TABLE users DROP CHECK " . chr(96) . $quoted . chr(96),
+                "ALTER TABLE users DROP CONSTRAINT " . chr(96) . $quoted . chr(96),
+            ] as $sql) {
+                try {
+                    $db->exec($sql);
+                    $dropped = true;
+                    break;
+                } catch (Throwable $e) {
+                    // Try the alternate MariaDB/MySQL spelling.
+                }
+            }
+            if (!$dropped) {
+                throw new RuntimeException('Unable to remove legacy users CHECK constraint.');
             }
         }
     } catch (Throwable $e) {
-        // اطلاعات قیدها در همهٔ نسخه‌ها موجود نیست؛ خطا بی‌خطر است.
+        error_log('Unable to inspect/drop users CHECK constraints: ' . get_class($e));
+        throw $e;
     }
 }
 
