@@ -393,6 +393,7 @@ function jhd_ensure_identity_schema(bool $force = false): array {
             }
             $columns = jhd_table_columns('users');
             jhd_drop_user_check_constraints($db);
+            $failedColumns = [];
             foreach (jhd_user_column_definitions() as $name => $ddl) {
                 if (isset($columns[$name])) continue;
                 $definition = $ddl[$driver] ?? $ddl['mysql'];
@@ -400,8 +401,13 @@ function jhd_ensure_identity_schema(bool $force = false): array {
                     $db->exec("ALTER TABLE users ADD COLUMN $name $definition");
                     $result['columns'][] = $name;
                 } catch (Throwable $e) {
+                    $failedColumns[] = $name;
                     error_log("Column users.$name could not be added: " . get_class($e));
                 }
+            }
+            if ($failedColumns) {
+                $result['error'] = 'ستون‌های ضروری جدول users اضافه نشدند: ' . implode(', ', $failedColumns);
+                return $result;
             }
             // username/email در نصب‌های قدیمی NOT NULL بودند و عضو عمومی بدون
             // نام کاربری نمی‌توانست ثبت شود.
