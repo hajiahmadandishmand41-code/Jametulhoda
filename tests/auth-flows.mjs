@@ -68,7 +68,7 @@ const userClient = await newClient();
     const { csrf } = await csrfFrom(userClient, loginUrl);
     const r = await userClient.post(loginUrl, { form: { csrf_token: csrf, identifier: memberPhone, password: memberPass } });
     check('B member login → 303', r.status() === 303, `${r.status()} → ${r.headers()['location'] || ''}`);
-    check('B member redirected to own account', (r.headers()['location'] || '').includes('/account'), r.headers()['location'] || '');
+    check('B member redirected to own account', /(?:\/account|index\.php\?p=account)/.test(r.headers()['location'] || ''), r.headers()['location'] || '');
     const account = await userClient.get('/account');
     check('B member account page after login', account.status() === 200, String(account.status()));
 
