@@ -34,7 +34,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $result = jhd_change_password((int)$user['id'], $current, $next, $confirm, true);
             if (!empty($result['ok'])) {
                 // نشست جاری با نسخهٔ تازه هم‌گام می‌شود تا کاربر بیرون نیفتد.
-                jhd_keep_current_session_after_password_change((int)$me['id']);
+                jhd_keep_current_session_after_password_change((int)$user['id']);
                 $_SESSION['flash_msg'] = 'رمز عبور با موفقیت تغییر کرد.';
                 $_SESSION['flash_type'] = 'success';
                 redirect(jhd_role_is_staff($user['role']) ? adminDashboardUrl() : accountUrl());
