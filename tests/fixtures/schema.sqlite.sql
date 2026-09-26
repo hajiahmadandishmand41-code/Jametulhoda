@@ -96,6 +96,7 @@ CREATE INDEX IF NOT EXISTS post_images_idx_post ON post_images (post_id);
 CREATE TABLE IF NOT EXISTS post_topics (
   post_id  INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
   topic_id INTEGER NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+  is_primary SMALLINT NOT NULL DEFAULT 0,
   PRIMARY KEY (post_id, topic_id)
 );
 CREATE INDEX IF NOT EXISTS post_topics_topic_idx ON post_topics(topic_id);
