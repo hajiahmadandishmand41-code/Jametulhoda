@@ -1805,6 +1805,80 @@ html[data-theme="dark"] .jhd-public-site .text-black { color: var(--jhd-ink) !im
   color: var(--jhd-muted);
 }
 .jhd-kicker { color: var(--jhd-gold); font-weight: 800; letter-spacing: .04em; font-size: .82rem; margin-bottom: 6px; }
+
+/* ─── Unified login (single entry point for members and staff) ────────── */
+.jhd-login-card { max-width: 480px; }
+.jhd-login-head { text-align: center; margin-bottom: 6px; }
+.jhd-login-logo {
+  display: block;
+  margin: 0 auto 12px;
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  object-fit: cover;
+  border: 1px solid var(--jhd-border);
+  background: var(--jhd-soft);
+  padding: 4px;
+}
+.jhd-login-head h1 { margin-bottom: 6px; }
+.jhd-login-head .jhd-auth-lead { font-size: .92rem; margin-bottom: 14px; }
+.jhd-login-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--jhd-soft);
+  border: 1px solid var(--jhd-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: var(--jhd-muted);
+  font-size: .86rem;
+  margin-bottom: 14px;
+}
+.jhd-input-wrap { position: relative; display: block; }
+.jhd-input-wrap > i {
+  position: absolute;
+  inset-inline-start: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--jhd-muted);
+  pointer-events: none;
+  font-size: 1rem;
+}
+.jhd-input-wrap .form-control { padding-inline-start: 42px; min-height: 48px; border-radius: 12px; }
+.jhd-input-wrap:has(.jhd-input-action) .form-control { padding-inline-end: 48px; }
+.jhd-input-action {
+  position: absolute;
+  inset-inline-end: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  color: var(--jhd-muted);
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.jhd-input-action:hover, .jhd-input-action:focus-visible { color: var(--jhd-green); background: var(--jhd-soft); }
+.jhd-login-row { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; margin: 14px 0 16px; }
+.jhd-remember { font-size: .9rem; color: var(--jhd-muted); align-items: center; }
+.jhd-login-help { color: var(--jhd-muted); font-size: .84rem; }
+.jhd-login-links { justify-content: center; }
+.jhd-login-foot {
+  text-align: center;
+  color: var(--jhd-muted);
+  font-size: .8rem;
+  margin: 18px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--jhd-border-subtle);
+}
+@media (max-width: 575.98px) {
+  .jhd-login-row { justify-content: flex-start; }
+  .jhd-login-head h1 { font-size: 1.3rem; }
+}
 @media (max-width: 575.98px) {
   .jhd-auth-page { padding: 24px 0 48px; }
   .jhd-auth-card { padding: 22px 16px; border-radius: 16px; }

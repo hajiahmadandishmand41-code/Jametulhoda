@@ -60,7 +60,7 @@ require_once __DIR__ . '/../includes/header.php';
         <i class="bi bi-search ms-2 text-gold"></i> جستجو در آرشیو محتوایی
       </h1>
       <div class="section-divider"></div>
-      <p class="text-muted mt-2 mb-0">جستجو در اخبار، مقالات، گزارش‌ها، کتب دیجیتال، جلسات درسی و موضوعات حوزوی</p>
+      <p class="text-muted mt-2 mb-0">جستجو در اخبار، مقالات، پژوهش‌ها، کتاب‌ها، درس‌ها، ویدیوها، صوت‌ها و موضوعات</p>
     </div>
 
     <!-- فرم جستجو -->
@@ -93,7 +93,13 @@ require_once __DIR__ . '/../includes/header.php';
     <?php if (!empty($results)): ?>
     <div class="row g-4">
       <?php foreach ($results as $p):
-          if ($p['target'] === 'topic') {
+          if ($p['target'] === 'media') {
+              $isAudio = ($p['media_kind'] ?? '') === 'audio';
+              $resultUrl = mediaUrl($isAudio ? 'audio' : 'video', (int)$p['id']);
+              $badge = $isAudio
+                  ? '<span class="badge bg-info text-dark">صوت</span>'
+                  : '<span class="badge bg-primary">ویدیو</span>';
+          } elseif ($p['target'] === 'topic') {
               $resultUrl = topicUrl($p);
               $badge = '<span class="badge badge-article">موضوع</span>';
           } elseif ($p['target'] === 'book') {
@@ -115,7 +121,7 @@ require_once __DIR__ . '/../includes/header.php';
               <img src="<?= imgUrl($p['featured_image']) ?>" alt="<?= sanitize($p['title']) ?>" class="news-card-img" loading="lazy">
               <?php else: ?>
               <div class="news-card-placeholder">
-                <i class="bi <?= $p['target'] === 'topic' ? 'bi-diagram-3' : ($p['target'] === 'book' ? 'bi-book' : ($p['target'] === 'lesson' ? 'bi-mortarboard' : 'bi-file-text')) ?>"></i>
+                <i class="bi <?= $p['target'] === 'media' ? (($p['media_kind'] ?? '') === 'audio' ? 'bi-headphones' : 'bi-play-circle') : ($p['target'] === 'topic' ? 'bi-diagram-3' : ($p['target'] === 'book' ? 'bi-book' : ($p['target'] === 'lesson' ? 'bi-mortarboard' : 'bi-file-text'))) ?>"></i>
               </div>
               <?php endif; ?>
             </a>

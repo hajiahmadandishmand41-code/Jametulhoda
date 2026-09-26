@@ -74,10 +74,10 @@ try {
   assert.equal(await page.locator('html').getAttribute('data-theme'),'dark','theme persists');
   console.log('PASS responsive widths ' + viewportAudit.map(v=>v.width).join(', ') + ', drawer keyboard focus, no overflow, theme persistence');
   if (process.env.TEST_ADMIN_PASSWORD) {
-    await page.goto(new URL('admin/login.php',base).href,{waitUntil:'networkidle'});
-    await page.locator('[name=username]').fill(process.env.TEST_ADMIN_USERNAME || 'qa_admin');
+    await page.goto(new URL('login',base).href,{waitUntil:'networkidle'});
+    await page.locator('[name=identifier]').fill(process.env.TEST_ADMIN_USERNAME || 'qa_admin');
     await page.locator('[name=password]').fill(process.env.TEST_ADMIN_PASSWORD);
-    await Promise.all([page.waitForURL('**/admin/'),page.locator('button[type=submit]').click()]);
+    await Promise.all([page.waitForURL('**/admin/dashboard*'),page.locator('button[type=submit]').click()]);
     assert.equal(await page.locator('html').getAttribute('data-theme'),'dark','admin inherits theme');
     assert.equal(await page.locator('body.jhd-admin-site').count(),1,'admin shared shell');
     await page.locator('#sidebarToggle').click();

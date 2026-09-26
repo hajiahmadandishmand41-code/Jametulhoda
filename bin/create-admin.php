@@ -10,6 +10,14 @@
  */
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/identity.php';
+
+// ساختار یکپارچهٔ هویت را تضمین می‌کند (نصب‌های قدیمی: members → users، نقش‌های تازه).
+$schema = jhd_ensure_identity_schema();
+if (empty($schema['ok'])) {
+    fwrite(STDERR, "Identity schema could not be prepared: " . ($schema['error'] ?? 'unknown') . "\n");
+    exit(1);
+}
 
 $username = env_value('ADMIN_USERNAME', DEFAULT_ADMIN_USERNAME);
 $customPassword = env_value('ADMIN_PASSWORD');
@@ -31,7 +39,7 @@ if ($existingId) {
        ->execute([$hash, $existingId]);
     echo "Administrator '{$username}' already existed: password reset and existing sessions invalidated.\n";
 } else {
-    $db->prepare("INSERT INTO users (username, password, email, full_name, role, is_active, auth_version) VALUES (?, ?, ?, ?, 'superadmin', 1, 1)")
+    $db->prepare("INSERT INTO users (username, password, email, full_name, role, is_active, auth_version) VALUES (?, ?, ?, ?, 'super_admin', 1, 1)")
        ->execute([$username, $hash, env_value('ADMIN_EMAIL'), env_value('ADMIN_NAME', $username)]);
     echo "Administrator '{$username}' created; the password is stored as a password_hash() digest only.\n";
 }

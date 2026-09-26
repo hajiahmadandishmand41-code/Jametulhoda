@@ -69,11 +69,30 @@ return [
         '/php/install.php'      => 'php/install.php',
 
         // ─── پنل مدیریت ─────────────────────────────────────────────────
+        // ورود، خروج و ورود مدیر همه از یک کنترلر واحد می‌آیند:
+        //   /login و /admin/login ⇒ pages/login.php
+        //   /logout و /admin/logout ⇒ pages/logout.php
         '/admin'                     => 'admin/index.php',
+        // نشانی تمیز داشبورد (canonical). فایل فیزیکی admin/dashboard.php هم
+        // وجود دارد تا روی میزبان‌های بدون mod_rewrite هم /admin/dashboard.php کار کند.
+        '/admin/dashboard'           => 'admin/dashboard.php',
+        '/admin/profile'             => 'admin/profile.php',
+        '/admin/uploads'             => 'admin/media/index.php',
+        '/admin/videos'              => ['file' => 'admin/videos.php', 'get' => ['kind' => 'video']],
+        '/admin/audios'              => ['file' => 'admin/audios.php', 'get' => ['kind' => 'audio']],
+        '/admin/courses'             => 'admin/courses.php',
+        '/admin/research'            => ['file' => 'admin/research.php', 'get' => ['type' => 'research']],
+        '/admin/dashboard'           => 'admin/dashboard.php',
         '/admin/login'               => 'admin/login.php',
         '/admin/logout'              => 'admin/logout.php',
+        '/admin/profile'             => 'admin/profile.php',
         '/admin/change-password'     => 'admin/change-password.php',
         '/admin/settings'            => 'admin/settings.php',
+        '/admin/uploads'             => 'admin/media/index.php',
+        '/admin/videos'              => 'admin/videos.php',
+        '/admin/audios'              => 'admin/audios.php',
+        '/admin/courses'             => 'admin/courses.php',
+        '/admin/research'            => 'admin/research.php',
         '/admin/content'             => 'admin/posts/index.php',
         '/admin/users'               => 'admin/users/index.php',
         '/admin/users/new'           => 'admin/users/index.php',

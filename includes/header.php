@@ -140,7 +140,7 @@ endif; ?>
 
             <div class="jhd-account-cluster d-none d-md-flex">
             <?php if ($isAdminLoggedIn): ?>
-            <a class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" href="<?= adminUrl() ?>">
+            <a class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1" href="<?= adminDashboardUrl() ?>">
                 <i class="bi bi-speedometer2"></i>
                 <span>پنل مدیریت</span>
             </a>
@@ -158,7 +158,6 @@ endif; ?>
                 <i class="bi bi-person-plus"></i>
                 <span>ثبت‌نام</span>
             </a>
-            <a class="jhd-admin-login-link" href="<?= adminLoginUrl() ?>">ورود مدیر</a>
             <?php endif; ?>
             </div>
 
@@ -250,16 +249,16 @@ endif; ?>
 
         <div class="drawer-section">حساب کاربری</div>
         <?php if ($isAdminLoggedIn): ?>
-        <a href="<?= adminUrl() ?>" class="drawer-link"><i class="bi bi-speedometer2"></i> پنل مدیریت</a>
-        <a href="<?= url('admin/logout') ?>" class="drawer-link text-danger" data-confirm="آیا از خروج از سیستم اطمینان دارید؟"><i class="bi bi-box-arrow-right"></i> خروج مدیر</a>
+        <a href="<?= adminDashboardUrl() ?>" class="drawer-link"><i class="bi bi-speedometer2"></i> پنل مدیریت</a>
+        <a href="<?= adminProfileUrl() ?>" class="drawer-link"><i class="bi bi-person-gear"></i> پروفایل من</a>
+        <a href="<?= adminLogoutUrl() ?>" class="drawer-link text-danger"><i class="bi bi-box-arrow-right"></i> خروج از حساب</a>
         <?php elseif ($isMemberLoggedIn): ?>
         <a href="<?= accountUrl() ?>" class="drawer-link"><i class="bi bi-person-circle"></i> حساب کاربری</a>
         <a href="<?= url('password-change') ?>" class="drawer-link"><i class="bi bi-key"></i> تغییر رمز</a>
-        <a href="<?= logoutUrl() ?>" class="drawer-link text-danger"><i class="bi bi-box-arrow-right"></i> خروج</a>
+        <a href="<?= logoutUrl() ?>" class="drawer-link text-danger"><i class="bi bi-box-arrow-right"></i> خروج از حساب</a>
         <?php else: ?>
         <a href="<?= loginUrl() ?>" class="drawer-link"><i class="bi bi-box-arrow-in-left"></i> ورود</a>
         <a href="<?= registerUrl() ?>" class="drawer-link"><i class="bi bi-person-plus"></i> ثبت‌نام</a>
-        <a href="<?= adminLoginUrl() ?>" class="drawer-link"><i class="bi bi-shield-lock"></i> ورود مدیر</a>
         <?php endif; ?>
     </div>
 </aside>

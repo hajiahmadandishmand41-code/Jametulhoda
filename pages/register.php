@@ -4,6 +4,7 @@
  */
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/member-auth.php';
 startSecureSession();
 
@@ -81,7 +82,7 @@ $selectedCountry = (string)($_POST['country'] ?? 'AF');
             </form>
             <div class="jhd-auth-links">
                 <a href="<?= loginUrl() ?>">حساب دارید؟ وارد شوید</a>
-                <a href="<?= adminLoginUrl() ?>">ورود مدیران</a>
+                <a href="<?= url('about') ?>">درباره جامعه‌الهدی</a>
             </div>
         </div>
     </div>

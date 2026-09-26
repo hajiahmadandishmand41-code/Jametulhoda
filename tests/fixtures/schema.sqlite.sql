@@ -5,16 +5,26 @@
 
 CREATE TABLE IF NOT EXISTS users (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
-  username   VARCHAR(80)      NOT NULL,
-  email      VARCHAR(180)     NOT NULL DEFAULT '',
+  username   VARCHAR(80)      NULL,
+  email      VARCHAR(180)     NULL,
+  phone      VARCHAR(32)      NULL,
+  phone_normalized VARCHAR(32) NULL,
+  country    VARCHAR(80)      NOT NULL DEFAULT '',
+  country_code VARCHAR(8)     NOT NULL DEFAULT '',
   password   VARCHAR(255)     NOT NULL,
   full_name  VARCHAR(120)     NOT NULL DEFAULT '',
-  role       VARCHAR(30) NOT NULL DEFAULT 'admin' CHECK (role IN ('superadmin','admin','editor')),
-  is_active  SMALLINT       NOT NULL DEFAULT 1,
-  last_login DATETIME             NULL,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  auth_version INT NOT NULL DEFAULT 1,
-  UNIQUE (username)
+  role       VARCHAR(30)      NOT NULL DEFAULT 'user',
+  is_active  SMALLINT         NOT NULL DEFAULT 1,
+  must_change_password SMALLINT NOT NULL DEFAULT 0,
+  agreed_terms SMALLINT       NOT NULL DEFAULT 0,
+  avatar     VARCHAR(350)     NULL,
+  last_login DATETIME         NULL,
+  created_at DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  auth_version INT            NOT NULL DEFAULT 1,
+  UNIQUE (username),
+  UNIQUE (email),
+  UNIQUE (phone_normalized)
 );
 
 CREATE TABLE IF NOT EXISTS categories (

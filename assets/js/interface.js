@@ -178,3 +178,17 @@ document.querySelectorAll('[data-theme-toggle]').forEach(button => {
         if (e.matches) close();
     });
 })();
+
+// Show/hide password fields (login, register, profile) — one accessible toggle.
+document.querySelectorAll('[data-password-toggle]').forEach(button => {
+  button.addEventListener('click', () => {
+    const input = document.getElementById(button.dataset.passwordToggle);
+    if (!input) return;
+    const show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    button.setAttribute('aria-pressed', show ? 'true' : 'false');
+    const icon = button.querySelector('i');
+    if (icon) icon.className = show ? 'bi bi-eye-slash' : 'bi bi-eye';
+    input.focus({ preventScroll: true });
+  });
+});

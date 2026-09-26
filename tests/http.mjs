@@ -30,8 +30,10 @@ const bareDetail=['/post','/post.php','/lesson','/lesson.php','/speech','/speech
 for(const path of bareDetail){const r=await api.get(path,{maxRedirects:0});const body=r.status()===200?await r.text():'';check('detail without id '+path,[200,302,404].includes(r.status())&&r.status()<500&&!/(Warning|Fatal error|Parse error|Deprecated):/.test(body),String(r.status()));}
 for(const path of ['/missing-page','/.env','/.git/config','/config/database.php','/config/local.php','/config/install.lock','/config/local.example.php','/database.sql','/database/database.mysql.sql','/database/database.postgres.sql','/install.php','/includes/auth.php','/includes/functions.php','/pages/about.php','/content/home-intro.php','/admin/includes/header.php','/storage/logs/.gitkeep','/bin/migrate.php','/uploads/test.php','/uploads/images/test.php']){const r=await api.get(path);check('protected '+path,r.status()===404,String(r.status()));}
 let r=await api.get('/admin/',{maxRedirects:0});check('admin requires login',r.status()===302);
-r=await api.get('/admin/login.php');let csrf=token(await r.text());
-r=await api.post('/admin/login.php',{form:{...creds,csrf_token:csrf},maxRedirects:0});check('login valid',r.status()===303,String(r.status()));
+// One login page for everyone: /login authenticates members, admins and the
+// owner. The identifier may be a username, an email address or a phone number.
+r=await api.get('/login');let csrf=token(await r.text());
+r=await api.post('/login',{form:{identifier:creds.username,password:creds.password,csrf_token:csrf},maxRedirects:0});check('login valid',r.status()===303,String(r.status()));
 r=await api.get('/admin/');check('dashboard',r.status()===200,String(r.status()));
 for(const path of ['/admin','/admin/','/admin/index.php','/admin/posts','/admin/posts/','/admin/articles','/admin/articles/','/admin/news/','/admin/speeches/','/admin/lessons','/admin/lessons/','/admin/books','/admin/books/','/admin/categories','/admin/categories/','/admin/media','/admin/media/','/admin/messages','/admin/messages/','/admin/messages.php','/admin/settings','/admin/settings.php','/admin/users','/admin/users/','/admin/users.php','/admin/users/index.php','/admin/topics','/admin/topics/','/admin/lesson-collections/','/admin/banners/','/admin/change-password','/admin/change-password.php']){const r=await api.get(path);check('admin '+path,r.status()===200,String(r.status()));}
 r=await api.get('/admin/posts/create.php');csrf=token(await r.text());
@@ -100,13 +102,13 @@ r=await api.get('/admin/users.php');csrf=token(await r.text());
 const editorName='qa_editor_'+stamp;
 r=await api.post('/admin/users.php',{form:{csrf_token:csrf,username:editorName,full_name:'ویرایشگر آزمون',role:'editor',password:creds.password,is_active:'on'}});check('create editor account',r.status()===200 && (await r.text()).includes('اطلاعات کاربر ذخیره شد'));
 const editor=await request.newContext({baseURL:base});
-r=await editor.get('/admin/login.php');csrf=token(await r.text());
-r=await editor.post('/admin/login.php',{form:{csrf_token:csrf,username:editorName,password:creds.password},maxRedirects:0});check('editor login',r.status()===303);
+r=await editor.get('/admin/login');csrf=token(await r.text());
+r=await editor.post('/admin/login',{form:{csrf_token:csrf,identifier:editorName,password:creds.password},maxRedirects:0});check('editor login',r.status()===303);
 r=await editor.get('/admin/settings.php');check('editor forbidden from settings',r.status()===403);
 r=await editor.get('/admin/users.php');check('editor forbidden from users',r.status()===403);
 await editor.dispose();
 r=await api.get('/contact.php');csrf=token(await r.text());r=await api.post('/contact.php',{form:{csrf_token:csrf,name:'آزمون تماس',email:'qa@example.test',subject:'آزمون محلی',message:'این پیام برای بررسی فرم تماس ایجاد شده است.'}});check('contact submit',r.status()===200 && /موفقیت|تعداد پیام‌های ارسالی بیش از حد مجاز/.test(await r.text()));
-r=await api.get('/admin/logout.php');csrf=token(await r.text());r=await api.post('/admin/logout.php',{form:{csrf_token:csrf},maxRedirects:0});check('logout',r.status()===302||r.status()===303);r=await api.get('/admin/',{maxRedirects:0});check('logged out cannot access admin',r.status()===302);
+r=await api.get('/logout');csrf=token(await r.text());r=await api.post('/logout',{form:{csrf_token:csrf},maxRedirects:0});check('logout',r.status()===302||r.status()===303);r=await api.get('/admin/',{maxRedirects:0});check('logged out cannot access admin',r.status()===302);
 // Public member auth is separate from admin. Members must never reach the panel.
 const guest=await request.newContext({baseURL:base});
 r=await guest.get('/login');check('public login page',r.status()===200 && (await r.text()).includes('ورود'));
@@ -119,6 +121,16 @@ const memberPhone='700'+String(stamp).slice(-8);
 r=await guest.post('/register',{form:{csrf_token:csrf,full_name:'عضو آزمون',country:'AF',phone:memberPhone,email:'',password:creds.password,password_confirm:creds.password,agreed_terms:'1'},maxRedirects:0});
 check('public register',r.status()===303||r.status()===302,String(r.status()));
 r=await guest.get('/account');check('member account',r.status()===200,String(r.status()));
+// عضو عمومی هم از همان صفحهٔ /login وارد می‌شود (نقش از دیتابیس می‌آید).
+{
+  const member=await request.newContext({baseURL:base});
+  r=await member.get('/login');csrf=token(await r.text());
+  r=await member.post('/login',{form:{csrf_token:csrf,identifier:memberPhone,password:creds.password},maxRedirects:0});
+  check('member login via unified /login',r.status()===303,String(r.status()));
+  r=await member.get('/account');check('member dashboard after unified login',r.status()===200,String(r.status()));
+  r=await member.get('/admin/',{maxRedirects:0});check('member still cannot open admin',r.status()===302,String(r.status()));
+  await member.dispose();
+}
 r=await guest.get('/admin/',{maxRedirects:0});check('member cannot open admin',r.status()===302,String(r.status()));
 r=await guest.get('/register');check('duplicate register blocked while logged in',r.status()===302||r.status()===200,String(r.status()));
 await guest.dispose();

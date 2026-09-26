@@ -136,7 +136,7 @@ $siteEmail     = getSetting('email', SITE_EMAIL);
                         <span>·</span>
                         <a href="<?= url('search') ?>" style="color:inherit;text-decoration:none">جستجو</a>
                         <span>·</span>
-                        <a href="<?= url('login') ?>" style="color:inherit;text-decoration:none"><i class="bi bi-shield-lock ms-1"></i>ورود مدیریت</a>
+                        <a href="<?= loginUrl() ?>" style="color:inherit;text-decoration:none"><i class="bi bi-box-arrow-in-left ms-1"></i>ورود</a>
                     </p>
                 </div>
             </div>
