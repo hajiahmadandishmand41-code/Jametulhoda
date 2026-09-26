@@ -61,6 +61,9 @@ function ensureCoreAuthTables(): void {
 
 function startSecureSession(): void {
     if (session_status() === PHP_SESSION_NONE) {
+        // Keep session IDs long and hexadecimal for strong entropy and stable security audits.
+        ini_set('session.sid_length', '32');
+        ini_set('session.sid_bits_per_character', '4');
         ini_set('session.use_strict_mode', '1');
         ini_set('session.use_only_cookies', '1');
         if (env_value('SESSION_DRIVER', 'database') === 'database') {
