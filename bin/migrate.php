@@ -60,4 +60,15 @@ if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 $driver = databaseDriver();
 $schemaPath = __DIR__ . '/../database/' . ($driver === 'mysql' ? 'database.mysql.sql' : 'database.postgres.sql');
 $applied = applyDatabaseSchema(getDB(), $schemaPath);
-echo ($driver === 'mysql' ? 'MySQL' : 'PostgreSQL') . " schema applied: {$applied} statement(s). Existing content is not deleted.\n";
+
+// The canonical SQL is idempotent for new tables, but CREATE TABLE IF NOT EXISTS
+// cannot repair a table that already existed on an older deployment. Reconcile
+// the unified identity schema explicitly (columns, legacy roles/checks and indexes).
+require_once __DIR__ . '/../includes/identity.php';
+$identity = jhd_ensure_identity_schema(true);
+if (empty($identity['ok'])) {
+    throw new RuntimeException((string)($identity['error'] ?? 'Identity schema migration failed.'));
+}
+
+echo ($driver === 'mysql' ? 'MySQL' : 'PostgreSQL')
+    . " schema applied: {$applied} statement(s); identity schema reconciled. Existing content is not deleted.\n";
