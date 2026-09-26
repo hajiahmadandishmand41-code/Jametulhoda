@@ -25,7 +25,13 @@ try {
     $dbOk = true;
     $driver = databaseDriver();
     $report['db_driver'] = $driver;
-    foreach (['users', 'members', 'app_sessions', 'login_limits', 'topics', 'posts', 'post_topics'] as $table) {
+    foreach ([
+        'users','categories','topics','posts','post_images','post_topics',
+        'lesson_collections','lesson_volumes','lessons','lesson_topics',
+        'contact_messages','media_files','settings','books','book_topics',
+        'site_banners','featured_banners','app_sessions','login_limits',
+        'stored_files','storage_deletions','pending_uploads'
+    ] as $table) {
         try {
             $count = (int)$db->query('SELECT COUNT(*) FROM ' . $table)->fetchColumn();
             $tables[$table] = ['ok' => true, 'rows' => $count];
