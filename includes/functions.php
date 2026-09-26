@@ -1230,6 +1230,13 @@ function postTypeLabel(string $type): string {
         'program'      => 'برنامه آموزشی',
         'religious'    => 'فعالیت مذهبی',
         'qa'           => 'پرسش و پاسخ',
+        'book'         => 'کتاب',
+        'lesson'       => 'درس',
+        'topic'        => 'موضوع',
+        'video'        => 'ویدیو',
+        'audio'        => 'صوت',
+        'media'        => 'رسانه',
+        'report'       => 'گزارش',
         default        => 'مطلب',
     };
 }

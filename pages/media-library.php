@@ -74,14 +74,12 @@ require_once __DIR__ . '/../includes/header.php';
   <div class="container">
     <!-- Header -->
     <div class="jhd-page-heading d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
-      <div>
-        <span class="jhd-eyebrow">شنیدن، دیدن و آموختن معارف</span>
-        <h1 class="page-title mb-1">
-          <i class="bi bi-<?= $kind === 'audio' ? 'headphones' : 'play-circle' ?> ms-2 text-gold"></i> <?= $pageTitle ?>
-        </h1>
-        <div class="section-divider"></div>
-        <p class="text-muted mt-2 mb-0">آرشیو فایل‌های رسانه‌ای منتشرشده جامعه‌الهدی؛ همراه شما در مسیر یادگیری</p>
-      </div>
+      <?= jhd_page_head([
+        'eyebrow' => 'شنیدن، دیدن و آموختن معارف',
+        'icon' => $kind === 'audio' ? 'bi-headphones' : 'bi-play-circle',
+        'title' => $pageTitle,
+        'lead' => 'آرشیو فایل‌های رسانه‌ای منتشرشده جامعه‌الهدی؛ همراه شما در مسیر یادگیری',
+      ]) ?>
 
       <!-- تب‌های سوئیچ نوع رسانه -->
       <div class="btn-group" role="group">
@@ -95,10 +93,7 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 
     <?php if (empty($items)): ?>
-    <div class="text-center py-5 border rounded" style="background:var(--jhd-surface)">
-      <i class="bi bi-film display-1 text-muted opacity-25 d-block mb-3"></i>
-      <h4 class="text-muted">هنوز فایلی در این بخش منتشر نشده است.</h4>
-    </div>
+    <div class="jhd-empty-state"><i class="bi bi-film" aria-hidden="true"></i><p>هنوز فایلی در این بخش منتشر نشده است.</p></div>
     <?php else: ?>
     <div class="row g-4">
       <?php foreach ($items as $item):
@@ -111,37 +106,38 @@ require_once __DIR__ . '/../includes/header.php';
           }
       ?>
       <div class="col-md-6 col-lg-4">
-        <article class="card h-100 p-3">
+        <article class="jhd-card jhd-card--media h-100">
           <?php if ($kind === 'video'): ?>
-          <div class="news-card-img-wrap mb-3" style="aspect-ratio:16/9;border-radius:8px">
-            <video controls preload="none" playsinline poster="<?= imgUrl($item['featured_image'] ?? '') ?>" aria-label="<?= sanitize($item['title']) ?>" src="<?= imgUrl($item['path']) ?>" class="w-100 h-100"></video>
+          <div class="jhd-card-media jhd-media-frame">
+            <video controls preload="none" playsinline poster="<?= imgUrl($item['featured_image'] ?? '') ?>"
+                   aria-label="<?= sanitize($item['title']) ?>" src="<?= imgUrl($item['path']) ?>"></video>
+            <span class="jhd-card-badge">ویدیو</span>
           </div>
           <?php else: ?>
-          <div class="d-flex align-items-center gap-3 mb-3">
-            <div class="topic-card-icon" style="width:52px;height:52px;font-size:1.4rem;border-radius:10px;margin-bottom:0">
-              <i class="bi bi-music-note-beamed"></i>
-            </div>
-            <div>
-              <span class="badge bg-secondary mb-1">فایل صوتی</span>
-              <div class="text-muted small"><i class="bi bi-calendar3 ms-1"></i><?= persianDate($item['date']) ?></div>
-            </div>
+          <div class="jhd-card-media jhd-card-media--audio">
+            <i class="bi bi-soundwave jhd-audio-wave" aria-hidden="true"></i>
+            <span class="jhd-card-badge">صوت</span>
           </div>
           <?php endif; ?>
 
-          <h2 class="h5 fw-bold mb-2">
-            <a href="<?= $detailUrl ?>" class="text-reset text-decoration-none"><?= sanitize($item['title']) ?></a>
-          </h2>
+          <div class="jhd-card-body">
+            <div class="jhd-card-meta">
+              <time><i class="bi bi-calendar3 ms-1"></i><?= persianDate($item['date']) ?></time>
+            </div>
+            <h2 class="jhd-card-title">
+              <a href="<?= $detailUrl ?>"><?= sanitize($item['title']) ?></a>
+            </h2>
 
-          <?php if ($kind === 'audio'): ?>
-          <div class="my-3">
-            <audio controls preload="none" aria-label="<?= sanitize($item['title']) ?>" src="<?= imgUrl($item['path']) ?>" class="w-100"></audio>
-          </div>
-          <?php endif; ?>
+            <?php if ($kind === 'audio'): ?>
+            <div class="jhd-audio-player">
+              <audio controls preload="none" aria-label="<?= sanitize($item['title']) ?>" src="<?= imgUrl($item['path']) ?>"></audio>
+            </div>
+            <?php endif; ?>
 
-          <div class="mt-auto pt-2 border-top">
-            <a class="btn-read-more" href="<?= $detailUrl ?>">
-              جزییات و متن جلسه <i class="bi bi-arrow-left"></i>
-            </a>
+            <div class="jhd-card-foot">
+              <span class="jhd-card-author"><i class="bi bi-<?= $kind === 'audio' ? 'headphones' : 'play-circle' ?> ms-1"></i><?= $kind === 'audio' ? 'فایل صوتی' : 'فیلم' ?></span>
+              <a class="btn-read-more" href="<?= $detailUrl ?>">مشاهده <i class="bi bi-arrow-left"></i></a>
+            </div>
           </div>
         </article>
       </div>

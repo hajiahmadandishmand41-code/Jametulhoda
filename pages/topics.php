@@ -70,57 +70,15 @@ require_once __DIR__ . '/../includes/header.php';
           $bookCnt = count(getBooksByTopic((int)$top['id'], 100));
           $topUrl = topicUrl($top);
       ?>
-      <div class="col-lg-6">
-        <div class="card jhd-card h-100 p-3">
-          <div class="d-flex gap-3 align-items-start">
-            <?php if (!empty($top['cover_image'])): ?>
-            <img src="<?= imgUrl($top['cover_image']) ?>" alt="<?= sanitize($top['name']) ?>"
-                 style="width:84px;height:84px;object-fit:cover;border-radius:10px;border:1px solid var(--jhd-border)" loading="lazy">
-            <?php else: ?>
-            <div class="topic-card-icon" style="width:72px;height:72px;font-size:1.8rem;border-radius:12px;margin-bottom:0">
-              <i class="bi bi-folder-fill"></i>
-            </div>
-            <?php endif; ?>
-
-            <div class="flex-grow-1">
-              <h2 class="h5 mb-1 fw-bold">
-                <a href="<?= $topUrl ?>" class="text-reset text-decoration-none"><?= sanitize($top['name']) ?></a>
-              </h2>
-              <?php if ($top['intro'] ?: $top['description']): ?>
-              <p class="text-muted small mb-2 line-clamp-2">
-                <?= sanitize(excerpt($top['intro'] ?: $top['description'], 110)) ?>
-              </p>
-              <?php endif; ?>
-              <div class="text-muted small d-flex flex-wrap gap-2">
-                <span><i class="bi bi-file-earmark-text ms-1"></i><?= number_format($cnt) ?> مطلب</span>
-                <span>•</span>
-                <span><i class="bi bi-mortarboard ms-1"></i><?= number_format($lessonCnt) ?> درس</span>
-                <span>•</span>
-                <span><i class="bi bi-book ms-1"></i><?= number_format($bookCnt) ?> کتاب</span>
-              </div>
-            </div>
-          </div>
-
-          <?php if (!empty($children)): ?>
-          <div class="mt-3 pt-2 border-top">
-            <span class="text-muted" style="font-size:0.75rem">زیرموضوعات:</span>
-            <div class="d-flex flex-wrap gap-1 mt-1">
-              <?php foreach ($children as $ch): $subcnt = countPostsByTopic((int)$ch['id']); ?>
-              <a href="<?= topicUrl($ch) ?>" class="badge badge-article text-decoration-none">
-                <?= sanitize($ch['name']) ?> <?php if ($subcnt > 0): ?><span class="opacity-75">(<?= $subcnt ?>)</span><?php endif; ?>
-              </a>
-              <?php endforeach; ?>
-            </div>
-          </div>
-          <?php endif; ?>
-
-          <div class="mt-auto pt-3">
-            <a href="<?= $topUrl ?>" class="btn btn-outline-primary btn-sm w-100">
-              ورود به مرکز محتوایی موضوع <i class="bi bi-arrow-left ms-1"></i>
-            </a>
-          </div>
-        </div>
-      </div>
+      <?= renderTopicCard($top, [
+          'col' => 'col-lg-6',
+          'cta' => 'ورود به مرکز محتوایی موضوع',
+          'counts' => [
+              ['icon' => 'bi-file-earmark-text', 'value' => $cnt, 'label' => 'مطلب'],
+              ['icon' => 'bi-mortarboard', 'value' => $lessonCnt, 'label' => 'درس'],
+              ['icon' => 'bi-book', 'value' => $bookCnt, 'label' => 'کتاب'],
+          ],
+      ]) ?>
       <?php endforeach; ?>
     </div>
     <?php endif; ?>

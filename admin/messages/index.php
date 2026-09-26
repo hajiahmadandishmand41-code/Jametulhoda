@@ -107,9 +107,9 @@ $newCount = (int)$db->query("SELECT COUNT(*) FROM contact_messages WHERE is_read
 </div>
 
 <?php if (empty($messages)): ?>
-<div class="text-center py-5">
-    <i class="bi bi-inbox display-1 text-muted opacity-25 d-block mb-3"></i>
-    <h5 class="text-muted">پیامی یافت نشد</h5>
+<div class="jhd-empty-state">
+    <i class="bi bi-inbox" aria-hidden="true"></i>
+    <h5>پیامی یافت نشد</h5>
 </div>
 <?php else: ?>
 

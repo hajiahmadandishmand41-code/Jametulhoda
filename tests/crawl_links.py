@@ -15,7 +15,7 @@ os.chdir(BASE_DIR)
 
 files_to_scan = []
 for root, dirs, files in os.walk('.'):
-    dirs[:] = [d for d in dirs if d not in ['.git', 'tests', 'vendor']]
+    dirs[:] = [d for d in dirs if d not in ['.git', '.github', 'tests', 'vendor', 'node_modules', 'uploads', 'storage', '.cache']]
     for f in files:
         if f.endswith('.php') or f.endswith('.html'):
             files_to_scan.append(os.path.normpath(os.path.join(root, f)))

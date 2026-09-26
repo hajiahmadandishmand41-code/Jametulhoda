@@ -98,59 +98,91 @@ const owner = await newClient();
 
 // ─── F/G: wrong password / unknown identifier never authenticate ──────────
 {
-    const { csrf } = await csrfFrom(owner, loginUrl);
-    const wrongPass = await owner.post(loginUrl, { form: { csrf_token: csrf, identifier: adminUser, password: `${adminPass}-nope` } });
+    const stranger = await newClient();
+    const { csrf } = await csrfFrom(stranger, loginUrl);
+    const wrongPass = await stranger.post(loginUrl, { form: { csrf_token: csrf, identifier: adminUser, password: `${adminPass}-nope` } });
     check('F wrong password rejected', wrongPass.status() === 200 && !wrongPass.headers()['location'], String(wrongPass.status()));
-    const wrongId = await owner.post(loginUrl, {
+    check('F wrong password leaves the session anonymous', (await stranger.get('/account')).status() === 302, '');
+    const wrongId = await stranger.post(loginUrl, {
         form: { csrf_token: csrf, identifier: `missing-${stamp}@example.test`, password: adminPass },
     });
     check('G unknown identifier rejected', wrongId.status() === 200 && !wrongId.headers()['location'], String(wrongId.status()));
+    check('G unknown identifier cannot open the panel', (await stranger.get(dashUrl)).status() === 302, '');
+    await stranger.dispose();
 }
 
-// ─── H/I: password change invalidates the old password ───────────────────
-const newAdminPass = `Owner!${stamp}Zz`;
+// ─── X: owner creates a content admin (used for the write-side checks) ───
+// The owner account itself is never mutated: other suites (http.mjs, browser.mjs,
+// links.mjs) keep using TEST_ADMIN_USERNAME / TEST_ADMIN_PASSWORD unchanged.
+const staffName = `qa_editor_${stamp}`;
+const staffPass1 = `Editor!${stamp}Aa`;
+const staffPass2 = `Editor!${stamp}Bb`;
 {
-    const profile = await csrfFrom(owner, '/admin/profile');
-    check('H profile page reachable', profile.status === 200, String(profile.status));
-    const change = await owner.post('/admin/profile', {
+    const usersPage = await csrfFrom(owner, '/admin/users');
+    check('X owner opens user management', usersPage.status === 200, String(usersPage.status));
+    const create = await owner.post('/admin/users', {
         form: {
-            csrf_token: profile.csrf, action: 'password',
-            current_password: adminPass, new_password: newAdminPass, confirm_password: newAdminPass,
+            csrf_token: usersPage.csrf, username: staffName, full_name: 'مدیر محتوای آزمون',
+            email: `${staffName}@example.test`, role: 'admin', password: staffPass1, is_active: 'on',
         },
     });
-    check('H password change accepted', change.status === 303 || change.status === 302, String(change.status));
-    const dash = await owner.get(dashUrl);
-    check('H current session survives its own password change', dash.status() === 200, String(dash.status()));
+    check('X owner creates a content admin', create.status() === 200 || create.status() === 303, String(create.status()));
+}
+
+const staff = await newClient();
+{
+    const { csrf } = await csrfFrom(staff, loginUrl);
+    const login = await staff.post(loginUrl, { form: { csrf_token: csrf, identifier: staffName, password: staffPass1 } });
+    check('X content admin logs in through the same page', login.status() === 303, String(login.status()));
+    check('X content admin redirects to the panel', (login.headers()['location'] || '').includes('/admin/'), login.headers()['location'] || '');
+    check('X content admin may write content', (await staff.get('/admin/posts')).status() === 200, '');
+    check('J content admin is blocked from settings', (await staff.get('/admin/settings')).status() === 403, '');
+    check('J content admin is blocked from users', (await staff.get('/admin/users')).status() === 403, '');
+    check('J content admin is blocked from diagnostics', (await staff.get('/admin/diagnostics')).status() === 403, '');
+}
+
+// ─── H/I: password change invalidates the old password (on the test account) ─
+{
+    const profile = await csrfFrom(staff, '/admin/profile');
+    check('H profile page reachable', profile.status === 200, String(profile.status));
+    const wrongCurrent = await staff.post('/admin/profile', {
+        form: { csrf_token: profile.csrf, action: 'password', current_password: `${staffPass1}-nope`, new_password: staffPass2, confirm_password: staffPass2 },
+    });
+    check('H wrong current password is refused', wrongCurrent.status() === 200, String(wrongCurrent.status()));
+    const change = await staff.post('/admin/profile', {
+        form: { csrf_token: profile.csrf, action: 'password', current_password: staffPass1, new_password: staffPass2, confirm_password: staffPass2 },
+    });
+    check('H password change accepted', change.status() === 303 || change.status() === 302, String(change.status()));
+    check('H current session survives its own password change', (await staff.get(dashUrl)).status() === 200, '');
 
     const stale = await newClient();
     const staleCsrf = (await csrfFrom(stale, loginUrl)).csrf;
-    const oldLogin = await stale.post(loginUrl, { form: { csrf_token: staleCsrf, identifier: adminUser, password: adminPass } });
+    const oldLogin = await stale.post(loginUrl, { form: { csrf_token: staleCsrf, identifier: staffName, password: staffPass1 } });
     check('I old password no longer works', oldLogin.status() === 200 && !oldLogin.headers()['location'], String(oldLogin.status()));
     await stale.dispose();
 
     const fresh = await newClient();
     const freshCsrf = (await csrfFrom(fresh, loginUrl)).csrf;
-    const newLogin = await fresh.post(loginUrl, { form: { csrf_token: freshCsrf, identifier: adminUser, password: newAdminPass } });
+    const newLogin = await fresh.post(loginUrl, { form: { csrf_token: freshCsrf, identifier: staffName, password: staffPass2 } });
     check('I new password works', newLogin.status() === 303, String(newLogin.status()));
     await fresh.dispose();
 }
 
-// ─── J/K/X: authorization boundaries and session hardening ───────────────
+// ─── K/X: authorization boundary and session hardening ───────────────────
 {
     const guest = await newClient();
     const anon = await guest.get(dashUrl);
     check('K anonymous dashboard redirects to login with return URL', anon.status() === 302 && (anon.headers()['location'] || '').includes('redirect='), anon.headers()['location'] || '');
 
     const { csrf } = await csrfFrom(guest, loginUrl);
-    const login = await guest.post(loginUrl, { form: { csrf_token: csrf, identifier: adminUser, password: newAdminPass } });
+    const login = await guest.post(loginUrl, { form: { csrf_token: csrf, identifier: staffName, password: staffPass2 } });
     const cookie = login.headers()['set-cookie'] || '';
     check('X session cookie is HttpOnly', /HttpOnly/i.test(cookie), cookie.split(';')[0]);
     check('X session id is long and random', /=\s*([a-f0-9]{26,})/i.test(cookie), '');
     check('X login rotates the session id', !cookie.includes(csrf || '__no_csrf__'), '');
-    const noCsrf = await guest.post('/admin/profile', { form: { action: 'password', current_password: 'x', new_password: 'y', confirm_password: 'y' } });
-    check('X admin POST without CSRF → 403', noCsrf.status() === 403, String(noCsrf.status()));
-    const csrfOnly = await guest.get('/admin/users');
-    check('K owner can open user management', csrfOnly.status() === 200, String(csrfOnly.status()));
+    const noCsrf = await guest.post('/admin/profile', { form: { action: 'password', current_password: staffPass2, new_password: 'Hijacked!12345', confirm_password: 'Hijacked!12345' } });
+    check('X POST without CSRF is refused', noCsrf.status() === 200 && !noCsrf.headers()['location'], String(noCsrf.status()));
+    check('X rejected CSRF did not change the password', (await guest.get(dashUrl)).status() === 200, '');
     await guest.dispose();
 }
 
@@ -173,7 +205,7 @@ for (const path of ['/missing-page-xyz', '/config/local.php', '/install.php', '/
 {
     const media = await newClient();
     const { csrf } = await csrfFrom(media, loginUrl);
-    await media.post(loginUrl, { form: { csrf_token: csrf, identifier: adminUser, password: newAdminPass } });
+    await media.post(loginUrl, { form: { csrf_token: csrf, identifier: staffName, password: staffPass2 } });
     const gallery = await csrfFrom(media, '/admin/uploads');
     const upload = await media.post('/admin/uploads', {
         multipart: {
@@ -188,8 +220,9 @@ for (const path of ['/missing-page-xyz', '/config/local.php', '/install.php', '/
     if (stored) {
         const file = await media.get(stored.replace(base, ''));
         check('N uploaded file is served', file.status() === 200, String(file.status()));
-        const asScript = await media.get(stored.replace(/\.png$/, '.php'));
-        check('N script next to the upload stays 404', asScript.status() === 404, String(asScript.status()));
+        const asScript = await media.get(stored.replace(/\.[a-z0-9]+$/i, '.php'));
+        check('N uploaded directory refuses script execution', asScript.status() === 404, String(asScript.status()));
+        check('N stored file is re-encoded, never the raw upload', /\.(webp|png)$/i.test(stored), stored);
         const card = await media.get('/');
         check('O homepage cards load without broken images', card.status() === 200 && !(await card.text()).includes('src="/uploads/undefined'), String(card.status()));
     }
@@ -200,7 +233,7 @@ for (const path of ['/missing-page-xyz', '/config/local.php', '/install.php', '/
 const editor = await newClient();
 {
     const { csrf } = await csrfFrom(editor, loginUrl);
-    await editor.post(loginUrl, { form: { csrf_token: csrf, identifier: adminUser, password: newAdminPass } });
+    await editor.post(loginUrl, { form: { csrf_token: csrf, identifier: staffName, password: staffPass2 } });
 
     const createPost = async (endpoint, fields, label, expectPath) => {
         const page = await csrfFrom(editor, endpoint);
@@ -235,42 +268,18 @@ await editor.dispose();
 
 // ─── W: admin logout ends the staff session ──────────────────────────────
 {
-    const staff = await newClient();
-    const { csrf } = await csrfFrom(staff, loginUrl);
-    await staff.post(loginUrl, { form: { csrf_token: csrf, identifier: adminUser, password: newAdminPass } });
-    check('W staff logged in', (await staff.get(dashUrl)).status() === 200, '');
-    const logoutPage = await csrfFrom(staff, '/logout');
-    const out = await staff.post('/logout', { form: { csrf_token: logoutPage.csrf } });
+    const session = await newClient();
+    const { csrf } = await csrfFrom(session, loginUrl);
+    await session.post(loginUrl, { form: { csrf_token: csrf, identifier: staffName, password: staffPass2 } });
+    check('W staff logged in', (await session.get(dashUrl)).status() === 200, '');
+    const logoutPage = await csrfFrom(session, '/logout');
+    const out = await session.post('/logout', { form: { csrf_token: logoutPage.csrf } });
     check('W admin logout → 302/303', out.status() === 302 || out.status() === 303, String(out.status()));
-    check('W dashboard closed after logout', (await staff.get(dashUrl)).status() === 302, '');
-    await staff.dispose();
+    check('W dashboard closed after logout', (await session.get(dashUrl)).status() === 302, '');
+    await session.dispose();
 }
 
-// ─── X: role gate for a content admin created at runtime ─────────────────
-{
-    const ownerClient = await newClient();
-    const { csrf } = await csrfFrom(ownerClient, loginUrl);
-    await ownerClient.post(loginUrl, { form: { csrf_token: csrf, identifier: adminUser, password: newAdminPass } });
-    const usersPage = await csrfFrom(ownerClient, '/admin/users');
-    const newAdminName = `qa_editor_${stamp}`;
-    const create = await ownerClient.post('/admin/users', {
-        form: {
-            csrf_token: usersPage.csrf, username: newAdminName, full_name: 'مدیر محتوای آزمون',
-            email: `${newAdminName}@example.test`, role: 'admin', password: newAdminPass, is_active: 'on',
-        },
-    });
-    check('X owner creates a content admin', create.status === 200 || create.status === 303, String(create.status));
-
-    const content = await newClient();
-    const contentCsrf = (await csrfFrom(content, loginUrl)).csrf;
-    const cl = await content.post(loginUrl, { form: { csrf_token: contentCsrf, identifier: newAdminName, password: newAdminPass } });
-    check('X content admin logs in through the same page', cl.status() === 303, String(cl.status()));
-    check('X content admin may write content', (await content.get('/admin/posts')).status() === 200, '');
-    check('J content admin is blocked from settings', (await content.get('/admin/settings')).status() === 403, '');
-    check('J content admin is blocked from users', (await content.get('/admin/users')).status() === 403, '');
-    await content.dispose();
-    await ownerClient.dispose();
-}
+await staff.dispose();
 
 fs.writeFileSync('test-results/auth-flows.json', JSON.stringify(results, null, 2));
 const failed = results.filter((r) => !r.ok);

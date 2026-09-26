@@ -26,7 +26,7 @@ require_once __DIR__ . '/../includes/header.php';
         <p class="text-muted mt-2">مراسم، مناسبت‌ها، محافل قرآنی و برنامه‌های مذهبی جامعه‌الهدی</p>
     </div>
     <?php if (empty($posts)): ?>
-    <div class="text-center py-5 border rounded" style="background:var(--jhd-surface)"><i class="bi bi-moon-stars display-1 text-muted opacity-25 d-block mb-3"></i><h4 class="text-muted">موردی یافت نشد</h4></div>
+    <div class="jhd-empty-state"><i class="bi bi-moon-stars" aria-hidden="true"></i><p>موردی یافت نشد</p></div>
     <?php else: ?>
     <?= renderCategoryChips(['religious'], url('religious-activities'), 'همه فعالیت‌ها') ?>
     <div class="row g-4">

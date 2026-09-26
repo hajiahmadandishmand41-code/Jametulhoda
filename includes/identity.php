@@ -580,8 +580,13 @@ function jhd_user_by_identifier(string $identifier): ?array {
         if ($row) return jhd_user_public($row) + ['password' => (string)$row['password']];
 
         // پسوند (شمارهٔ بدون کد کشور). نویسه‌های عام LIKE بی‌اثر می‌شوند.
+        // MySQL درون رشتهٔ نقل‌قولی، خودِ بک‌اسلش را نویسهٔ فرار می‌داند؛ پس
+        // برای ESCAPE باید '\\\\' نوشته شود، ولی SQLite/PostgreSQL یک بک‌اسلش
+        // می‌خواهد. مقدار بر پایهٔ درایور ساخته می‌شود تا هیچ‌کدام خطای
+        // «ESCAPE expression must be a single character» ندهند.
         $suffix = addcslashes($trimmed, '%_\\');
-        $stmt = $db->prepare("SELECT $fields FROM users WHERE COALESCE(phone_normalized,'') LIKE ? ESCAPE '\\\\' LIMIT 1");
+        $likeEscape = databaseDriver() === 'mysql' ? '\\\\' : '\\';
+        $stmt = $db->prepare("SELECT $fields FROM users WHERE COALESCE(phone_normalized,'') LIKE ? ESCAPE '" . $likeEscape . "' LIMIT 1");
         $stmt->execute(['%' . $suffix]);
         $row = $stmt->fetch();
         if ($row) return jhd_user_public($row) + ['password' => (string)$row['password']];

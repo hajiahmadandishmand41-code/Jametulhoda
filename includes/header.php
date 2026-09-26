@@ -100,6 +100,7 @@ endif; ?>
 <link rel="icon" href="<?= asset('img/favicon.svg') ?>" type="image/svg+xml">
 <script src="<?= asset('js/theme.js') ?>"></script>
 <link rel="preload" href="<?= asset('fonts/Vazirmatn-Regular.woff2') ?>" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="<?= asset('fonts/Amiri-Bold.woff2') ?>" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="<?= asset('vendor/bootstrap.rtl.min.css') ?>">
 <link rel="stylesheet" href="<?= asset('vendor/icons/bootstrap-icons.min.css') ?>">
 <link rel="stylesheet" href="<?= asset('vendor/plyr.css') ?>">
@@ -111,6 +112,11 @@ endif; ?>
 </head>
 <body class="jhd-public-site<?= !empty($authNoindex) ? ' jhd-login-site' : '' ?>">
 <a class="skip-link" href="#main-content">رفتن به محتوای اصلی</a>
+
+<!-- نوار بسمله: امضای بصری یک پایگاه دینی -->
+<div class="bismillah-bar" aria-hidden="true">
+    <span>بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</span>
+</div>
 
 <!-- Header اصلی -->
 <header class="jhd-header" role="banner">

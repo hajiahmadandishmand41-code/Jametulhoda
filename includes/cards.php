@@ -31,7 +31,7 @@ function jhd_card_topics(array $post, int $limit = 2): array {
 }
 
 function renderPostCard(array $post, array $opts = []): string {
-    $type = (string)($post['post_type'] ?? ($opts['type'] ?? 'post'));
+    $type = (string)($opts['type'] ?? ($post['post_type'] ?? 'post'));
     $href = $opts['url'] ?? postUrl($post);
     $title = (string)($post['title'] ?? '');
     $summary = excerpt((string)($post['summary'] ?? $post['content'] ?? ''), (int)($opts['excerpt'] ?? 118));
@@ -83,29 +83,53 @@ function renderBookCard(array $book, array $opts = []): string {
     $img = $cover
         ? '<img src="' . sanitize(imgUrl($cover)) . '" alt="جلد ' . sanitize($title) . '" loading="lazy">'
         : '<div class="jhd-card-ph jhd-book-ph"><i class="bi bi-book"></i></div>';
+    $bookMeta = [];
+    if (!empty($book['publish_year'])) $bookMeta[] = 'سال ' . sanitize((string)$book['publish_year']);
+    if (!empty($book['pages'])) $bookMeta[] = number_format((int)$book['pages']) . ' صفحه';
+    if (!$bookMeta) {
+        $d = persianDate((string)($book['published_at'] ?? $book['created_at'] ?? ''));
+        if ($d !== '') $bookMeta[] = sanitize($d);
+    }
+    $cta = (string)($opts['cta'] ?? 'معرفی کتاب');
     return '<div class="' . $col . '"><article class="book-card jhd-card jhd-card--book h-100">'
-        . '<div class="book-card-cover"><a href="' . sanitize($href) . '">' . $img . '</a></div>'
+        . '<div class="book-card-cover"><a href="' . sanitize($href) . '">' . $img
+        . '<span class="jhd-card-badge">کتاب</span></a></div>'
         . '<h3 class="book-card-title"><a href="' . sanitize($href) . '">' . sanitize($title) . '</a></h3>'
         . ($author !== '' ? '<div class="book-card-author"><i class="bi bi-pen ms-1"></i>' . sanitize($author) . '</div>' : '')
-        . '<a class="btn-read-more" href="' . sanitize($href) . '">معرفی کتاب <i class="bi bi-arrow-left"></i></a>'
+        . ($bookMeta ? '<div class="jhd-card-meta justify-content-center"><time><i class="bi bi-journal ms-1"></i>' . implode(' • ', $bookMeta) . '</time></div>' : '')
+        . '<a class="btn-read-more" href="' . sanitize($href) . '">' . sanitize($cta) . ' <i class="bi bi-arrow-left"></i></a>'
         . '</article></div>';
 }
 
 function renderLessonCard(array $lesson, array $opts = []): string {
-    $href = lessonUrl($lesson);
+    $href = $opts['url'] ?? lessonUrl($lesson);
     $title = (string)($lesson['title'] ?? '');
     $teacher = (string)($lesson['teacher'] ?? '');
+    $collection = (string)($lesson['collection_title'] ?? $lesson['subject'] ?? '');
+    $summary = excerpt((string)($lesson['summary'] ?? $lesson['content'] ?? ''), (int)($opts['excerpt'] ?? 90));
     $col = $opts['col'] ?? 'col-md-6 col-lg-4';
+    $cta = (string)($opts['cta'] ?? 'جلسات و صوت درس');
     $image = (string)($lesson['featured_image'] ?? '');
+    $lessonNo = (int)($lesson['lesson_number'] ?? 0);
     $img = $image
-        ? '<img src="' . sanitize(imgUrl($image)) . '" alt="' . sanitize($title) . '" class="jhd-card-img news-card-img" loading="lazy">'
+        ? '<img src="' . sanitize(imgUrl($image)) . '" alt="' . sanitize($title) . '" class="jhd-card-img news-card-img" loading="lazy" decoding="async">'
         : '<div class="jhd-card-ph news-card-placeholder"><i class="bi bi-mortarboard"></i></div>';
+    $badge = $lessonNo > 0 ? 'جلسه ' . number_format($lessonNo) : 'درس';
+    $meta = '';
+    if ($collection !== '') {
+        $meta .= '<span class="jhd-chip">' . sanitize($collection) . '</span>';
+    }
     return '<div class="' . $col . '"><article class="lesson-card jhd-card jhd-card--lesson h-100">'
-        . '<a class="jhd-card-media news-card-img-wrap" href="' . sanitize($href) . '">' . $img . '<span class="jhd-card-badge">درس</span></a>'
-        . '<div class="jhd-card-body news-card-body"><h3 class="jhd-card-title news-card-title"><a href="' . sanitize($href) . '">' . sanitize($title) . '</a></h3>'
-        . ($teacher !== '' ? '<p class="jhd-card-summary">' . sanitize($teacher) . '</p>' : '')
-        . '<a class="btn-read-more" href="' . sanitize($href) . '">ورود به درس <i class="bi bi-arrow-left"></i></a>'
-        . '</div></article></div>';
+        . '<a class="jhd-card-media news-card-img-wrap" href="' . sanitize($href) . '" aria-label="' . sanitize($title) . '">'
+        . $img . '<span class="jhd-card-badge">' . sanitize($badge) . '</span></a>'
+        . '<div class="jhd-card-body news-card-body">'
+        . ($meta !== '' ? '<div class="jhd-card-meta">' . $meta . '</div>' : '')
+        . '<h3 class="jhd-card-title news-card-title"><a href="' . sanitize($href) . '">' . sanitize($title) . '</a></h3>'
+        . ($summary !== '' ? '<p class="jhd-card-summary news-card-summary">' . sanitize($summary) . '</p>' : '')
+        . '<div class="jhd-card-foot news-card-footer">'
+        . ($teacher !== '' ? '<span class="jhd-card-author"><i class="bi bi-person-video3 ms-1"></i>استاد: ' . sanitize($teacher) . '</span>' : '<span></span>')
+        . '<a class="btn-read-more" href="' . sanitize($href) . '">' . sanitize($cta) . ' <i class="bi bi-arrow-left"></i></a>'
+        . '</div></div></article></div>';
 }
 
 function renderTopicCard(array $topic, array $opts = []): string {
@@ -122,12 +146,26 @@ function renderTopicCard(array $topic, array $opts = []): string {
     foreach (array_slice($children, 0, 4) as $ch) {
         $childHtml .= '<a class="jhd-chip" href="' . sanitize(topicUrl($ch)) . '">' . sanitize((string)$ch['name']) . '</a>';
     }
+    $counts = (array)($opts['counts'] ?? []);
+    $countsHtml = '';
+    if ($counts) {
+        $parts = [];
+        foreach ($counts as $c) {
+            if (empty($c['label'])) continue;
+            $parts[] = '<span><i class="bi ' . sanitize((string)($c['icon'] ?? 'bi-dot')) . ' ms-1"></i>'
+                . number_format((int)($c['value'] ?? 0)) . ' ' . sanitize((string)$c['label']) . '</span>';
+        }
+        if ($parts) $countsHtml = '<div class="jhd-card-meta">' . implode('', $parts) . '</div>';
+    }
+    $cta = sanitize((string)($opts['cta'] ?? 'ورود به موضوع'));
     return '<div class="' . $col . '"><article class="topic-card jhd-card jhd-card--topic h-100">'
-        . '<a class="jhd-card-media jhd-topic-media" href="' . sanitize($href) . '">' . $img . '</a>'
+        . '<a class="jhd-card-media jhd-topic-media" href="' . sanitize($href) . '">' . $img
+        . '<span class="jhd-card-badge">موضوع</span></a>'
         . '<div class="jhd-card-body"><h3 class="jhd-card-title"><a href="' . sanitize($href) . '">' . sanitize($name) . '</a></h3>'
         . ($desc !== '' ? '<p class="jhd-card-summary">' . sanitize($desc) . '</p>' : '')
-        . ($childHtml !== '' ? '<div class="jhd-card-meta">' . $childHtml . '</div>' : '')
-        . '<a class="btn-read-more" href="' . sanitize($href) . '">ورود به موضوع <i class="bi bi-arrow-left"></i></a>'
+        . $countsHtml
+        . ($childHtml !== '' ? '<div class="jhd-card-meta jhd-card-chips">' . $childHtml . '</div>' : '')
+        . '<a class="btn-read-more" href="' . sanitize($href) . '">' . $cta . ' <i class="bi bi-arrow-left"></i></a>'
         . '</div></article></div>';
 }
 
@@ -269,4 +307,57 @@ function jhd_render_topic_tree_nav(array $nodes, string $mode = 'desktop'): stri
         }
     }
     return $html;
+}
+
+/**
+ * سرفصل بخش‌ها — یک الگوی واحد برای همهٔ فهرست‌ها و صفحهٔ اصلی.
+ * هر بخش: برچسب کوچک (eyebrow)، عنوان با نماد، خط طلایی و پیوند «مشاهده همه».
+ */
+function jhd_section_head(array $opts): string {
+    $eyebrow = (string)($opts['eyebrow'] ?? '');
+    $title   = (string)($opts['title'] ?? '');
+    $icon    = (string)($opts['icon'] ?? '');
+    $url     = (string)($opts['url'] ?? '');
+    $link    = (string)($opts['link'] ?? '');
+    $html = '<div class="jhd-section-head">';
+    $html .= '<div>';
+    if ($eyebrow !== '') $html .= '<span class="jhd-eyebrow">' . sanitize($eyebrow) . '</span>';
+    $html .= '<h2>';
+    if ($icon !== '') $html .= '<i class="bi ' . sanitize($icon) . '" aria-hidden="true"></i>';
+    $html .= sanitize($title) . '</h2>';
+    $html .= '<div class="jhd-rule" aria-hidden="true"></div>';
+    $html .= '</div>';
+    if ($url !== '' && $link !== '') {
+        $html .= '<a class="jhd-section-link" href="' . sanitize($url) . '">' . sanitize($link)
+              . ' <i class="bi bi-arrow-left" aria-hidden="true"></i></a>';
+    }
+    return $html . '</div>';
+}
+
+/**
+ * سرصفحهٔ صفحه‌های داخلی: برچسب، عنوان، توضیح کوتاه و در صورت نیاز دکمه‌ها.
+ */
+function jhd_page_head(array $opts): string {
+    $eyebrow = (string)($opts['eyebrow'] ?? '');
+    $title   = (string)($opts['title'] ?? '');
+    $icon    = (string)($opts['icon'] ?? '');
+    $lead    = (string)($opts['lead'] ?? '');
+    $actions = (string)($opts['actions'] ?? '');
+    $html = '<div class="jhd-page-head">';
+    if ($eyebrow !== '') $html .= '<span class="jhd-eyebrow">' . sanitize($eyebrow) . '</span>';
+    $html .= '<h1 class="jhd-page-title">';
+    if ($icon !== '') $html .= '<i class="bi ' . sanitize($icon) . '" aria-hidden="true"></i>';
+    $html .= sanitize($title) . '</h1>';
+    $html .= '<div class="jhd-rule" aria-hidden="true"></div>';
+    if ($lead !== '') $html .= '<p class="jhd-page-lead">' . sanitize($lead) . '</p>';
+    if ($actions !== '') $html .= '<div class="d-flex flex-wrap gap-2 mt-3">' . $actions . '</div>';
+    return $html . '</div>';
+}
+
+/** کارت آمار کوچک صفحهٔ اصلی (شمارنده + پیوند). */
+function jhd_stat_card(string $icon, string $value, string $label, string $url): string {
+    return '<a class="jhd-stat" href="' . sanitize($url) . '">'
+        . '<i class="bi ' . sanitize($icon) . '" aria-hidden="true"></i>'
+        . '<span><strong>' . sanitize($value) . '</strong><span>' . sanitize($label) . '</span></span>'
+        . '</a>';
 }

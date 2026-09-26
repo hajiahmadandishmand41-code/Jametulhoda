@@ -47,7 +47,7 @@ require_once __DIR__ . '/../includes/header.php';
         <p class="text-muted small"><?= number_format($total) ?> مطلب در این دسته‌بندی</p>
     </div>
     <?php if (empty($posts)): ?>
-    <div class="text-center py-5"><i class="bi bi-folder display-1 text-muted opacity-25 d-block mb-3"></i><h4 class="text-muted">مطلبی یافت نشد</h4></div>
+    <div class="jhd-empty-state"><i class="bi bi-folder" aria-hidden="true"></i><p>مطلبی یافت نشد</p></div>
     <?php else: ?>
     <div class="row g-4">
         <?php foreach ($posts as $k => $p):

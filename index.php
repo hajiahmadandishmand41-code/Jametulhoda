@@ -109,7 +109,7 @@ try {
         FROM lessons l
         LEFT JOIN lesson_collections c ON c.id = l.collection_id
         WHERE l.status = 'published'
-        ORDER BY l.published_at DESC, l.id DESC
+        ORDER BY l.is_featured DESC, l.sort_order ASC, l.id DESC
         LIMIT 4
     ");
     $stmt->execute();
@@ -136,6 +136,23 @@ try {
 
 // ط. بنر ویژه
 $specialBanner = getActiveBanner();
+
+// ی. شمارنده‌های واقعی برای نوار آمار صفحهٔ اصلی (از دیتابیس، نه عدد ثابت)
+$homeCounts = ['published' => 0, 'topics' => 0, 'books' => 0, 'lessons' => 0, 'media' => 0];
+try {
+    foreach ([
+        'published' => "SELECT COUNT(*) FROM posts WHERE status='published'",
+        'topics' => "SELECT COUNT(*) FROM topics WHERE is_active=1",
+        'books' => "SELECT COUNT(*) FROM books WHERE status='published'",
+        'lessons' => "SELECT COUNT(*) FROM lessons WHERE status='published'",
+        'media' => "SELECT COUNT(*) FROM media_files",
+    ] as $key => $sql) {
+        $homeCounts[$key] = (int)$db->query($sql)->fetchColumn();
+    }
+} catch (Throwable $e) {
+    $homeCounts = ['published' => 0, 'topics' => 0, 'books' => 0, 'lessons' => 0, 'media' => 0];
+}
+$homeContentTotal = $homeCounts['published'] + $homeCounts['books'] + $homeCounts['lessons'];
 
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -226,21 +243,30 @@ require_once __DIR__ . '/includes/header.php';
 </section>
 <?php endif; ?>
 
+<!-- ─── ۲.۵ نوار آمار واقعی سایت ───────────────────────────────────────────── -->
+<?php if ($homeContentTotal > 0): ?>
+<section class="jhd-stats-bar" aria-label="شمارگان محتوای سایت">
+    <div class="container">
+        <div class="jhd-stats-grid">
+            <?= jhd_stat_card('bi-collection', number_format($homeContentTotal), 'مطلب منتشرشده', url('articles')) ?>
+            <?= jhd_stat_card('bi-diagram-3', number_format($homeCounts['topics']), 'موضوع فعال', url('topics')) ?>
+            <?= jhd_stat_card('bi-book', number_format($homeCounts['books']), 'کتاب دیجیتال', url('books')) ?>
+            <?= jhd_stat_card('bi-mortarboard', number_format($homeCounts['lessons']), 'درس حوزوی', url('lessons')) ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
 <!-- ─── ۳. تازه‌ترین اخبار حوزه ─────────────────────────────────────────── -->
 <section class="py-5 section-plain" id="news-section">
     <div class="container">
-        <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-2">
-            <div>
-                <span class="jhd-eyebrow">اطلاع‌رسانی و رویدادهای جاری</span>
-                <h2 class="section-title mb-1">
-                    <i class="bi bi-newspaper ms-2 text-gold"></i> اخبار مدرسه علمیه
-                </h2>
-                <div class="section-divider"></div>
-            </div>
-            <a href="<?= url('news') ?>" class="btn btn-outline-primary btn-sm">
-                مشاهده همه اخبار <i class="bi bi-arrow-left ms-1"></i>
-            </a>
-        </div>
+        <?= jhd_section_head([
+    'eyebrow' => 'اطلاع‌رسانی و رویدادهای جاری',
+    'icon' => 'bi-newspaper',
+    'title' => 'اخبار مدرسه علمیه',
+    'url' => url('news'),
+    'link' => 'مشاهده همه اخبار',
+]) ?>
 
         <?php if (empty($latestNews)): ?>
         <div class="jhd-empty-state"><i class="bi bi-newspaper" aria-hidden="true"></i><p>هنوز خبری برای نمایش منتشر نشده است.</p></div>
@@ -258,18 +284,13 @@ require_once __DIR__ . '/includes/header.php';
 <!-- ─── ۴. مقالات علمی و یادداشت‌های پژوهشی [بخش مهم درخواستی] ────────────── -->
 <section class="py-5 section-soft" id="articles-section">
     <div class="container">
-        <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-2">
-            <div>
-                <span class="jhd-eyebrow">اندیشه و پژوهش‌های دینی</span>
-                <h2 class="section-title mb-1">
-                    <i class="bi bi-file-earmark-richtext ms-2 text-gold"></i> مقالات علمی و یادداشت‌ها
-                </h2>
-                <div class="section-divider"></div>
-            </div>
-            <a href="<?= url('articles') ?>" class="btn btn-outline-primary btn-sm">
-                همه مقالات <i class="bi bi-arrow-left ms-1"></i>
-            </a>
-        </div>
+        <?= jhd_section_head([
+    'eyebrow' => 'اندیشه و پژوهش‌های دینی',
+    'icon' => 'bi-file-earmark-richtext',
+    'title' => 'مقالات علمی و یادداشت‌ها',
+    'url' => url('articles'),
+    'link' => 'مشاهده همه مقالات',
+]) ?>
 
         <?php if (empty($latestArticles)): ?>
         <div class="jhd-empty-state"><i class="bi bi-file-text" aria-hidden="true"></i><p>مقاله‌ای برای نمایش در این بخش ثبت نشده است.</p></div>
@@ -287,18 +308,13 @@ require_once __DIR__ . '/includes/header.php';
 <!-- ─── ۵. گزارش‌های تصویری و میدانی [بخش مهم درخواستی] ──────────────────── -->
 <section class="py-5 section-plain" id="reports-section">
     <div class="container">
-        <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-2">
-            <div>
-                <span class="jhd-eyebrow">پوشش میدانی و رخدادها</span>
-                <h2 class="section-title mb-1">
-                    <i class="bi bi-card-text ms-2 text-gold"></i> گزارش‌های حوزه و جامعه
-                </h2>
-                <div class="section-divider"></div>
-            </div>
-            <a href="<?= url('reports') ?>" class="btn btn-outline-primary btn-sm">
-                همه گزارش‌ها <i class="bi bi-arrow-left ms-1"></i>
-            </a>
-        </div>
+        <?= jhd_section_head([
+    'eyebrow' => 'پوشش میدانی و رخدادها',
+    'icon' => 'bi-card-text',
+    'title' => 'گزارش‌های حوزه و جامعه',
+    'url' => url('reports'),
+    'link' => 'مشاهده همه گزارش‌ها',
+]) ?>
 
         <?php if (empty($latestReports)): ?>
         <div class="jhd-empty-state"><i class="bi bi-card-text" aria-hidden="true"></i><p>گزارشی برای نمایش در این بخش ثبت نشده است.</p></div>
@@ -316,49 +332,27 @@ require_once __DIR__ . '/includes/header.php';
 <!-- ─── ۶. موضوعات مهم و ستون فقرات محتوا [بخش مهم درخواستی] ─────────────── -->
 <section class="py-5 section-soft" id="topics-section">
     <div class="container">
-        <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-2">
-            <div>
-                <span class="jhd-eyebrow">ستون فقرات معارف اسلامی</span>
-                <h2 class="section-title mb-1">
-                    <i class="bi bi-diagram-3 ms-2 text-gold"></i> موضوعات مهم و محورهای پژوهشی
-                </h2>
-                <div class="section-divider"></div>
-            </div>
-            <a href="<?= url('topics') ?>" class="btn btn-outline-primary btn-sm">
-                اطلس کامل موضوعات <i class="bi bi-arrow-left ms-1"></i>
-            </a>
-        </div>
+        <?= jhd_section_head([
+            'eyebrow' => 'ستون فقرات معارف اسلامی',
+            'icon' => 'bi-diagram-3',
+            'title' => 'موضوعات مهم و محورهای پژوهشی',
+            'url' => url('topics'),
+            'link' => 'اطلس کامل موضوعات',
+        ]) ?>
 
         <?php if (empty($featuredTopics)): ?>
         <div class="jhd-empty-state"><i class="bi bi-diagram-3" aria-hidden="true"></i><p>موضوعی برای نمایش ثبت نشده است.</p></div>
         <?php else: ?>
         <div class="row g-4">
             <?php
-            $icons = ['bi-shield-check', 'bi-journal-bookmark', 'bi-sun', 'bi-book-half', 'bi-compass', 'bi-hourglass-split'];
-            foreach ($featuredTopics as $idx => $tp):
+            foreach ($featuredTopics as $tp):
                 $tUrl = topicUrl($tp);
-                $tIcon = $icons[$idx % count($icons)];
-                $tCount = (int)($tp['post_count'] ?? 0) . ' مطلب';
             ?>
-            <div class="col-sm-6 col-lg-4">
-                <div class="topic-card-showcase">
-                    <div class="topic-card-icon">
-                        <i class="bi <?= $tIcon ?>"></i>
-                    </div>
-                    <h3 class="topic-card-name">
-                        <a href="<?= $tUrl ?>" class="text-reset text-decoration-none"><?= sanitize($tp['name']) ?></a>
-                    </h3>
-                    <p class="topic-card-desc">
-                        <?= sanitize($tp['intro'] ?? $tp['desc'] ?? $tp['description'] ?? 'مطالب ثبت‌شده و پیوندهای مرتبط با این موضوع.') ?>
-                    </p>
-                    <div class="mt-auto d-flex align-items-center justify-content-between w-100 pt-2 border-top">
-                        <span class="small text-muted"><i class="bi bi-layers ms-1"></i><?= $tCount ?></span>
-                        <a href="<?= $tUrl ?>" class="topic-card-btn">
-                            ورود به موضوع <i class="bi bi-arrow-left"></i>
-                        </a>
-                    </div>
-                </div>
-            </div>
+            <?= renderTopicCard($tp, [
+                'col' => 'col-sm-6 col-lg-4',
+                'cta' => 'ورود به موضوع',
+                'counts' => [['icon' => 'bi-layers', 'value' => (int)($tp['post_count'] ?? 0), 'label' => 'مطلب']],
+            ]) ?>
             <?php endforeach; ?>
         </div>
         <?php endif; ?>
@@ -368,18 +362,13 @@ require_once __DIR__ . '/includes/header.php';
 <!-- ─── ۷. برنامه‌ها و رویدادهای آینده ──────────────────────────────────── -->
 <section class="py-5 section-plain" id="events-section">
     <div class="container">
-        <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-2">
-            <div>
-                <span class="jhd-eyebrow">تقویم حوزه و مناسبت‌ها</span>
-                <h2 class="section-title mb-1">
-                    <i class="bi bi-calendar-event ms-2 text-gold"></i> رویدادها و برنامه‌ها
-                </h2>
-                <div class="section-divider"></div>
-            </div>
-            <a href="<?= url('events') ?>" class="btn btn-outline-primary btn-sm">
-                همه رویدادها <i class="bi bi-arrow-left ms-1"></i>
-            </a>
-        </div>
+        <?= jhd_section_head([
+    'eyebrow' => 'تقویم حوزه و مناسبت‌ها',
+    'icon' => 'bi-calendar-event',
+    'title' => 'رویدادها و برنامه‌ها',
+    'url' => url('events'),
+    'link' => 'مشاهده همه رویدادها',
+]) ?>
 
         <?php if (empty($latestEvents)): ?>
         <div class="jhd-empty-state"><i class="bi bi-calendar-event" aria-hidden="true"></i><p>رویدادی برای نمایش ثبت نشده است.</p></div>
@@ -398,18 +387,13 @@ require_once __DIR__ . '/includes/header.php';
 <?php if (!empty($latestBooks)): ?>
 <section class="py-5 section-soft" id="books-section">
     <div class="container">
-        <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-2">
-            <div>
-                <span class="jhd-eyebrow">مرکز اسناد و نشر آثار</span>
-                <h2 class="section-title mb-1">
-                    <i class="bi bi-book ms-2 text-gold"></i> کتابخانه دیجیتال
-                </h2>
-                <div class="section-divider"></div>
-            </div>
-            <a href="<?= url('books') ?>" class="btn btn-outline-primary btn-sm">
-                همه کتاب‌ها <i class="bi bi-arrow-left ms-1"></i>
-            </a>
-        </div>
+        <?= jhd_section_head([
+    'eyebrow' => 'مرکز اسناد و نشر آثار',
+    'icon' => 'bi-book',
+    'title' => 'کتابخانه دیجیتال',
+    'url' => url('books'),
+    'link' => 'مشاهده همه کتاب‌ها',
+]) ?>
 
         <div class="row g-4">
             <?php foreach ($latestBooks as $b):
@@ -424,41 +408,17 @@ require_once __DIR__ . '/includes/header.php';
 <?php if (!empty($latestLessons)): ?>
 <section class="py-5 section-plain" id="lessons-section">
     <div class="container">
-        <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-2">
-            <div>
-                <span class="jhd-eyebrow">مدرسه علمیه و آموزش مجازی</span>
-                <h2 class="section-title mb-1">
-                    <i class="bi bi-mortarboard ms-2 text-gold"></i> درس‌های حوزوی
-                </h2>
-                <div class="section-divider"></div>
-            </div>
-            <a href="<?= url('lessons') ?>" class="btn btn-outline-primary btn-sm">
-                همه درس‌ها <i class="bi bi-arrow-left ms-1"></i>
-            </a>
-        </div>
+        <?= jhd_section_head([
+    'eyebrow' => 'مدرسه علمیه و آموزش مجازی',
+    'icon' => 'bi-mortarboard',
+    'title' => 'درس‌های حوزوی',
+    'url' => url('lessons'),
+    'link' => 'مشاهده همه درس‌ها',
+]) ?>
 
         <div class="row g-4">
             <?php foreach ($latestLessons as $ls): ?>
-            <div class="col-md-6 col-lg-3">
-                <div class="lesson-card h-100">
-                    <?php if (!empty($ls['collection_title'])): ?>
-                    <span class="badge bg-light text-dark align-self-start mb-2 border">
-                        <?= sanitize($ls['collection_title']) ?>
-                    </span>
-                    <?php endif; ?>
-                    <h3 class="lesson-card-title">
-                        <a href="<?= lessonUrl($ls) ?>"><?= sanitize($ls['title']) ?></a>
-                    </h3>
-                    <?php if (!empty($ls['teacher'])): ?>
-                    <div class="lesson-card-teacher">
-                        <i class="bi bi-person-video3"></i>استاد: <?= sanitize($ls['teacher']) ?>
-                    </div>
-                    <?php endif; ?>
-                    <a href="<?= lessonUrl($ls) ?>" class="btn btn-sm btn-outline-primary w-100 mt-auto">
-                        جلسات و صوت درس <i class="bi bi-arrow-left ms-1"></i>
-                    </a>
-                </div>
-            </div>
+            <?= renderLessonCard($ls, ['col' => 'col-6 col-md-4 col-lg-3', 'excerpt' => 0]) ?>
             <?php endforeach; ?>
         </div>
     </div>
@@ -469,18 +429,13 @@ require_once __DIR__ . '/includes/header.php';
 <?php if (!empty($latestVideos)): ?>
 <section class="py-5 section-soft" id="media-section">
     <div class="container">
-        <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-2">
-            <div>
-                <span class="jhd-eyebrow">نگارخانه صوتی و تصویری</span>
-                <h2 class="section-title mb-1">
-                    <i class="bi bi-play-circle ms-2 text-gold"></i> چندرسانه‌ای و سخنرانی‌ها
-                </h2>
-                <div class="section-divider"></div>
-            </div>
-            <a href="<?= url('media') ?>" class="btn btn-outline-primary btn-sm">
-                آرشیو رسانه <i class="bi bi-arrow-left ms-1"></i>
-            </a>
-        </div>
+        <?= jhd_section_head([
+    'eyebrow' => 'نگارخانه صوتی و تصویری',
+    'icon' => 'bi-play-circle',
+    'title' => 'چندرسانه‌ای و سخنرانی‌ها',
+    'url' => url('media'),
+    'link' => 'مشاهده همه رسانه‌ها',
+]) ?>
 
         <div class="row g-4">
             <?php foreach ($latestVideos as $v):
@@ -488,26 +443,28 @@ require_once __DIR__ . '/includes/header.php';
                 $vPostUrl = !empty($v['post_slug']) ? postUrl($v['post_slug']) : $vMediaUrl;
             ?>
             <div class="col-md-4">
-                <div class="news-card h-100">
-                    <div class="news-card-img-wrap" style="aspect-ratio:16/9">
+                <article class="jhd-card jhd-card--media jhd-card--video h-100">
+                    <div class="jhd-card-media jhd-media-frame">
                         <div class="video-thumb h-100 w-100" data-video="<?= url($v['file_path']) ?>">
-                            <div class="video-thumb__placeholder h-100 d-flex align-items-center justify-content-center bg-dark text-white">
-                                <i class="bi bi-camera-video fs-1 opacity-50"></i>
+                            <div class="video-thumb__placeholder h-100 d-flex align-items-center justify-content-center">
+                                <i class="bi bi-camera-video jhd-media-placeholder-icon" aria-hidden="true"></i>
                             </div>
                             <div class="video-play-overlay">
                                 <div class="play-btn-circle"><i class="bi bi-play-fill"></i></div>
                             </div>
                         </div>
+                        <span class="jhd-card-badge">ویدیو</span>
                     </div>
-                    <div class="news-card-body">
-                        <h3 class="news-card-title" style="font-size:0.96rem">
+                    <div class="jhd-card-body">
+                        <h3 class="jhd-card-title">
                             <a href="<?= $vPostUrl ?>"><?= sanitize($v['title'] ?: ($v['post_title'] ?? 'ویدیو')) ?></a>
                         </h3>
-                        <a href="<?= $vPostUrl ?>" class="btn-read-more mt-auto">
-                            پخش و دریافت <i class="bi bi-arrow-left"></i>
-                        </a>
+                        <div class="jhd-card-foot">
+                            <span class="jhd-card-author"><i class="bi bi-play-circle ms-1"></i>فیلم سخنرانی</span>
+                            <a href="<?= $vPostUrl ?>" class="btn-read-more">پخش و دریافت <i class="bi bi-arrow-left"></i></a>
+                        </div>
                     </div>
-                </div>
+                </article>
             </div>
             <?php endforeach; ?>
         </div>
