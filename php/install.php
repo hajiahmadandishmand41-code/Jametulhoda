@@ -170,46 +170,36 @@ if (!$alreadyInstalled && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         }
         $step('ساخت جداول دیتابیس', true, $applied . ' دستور اجرا شد' . ($skipped > 0 ? '، ' . $skipped . ' مورد از قبل موجود بود' : ''));
 
-        // ── 2.1) مهاجرت سازگار با دیتابیس‌های قدیمی ─────────────────────
-        // CREATE TABLE IF NOT EXISTS جدول موجود را تغییر نمی‌دهد. بنابراین
-        // نصب‌های قدیمی ممکن است ستون‌های جدید احراز هویت را نداشته باشند.
-        // پیش از INSERT/UPDATE حساب مدیر، ستون‌های هویتی موردنیاز را بررسی و
-        // فقط ستون‌های واقعاً مفقود را اضافه می‌کنیم.
-        $identityColumns = [
-            'username' => "VARCHAR(80) NULL",
-            'email' => "VARCHAR(180) NULL",
-            'phone' => "VARCHAR(32) NULL",
-            'phone_normalized' => "VARCHAR(32) NULL",
-            'country' => "VARCHAR(80) NOT NULL DEFAULT ''",
-            'country_code' => "VARCHAR(8) NOT NULL DEFAULT ''",
-            'password' => "VARCHAR(255) NOT NULL DEFAULT ''",
-            'full_name' => "VARCHAR(120) NOT NULL DEFAULT ''",
-            'role' => "VARCHAR(30) NOT NULL DEFAULT 'user'",
-            'is_active' => "SMALLINT NOT NULL DEFAULT 1",
-            'must_change_password' => "SMALLINT NOT NULL DEFAULT 0",
-            'agreed_terms' => "SMALLINT NOT NULL DEFAULT 0",
-            'avatar' => "VARCHAR(350) NULL",
-            'last_login' => "DATETIME NULL",
-            'updated_at' => "DATETIME NULL",
-            'auth_version' => "INT NOT NULL DEFAULT 1",
+        // ── 2.1) سازگارکردن دیتابیس‌های قدیمی ─────────────────────────
+        // CREATE TABLE IF NOT EXISTS جدول موجود را تغییر نمی‌دهد. برای همین
+        // همان موتور identity برنامه را قبل از ساخت حساب مدیر اجرا می‌کنیم تا
+        // ستون‌های ناقص، نقش‌های قدیمی، CHECK constraintها و ایندکس‌های هویت
+        // یک‌جا و با همان منطق runtime ترمیم شوند.
+        $GLOBALS['APP_LOCAL_CONFIG'] = [
+            'APP_ENV' => 'production',
+            'DB_DRIVER' => 'mysql',
+            'DB_HOST' => $host,
+            'DB_PORT' => (string)$port,
+            'DB_NAME' => $name,
+            'DB_USER' => $user,
+            'DB_PASS' => $pass,
+            'SITE_URL' => $siteUrl,
+            'SITE_EMAIL' => $adminEmail ?: 'hajiahmads299@gmail.com',
+            'SESSION_DRIVER' => 'database',
+            'UPLOAD_STORAGE' => 'local',
+            'JHD_PRETTY_URLS' => filter_var(env_value('JHD_PRETTY_URLS', 'false'), FILTER_VALIDATE_BOOLEAN) ? 'true' : 'false',
         ];
-        $identityAdded = 0;
-        $columnStmt = $pdo->prepare(
-            'SELECT COUNT(*) FROM information_schema.COLUMNS
-             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?'
-        );
-        foreach ($identityColumns as $column => $definition) {
-            $columnStmt->execute(['users', $column]);
-            if ((int)$columnStmt->fetchColumn() > 0) continue;
-            $pdo->exec("ALTER TABLE users ADD COLUMN $column $definition");
-            $identityAdded++;
+        require_once __DIR__ . '/../includes/identity.php';
+        $identity = jhd_ensure_identity_schema(true);
+        if (empty($identity['ok'])) {
+            throw new RuntimeException((string)($identity['error'] ?? 'ساختار جدول کاربران قابل ترمیم نیست.'));
         }
         $step(
-            'به‌روزرسانی ساختار جدول کاربران',
+            'ترمیم ساختار هویت کاربران',
             true,
-            $identityAdded > 0
-                ? $identityAdded . ' ستون مفقود برای احراز هویت اضافه شد'
-                : 'ساختار جدول کاربران از قبل کامل بود'
+            !empty($identity['columns'])
+                ? 'ستون‌های مفقود تکمیل شد: ' . implode('، ', $identity['columns'])
+                : 'ساختار هویت کامل بود'
         );
 
         // ── 3) تنظیمات پایه ──────────────────────────────────────────────
@@ -275,7 +265,7 @@ if (!$alreadyInstalled && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         }
 
         // ── 7) نوشتن تنظیمات خصوصی ──────────────────────────────────────
-        $prettyUrls = !empty($_SERVER['JHD_ROUTE_PATH']) || (bool)preg_match('~/php/install/?$~', (string)($_SERVER['REQUEST_URI'] ?? ''));
+        $prettyUrls = filter_var(env_value('JHD_PRETTY_URLS', 'false'), FILTER_VALIDATE_BOOLEAN);
         $localConfig = [
             'APP_ENV' => 'production',
             'DB_DRIVER' => 'mysql',
