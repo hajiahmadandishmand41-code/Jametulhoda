@@ -18,6 +18,17 @@ jobs:
         ports: ['5432:5432']
         options: >-
           --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_DATABASE: jhd_legacy
+          MARIADB_USER: jhd_test
+          MARIADB_PASSWORD: jhd_test
+          MARIADB_ROOT_PASSWORD: root_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval 5s --health-timeout 5s --health-retries 20
     env:
       APP_ENV: development
       DATABASE_URL: postgresql://jhd_test@127.0.0.1:5432/jhd_test?sslmode=disable
@@ -33,7 +44,7 @@ jobs:
           php-version: '8.3'
           coverage: none
           ini-values: opcache.jit=0, opcache.jit_buffer_size=0, output_buffering=4096
-          extensions: pdo_pgsql, mbstring, fileinfo, gd, dom, curl, zip
+          extensions: pdo_pgsql, pdo_mysql, mbstring, fileinfo, gd, dom, curl, zip
           tools: composer:v2
       - uses: actions/setup-node@v5
         with:
@@ -53,6 +64,15 @@ jobs:
           python3 tests/verify_routes.py
           python3 tests/crawl_links.py
       - run: php tests/security.php && php bin/migrate.php && php bin/migrate.php
+      - name: Legacy MariaDB identity migration
+        env:
+          DB_DRIVER: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: jhd_legacy
+          DB_USER: jhd_test
+          DB_PASS: jhd_test
+        run: php tests/legacy-mysql.php
       - name: Upload rollback and durable cleanup
         run: ALLOW_DESTRUCTIVE_TESTS=1 php tests/storage-recovery.php
       - name: Temporary test administrator
