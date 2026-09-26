@@ -3459,3 +3459,10 @@ html[data-theme="dark"] .btn-warning { color: #14261f !important; }
   display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap;
   padding-top: 16px; border-top: 1px solid var(--jhd-border-subtle);
 }
+
+
+/* Final responsive override: hamburger is mobile/tablet only. */
+.jhd-menu-toggle { display: inline-flex; }
+@media (min-width: 1200px) {
+  .jhd-menu-toggle { display: none; }
+}
