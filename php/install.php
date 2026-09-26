@@ -170,6 +170,48 @@ if (!$alreadyInstalled && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         }
         $step('ساخت جداول دیتابیس', true, $applied . ' دستور اجرا شد' . ($skipped > 0 ? '، ' . $skipped . ' مورد از قبل موجود بود' : ''));
 
+        // ── 2.1) مهاجرت سازگار با دیتابیس‌های قدیمی ─────────────────────
+        // CREATE TABLE IF NOT EXISTS جدول موجود را تغییر نمی‌دهد. بنابراین
+        // نصب‌های قدیمی ممکن است ستون‌های جدید احراز هویت را نداشته باشند.
+        // پیش از INSERT/UPDATE حساب مدیر، ستون‌های هویتی موردنیاز را بررسی و
+        // فقط ستون‌های واقعاً مفقود را اضافه می‌کنیم.
+        $identityColumns = [
+            'username' => "VARCHAR(80) NULL",
+            'email' => "VARCHAR(180) NULL",
+            'phone' => "VARCHAR(32) NULL",
+            'phone_normalized' => "VARCHAR(32) NULL",
+            'country' => "VARCHAR(80) NOT NULL DEFAULT ''",
+            'country_code' => "VARCHAR(8) NOT NULL DEFAULT ''",
+            'password' => "VARCHAR(255) NOT NULL DEFAULT ''",
+            'full_name' => "VARCHAR(120) NOT NULL DEFAULT ''",
+            'role' => "VARCHAR(30) NOT NULL DEFAULT 'user'",
+            'is_active' => "SMALLINT NOT NULL DEFAULT 1",
+            'must_change_password' => "SMALLINT NOT NULL DEFAULT 0",
+            'agreed_terms' => "SMALLINT NOT NULL DEFAULT 0",
+            'avatar' => "VARCHAR(350) NULL",
+            'last_login' => "DATETIME NULL",
+            'updated_at' => "DATETIME NULL",
+            'auth_version' => "INT NOT NULL DEFAULT 1",
+        ];
+        $identityAdded = 0;
+        $columnStmt = $pdo->prepare(
+            'SELECT COUNT(*) FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?'
+        );
+        foreach ($identityColumns as $column => $definition) {
+            $columnStmt->execute(['users', $column]);
+            if ((int)$columnStmt->fetchColumn() > 0) continue;
+            $pdo->exec("ALTER TABLE users ADD COLUMN $column $definition");
+            $identityAdded++;
+        }
+        $step(
+            'به‌روزرسانی ساختار جدول کاربران',
+            true,
+            $identityAdded > 0
+                ? $identityAdded . ' ستون مفقود برای احراز هویت اضافه شد'
+                : 'ساختار جدول کاربران از قبل کامل بود'
+        );
+
         // ── 3) تنظیمات پایه ──────────────────────────────────────────────
         $seedSettings = [
             'site_name' => 'جامعة‌الهدی',
