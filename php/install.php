@@ -187,7 +187,6 @@ if (!$alreadyInstalled && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             'SITE_EMAIL' => $adminEmail ?: 'hajiahmads299@gmail.com',
             'SESSION_DRIVER' => 'database',
             'UPLOAD_STORAGE' => 'local',
-            'JHD_PRETTY_URLS' => filter_var(env_value('JHD_PRETTY_URLS', 'false'), FILTER_VALIDATE_BOOLEAN) ? 'true' : 'false',
         ];
         require_once __DIR__ . '/../includes/identity.php';
         $identity = jhd_ensure_identity_schema(true);
