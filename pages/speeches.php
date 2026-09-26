@@ -207,9 +207,9 @@ $speechIds    = array_column($speeches, 'id');
 
                 <!-- نتایج -->
                 <?php if (empty($speeches)): ?>
-                <div class="text-center py-5">
-                    <i class="bi bi-mic display-1 text-muted opacity-25 d-block mb-3"></i>
-                    <h4 class="text-muted">سخنرانی‌ای یافت نشد</h4>
+                <div class="jhd-empty-state">
+                    <i class="bi bi-mic" aria-hidden="true"></i>
+                    <h4>سخنرانی‌ای یافت نشد</h4>
                     <?php if ($search || $speaker || $category || $year): ?>
                     <p class="text-muted">فیلترها را تغییر داده یا <a href="<?= siteUrl('speeches') ?>">همه سخنرانی‌ها</a> را ببینید.</p>
                     <?php endif; ?>

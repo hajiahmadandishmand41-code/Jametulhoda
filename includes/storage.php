@@ -55,7 +55,7 @@ function storageKey(string $value): string {
     elseif (str_starts_with($value, 'uploads/')) $value = substr($value, 8);
     // Legacy folder names (audio/video) stay valid: files uploaded before the
     // rename to audios/videos must keep resolving.
-    $folders = ['posts','lessons','books','book-covers','site','media','images','documents',
+    $folders = ['posts','lessons','books','book-covers','site','media','images','documents','avatars',
                 'audio','video','audios','videos',
                 UPLOAD_IMAGES,UPLOAD_AUDIO,UPLOAD_VIDEO,UPLOAD_DOCUMENTS];
     if (!in_array(explode('/', $value)[0], $folders, true)) return '';

@@ -133,52 +133,7 @@ require_once __DIR__ . '/../includes/header.php';
           $bookUrl = bookUrl($b);
           $cover = $b['cover_image'] ?? '';
       ?>
-      <div class="col-6 col-md-4 col-lg-3">
-        <article class="book-card jhd-card h-100">
-          <div class="book-card-cover">
-            <a href="<?= $bookUrl ?>">
-              <?php if ($cover): ?>
-              <img src="<?= imgUrl($cover) ?>" alt="جلد <?= sanitize($b['title']) ?>" loading="lazy">
-              <?php else: ?>
-              <div class="h-100 d-flex align-items-center justify-content-center text-muted"><i class="bi bi-book fs-1"></i></div>
-              <?php endif; ?>
-            </a>
-          </div>
-
-          <h2 class="book-card-title">
-            <a href="<?= $bookUrl ?>" class="text-reset text-decoration-none"><?= sanitize($b['title']) ?></a>
-          </h2>
-
-          <?php if (!empty($b['author'])): ?>
-          <div class="book-card-author">
-            <i class="bi bi-person ms-1"></i><?= sanitize($b['author']) ?>
-          </div>
-          <?php endif; ?>
-
-          <?php if (!empty($b['publish_year']) || !empty($b['pages'])): ?>
-          <div class="text-muted d-flex justify-content-center gap-2 mb-2" style="font-size:0.75rem">
-            <?php if (!empty($b['publish_year'])): ?><span>سال: <?= sanitize($b['publish_year']) ?></span><?php endif; ?>
-            <?php if (!empty($b['pages'])): ?><span>• <?= (int)$b['pages'] ?> صفحه</span><?php endif; ?>
-          </div>
-          <?php endif; ?>
-
-          <?php $tpcs = getTopicsForBook((int)$b['id']); if (!empty($tpcs)): ?>
-          <div class="d-flex justify-content-center flex-wrap gap-1 mb-2">
-            <?php foreach (array_slice($tpcs, 0, 2) as $tp): ?>
-            <a href="<?= url('books', ['topic' => $tp['slug']]) ?>" class="badge badge-article text-decoration-none" style="font-size:0.68rem">
-              #<?= sanitize($tp['name']) ?>
-            </a>
-            <?php endforeach; ?>
-          </div>
-          <?php endif; ?>
-
-          <div class="mt-auto pt-2">
-            <a href="<?= $bookUrl ?>" class="btn btn-sm btn-outline-primary w-100">
-              مشاهده و دریافت
-            </a>
-          </div>
-        </article>
-      </div>
+      <?= renderBookCard($b, ['col' => 'col-6 col-md-4 col-lg-3', 'cta' => 'مشاهده و دریافت']) ?>
       <?php endforeach; ?>
     </div>
 

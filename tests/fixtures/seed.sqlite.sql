@@ -7,8 +7,8 @@
 -- ── Users ─────────────────────────────────────────────────────────────
 -- admin / TestAdmin123!@#  (bcrypt, generated for tests only)
 INSERT OR IGNORE INTO users (id, username, email, password, full_name, role, is_active, auth_version) VALUES
-(1, 'admin', 'admin@example.test', '$2y$10$TH2NLrc3C9Dq3woNwlc2j.XFBjvD5Sl6xKXnBOezVV6TkWXX6FyfC', 'مدیر آزمون', 'superadmin', 1, 1),
-(2, 'editor', 'editor@example.test', '$2y$10$TH2NLrc3C9Dq3woNwlc2j.XFBjvD5Sl6xKXnBOezVV6TkWXX6FyfC', 'ویراستار آزمون', 'editor', 1, 1);
+(1, 'admin', 'admin@example.test', '$2y$10$TH2NLrc3C9Dq3woNwlc2j.XFBjvD5Sl6xKXnBOezVV6TkWXX6FyfC', 'مدیر آزمون', 'super_admin', 1, 1),
+(2, 'editor', 'editor@example.test', '$2y$10$TH2NLrc3C9Dq3woNwlc2j.XFBjvD5Sl6xKXnBOezVV6TkWXX6FyfC', 'ویراستار آزمون', 'admin', 1, 1);
 
 -- ── Extra topics (the twelve Islamic hubs from the spec) ──────────────
 INSERT OR IGNORE INTO topics (name, slug, description, intro, sort_order, is_featured) VALUES

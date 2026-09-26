@@ -6,19 +6,46 @@ require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth.php';
+// نگهبان پنل: ورود لازم است و نقش باید از نوع کارکنان باشد.
 requireLogin();
 header('Cache-Control: no-store');
 header('X-Robots-Tag: noindex, nofollow');
-if (preg_match('~/admin/(settings|messages|media|users)([/.]|$)~', $_SERVER['SCRIPT_NAME'] ?? '')) {
-    requireRole(['superadmin','admin']);
-}
-require_once __DIR__ . '/../../includes/admin-actions.php';
-$admin = currentAdmin();
+
 $currentAdminPage = basename($_SERVER['PHP_SELF']);
 $currentAdminDir  = basename(dirname($_SERVER['PHP_SELF']));
 $currentRoutePath = current_path();
-$isSuperAdmin = ($admin['role'] ?? '') === 'superadmin';
-$isAdminRole = in_array($admin['role'] ?? '', ['superadmin', 'admin'], true);
+
+// تا زمانی که رمز اولیهٔ نصب تغییر نکرده باشد، فقط پروفایل باز است.
+$adminAccount = currentUser();
+if ((int)($adminAccount['must_change_password'] ?? 0) === 1
+    && !in_array($currentAdminPage, ['profile.php', 'change-password.php'], true)) {
+    redirect(adminProfileUrl() . '?force=1');
+}
+
+// کنترل دسترسی بر پایهٔ «قابلیت» (includes/roles.php)، نه مقایسهٔ رشتهٔ نقش.
+$sectionCapabilities = [
+    'settings'    => 'settings',
+    'messages'    => 'messages',
+    'media'       => 'media',
+    'users'       => 'users',
+    'members'     => 'users',
+    'diagnostics' => 'diagnostics',
+    'banners'     => 'messages',
+];
+$currentSection = $currentAdminDir === 'admin'
+    ? preg_replace('/\.php$/', '', $currentAdminPage)
+    : $currentAdminDir;
+if (isset($sectionCapabilities[$currentSection]) && !jhd_can($sectionCapabilities[$currentSection])) {
+    http_response_code(403);
+    jhd_render_403();
+}
+
+require_once __DIR__ . '/../../includes/admin-actions.php';
+$admin = currentAdmin();
+$isSuperAdmin = jhd_can('users');
+$isAdminRole  = jhd_can('settings');
+$adminUnreadMessages = 0;
+try { $adminUnreadMessages = (int)getDB()->query("SELECT COUNT(*) FROM contact_messages WHERE is_read=0")->fetchColumn(); } catch (Throwable $e) { $adminUnreadMessages = 0; }
 ?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -195,64 +222,57 @@ html[data-theme="dark"] .admin-content .text-muted { color: var(--admin-muted) !
 
   <nav class="sidebar-nav">
     <div class="sidebar-section">داشبورد</div>
-    <a href="<?= url('admin') ?>" class="sidebar-link <?= ($currentAdminPage === 'index.php' && $currentAdminDir === 'admin') ? 'active' : '' ?>">
+    <a href="<?= adminDashboardUrl() ?>" class="sidebar-link <?= ($currentAdminPage === 'index.php' && $currentAdminDir === 'admin') || $currentAdminPage === 'dashboard.php' ? 'active' : '' ?>">
       <i class="bi bi-speedometer2"></i>داشبورد
     </a>
 
-    <div class="sidebar-section">مدیریت محتوا</div>
-    <a href="<?= url('admin/content') ?>" class="sidebar-link <?= ($currentAdminDir === 'posts' && empty($_GET['type'])) ? 'active' : '' ?>">
-      <i class="bi bi-collection"></i>کل محتوا (Content)
+    <div class="sidebar-section">محتوا</div>
+    <a href="<?= url('admin/news') ?>" class="sidebar-link <?= ($currentAdminDir === 'news' || (($_GET['type'] ?? '') === 'news' && $currentAdminDir !== 'posts')) ? 'active' : '' ?>">
+      <i class="bi bi-newspaper"></i>اخبار
     </a>
-    <a href="<?= url('admin/news') ?>" class="sidebar-link <?= ($currentAdminDir === 'news' || ($_GET['type'] ?? '') === 'news') ? 'active' : '' ?>">
-      <i class="bi bi-newspaper"></i>اخبار مدرسه
-    </a>
-    <a href="<?= url('admin/articles') ?>" class="sidebar-link <?= ($currentAdminDir === 'articles' || ($_GET['type'] ?? '') === 'article') ? 'active' : '' ?>">
+    <a href="<?= url('admin/articles') ?>" class="sidebar-link <?= ($currentAdminDir === 'articles') ? 'active' : '' ?>">
       <i class="bi bi-file-text"></i>مقالات علمی
     </a>
     <a href="<?= url('admin/content', ['type' => 'report']) ?>" class="sidebar-link <?= (($_GET['type'] ?? '') === 'report') ? 'active' : '' ?>">
       <i class="bi bi-card-text"></i>گزارش‌ها
     </a>
-    <a href="<?= url('admin/content', ['type' => 'program']) ?>" class="sidebar-link <?= (in_array(($_GET['type'] ?? ''), ['program', 'religious', 'announcement'], true)) ? 'active' : '' ?>">
-      <i class="bi bi-calendar-event"></i>رویدادها و برنامه‌ها
-    </a>
-    <a href="<?= url('admin/content', ['type' => 'research']) ?>" class="sidebar-link <?= (($_GET['type'] ?? '') === 'research') ? 'active' : '' ?>">
+    <a href="<?= url('admin/research') ?>" class="sidebar-link <?= ($currentAdminPage === 'research.php') ? 'active' : '' ?>">
       <i class="bi bi-journal-richtext"></i>پژوهش‌ها
     </a>
-
-    <div class="sidebar-section">کتابخانه و درس‌ها</div>
     <a href="<?= url('admin/books') ?>" class="sidebar-link <?= ($currentAdminDir === 'books') ? 'active' : '' ?>">
       <i class="bi bi-book"></i>کتاب‌ها
     </a>
-    <a href="<?= url('admin/lessons') ?>" class="sidebar-link <?= ($currentAdminDir === 'lessons') ? 'active' : '' ?>">
-      <i class="bi bi-mortarboard"></i>درس‌های حوزوی
+    <a href="<?= url('admin/courses') ?>" class="sidebar-link <?= (in_array($currentAdminDir, ['lessons', 'lesson-collections'], true) || $currentAdminPage === 'courses.php') ? 'active' : '' ?>">
+      <i class="bi bi-mortarboard"></i>دوره‌ها و درس‌ها
     </a>
-    <a href="<?= url('admin/lesson-collections') ?>" class="sidebar-link <?= ($currentAdminDir === 'lesson-collections') ? 'active' : '' ?>">
-      <i class="bi bi-journals"></i>مجموعه‌های درسی
+    <a href="<?= url('admin/videos') ?>" class="sidebar-link <?= ($currentAdminPage === 'videos.php') ? 'active' : '' ?>">
+      <i class="bi bi-play-circle"></i>ویدیوها
     </a>
-
-    <div class="sidebar-section">رسانه و سخنرانی</div>
-    <a href="<?= url('admin/media') ?>" class="sidebar-link <?= ($currentAdminDir === 'media') ? 'active' : '' ?>">
-      <i class="bi bi-images"></i>مدیریت رسانه
+    <a href="<?= url('admin/audios') ?>" class="sidebar-link <?= ($currentAdminPage === 'audios.php') ? 'active' : '' ?>">
+      <i class="bi bi-headphones"></i>صوت‌ها
     </a>
     <a href="<?= url('admin/speeches') ?>" class="sidebar-link <?= ($currentAdminDir === 'speeches' || ($_GET['type'] ?? '') === 'speech') ? 'active' : '' ?>">
       <i class="bi bi-mic"></i>سخنرانی‌ها
     </a>
+    <a href="<?= url('admin/content') ?>" class="sidebar-link <?= ($currentAdminDir === 'posts' && empty($_GET['type'])) ? 'active' : '' ?>">
+      <i class="bi bi-collection"></i>همهٔ مطالب
+    </a>
 
     <div class="sidebar-section">طبقه‌بندی</div>
     <a href="<?= url('admin/topics') ?>" class="sidebar-link <?= ($currentAdminDir === 'topics') ? 'active' : '' ?>">
-      <i class="bi bi-diagram-3"></i>موضوعات (ستون فقرات)
+      <i class="bi bi-diagram-3"></i>موضوعات
     </a>
     <a href="<?= url('admin/categories') ?>" class="sidebar-link <?= ($currentAdminDir === 'categories') ? 'active' : '' ?>">
       <i class="bi bi-folder"></i>دسته‌بندی‌ها
     </a>
 
-    <div class="sidebar-section">تعامل و اعلان</div>
-    <?php
-    try { $unread = (int)getDB()->query("SELECT COUNT(*) FROM contact_messages WHERE is_read=0")->fetchColumn(); } catch (\Throwable) { $unread = 0; }
-    ?>
+    <div class="sidebar-section">رسانه و اعلان</div>
+    <a href="<?= url('admin/uploads') ?>" class="sidebar-link <?= ($currentAdminDir === 'media') ? 'active' : '' ?>">
+      <i class="bi bi-images"></i>رسانه و آپلودها
+    </a>
     <a href="<?= url('admin/messages') ?>" class="sidebar-link <?= ($currentAdminDir === 'messages' || $currentAdminPage === 'messages.php') ? 'active' : '' ?>">
       <i class="bi bi-envelope"></i>پیام‌های تماس
-      <?php if ($unread > 0): ?><span class="badge bg-danger ms-auto"><?= $unread ?></span><?php endif; ?>
+      <?php if ($adminUnreadMessages > 0): ?><span class="badge bg-danger ms-auto"><?= $adminUnreadMessages ?></span><?php endif; ?>
     </a>
     <a href="<?= url('admin/banners') ?>" class="sidebar-link <?= ($currentAdminDir === 'banners') ? 'active' : '' ?>">
       <i class="bi bi-megaphone"></i>بنر و اعلان ویژه
@@ -260,32 +280,28 @@ html[data-theme="dark"] .admin-content .text-muted { color: var(--admin-muted) !
 
     <div class="sidebar-section">سیستم و دسترسی</div>
     <?php if ($isSuperAdmin): ?>
-    <a href="<?= url('admin/users') ?>" class="sidebar-link <?= ($currentAdminDir === 'users') ? 'active' : '' ?>">
-      <i class="bi bi-people"></i>مدیران و ویراستاران
+    <a href="<?= url('admin/users') ?>" class="sidebar-link <?= ($currentAdminDir === 'users' || $currentAdminDir === 'members') ? 'active' : '' ?>">
+      <i class="bi bi-people"></i>کاربران و اعضا
     </a>
-    <?php endif; ?>
-    <?php if ($isAdminRole): ?>
-    <a href="<?= url('admin/members') ?>" class="sidebar-link <?= ($currentAdminDir === 'members') ? 'active' : '' ?>">
-      <i class="bi bi-person-badge"></i>اعضای سایت
+    <a href="<?= url('admin/settings') ?>" class="sidebar-link <?= ($currentAdminPage === 'settings.php') ? 'active' : '' ?>">
+      <i class="bi bi-gear"></i>تنظیمات سایت
     </a>
     <a href="<?= url('admin/diagnostics') ?>" class="sidebar-link <?= ($currentAdminPage === 'diagnostics.php') ? 'active' : '' ?>">
       <i class="bi bi-heart-pulse"></i>وضعیت سامانه
     </a>
     <?php endif; ?>
-    <?php if ($isAdminRole): ?>
-    <a href="<?= url('admin/settings') ?>" class="sidebar-link <?= ($currentAdminPage === 'settings.php') ? 'active' : '' ?>">
-      <i class="bi bi-gear"></i>تنظیمات سایت
+    <a href="<?= adminProfileUrl() ?>" class="sidebar-link <?= ($currentAdminPage === 'profile.php') ? 'active' : '' ?>">
+      <i class="bi bi-person-gear"></i>پروفایل من
     </a>
-    <?php endif; ?>
-    <a href="<?= url('admin/change-password') ?>" class="sidebar-link <?= ($currentAdminPage === 'change-password.php') ? 'active' : '' ?>">
-      <i class="bi bi-key"></i>تغییر رمز عبور
+    <a href="<?= adminLogoutUrl() ?>" class="sidebar-link text-danger">
+      <i class="bi bi-box-arrow-right"></i>خروج
     </a>
   </nav>
 
   <div class="sidebar-footer">
     <div class="d-flex justify-content-between align-items-center">
       <a href="<?= url() ?>" target="_blank"><i class="bi bi-box-arrow-up-right ms-1"></i>مشاهده سایت</a>
-      <a href="<?= url('admin/logout') ?>" class="text-danger"><i class="bi bi-box-arrow-right ms-1"></i>خروج</a>
+      <a href="<?= adminLogoutUrl() ?>" class="text-danger"><i class="bi bi-box-arrow-right ms-1"></i>خروج</a>
     </div>
   </div>
 </div>
@@ -301,12 +317,13 @@ html[data-theme="dark"] .admin-content .text-muted { color: var(--admin-muted) !
     </div>
     <div class="topbar-user">
       <button class="jhd-icon-btn" data-theme-toggle aria-label="تغییر پوسته" aria-pressed="false" style="width:34px;height:34px;font-size:15px"><i class="bi bi-moon"></i></button>
-      <div class="avatar"><?= mb_substr($admin['name'] ?: $admin['user'], 0, 1) ?></div>
+      <a href="<?= adminProfileUrl() ?>" class="avatar" title="پروفایل من" aria-label="پروفایل من"><?= sanitize(mb_substr($admin['name'] ?: ($admin['user'] ?: 'م'), 0, 1)) ?></a>
       <div class="d-none d-md-block">
-        <div class="fw-bold small"><?= sanitize($admin['name'] ?: $admin['user']) ?></div>
-        <div class="text-muted" style="font-size:.73rem"><?= sanitize($admin['role']) ?></div>
+        <div class="fw-bold small"><?= sanitize($admin['name'] ?: ($admin['user'] ?: 'مدیر')) ?></div>
+        <div class="text-muted" style="font-size:.73rem"><?= sanitize(jhd_role_label($admin['role'])) ?></div>
       </div>
-      <a href="<?= url('admin/logout') ?>" class="btn btn-sm btn-outline-danger" title="خروج"><i class="bi bi-box-arrow-right"></i></a>
+      <a href="<?= adminProfileUrl() ?>" class="btn btn-sm btn-outline-secondary" title="پروفایل من"><i class="bi bi-person-gear"></i></a>
+      <a href="<?= adminLogoutUrl() ?>" class="btn btn-sm btn-outline-danger" title="خروج"><i class="bi bi-box-arrow-right"></i></a>
     </div>
   </div>
   <div class="admin-content">

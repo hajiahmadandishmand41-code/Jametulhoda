@@ -158,7 +158,7 @@ async function loginIfConfigured() {
   const res = await fetchManual(origin + '/admin/login', {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ username: user, password: pass, csrf_token: csrf }).toString(),
+    body: new URLSearchParams({ identifier: user, password: pass, csrf_token: csrf }).toString(),
   });
   const ok = res.chain.some((c) => c.status === 303 || c.status === 302);
   console.log(ok ? '[audit] admin login OK — admin pages included' : `[audit] admin login FAILED (status ${res.status})`);

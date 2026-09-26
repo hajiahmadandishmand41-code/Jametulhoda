@@ -281,6 +281,9 @@ function newDatabaseConnection(): PDO {
             PDO::ATTR_PERSISTENT => false,
         ]);
         $pdo->exec('PRAGMA foreign_keys=ON');
+        // WAL + مهلت کوتاه قفل: چند اتصال هم‌زمان (نشست، ژورنال آپلود) روی یک
+        // فایل SQLite بدون خطای «database is locked» کار می‌کنند.
+        try { $pdo->exec('PRAGMA journal_mode=WAL'); $pdo->exec('PRAGMA busy_timeout=5000'); } catch (Throwable $e) { }
         return $pdo;
     }
     if (databaseDriver() === 'mysql') {

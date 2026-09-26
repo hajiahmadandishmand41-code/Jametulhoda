@@ -63,10 +63,12 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="jhd-page-heading d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
       <div>
         <span class="jhd-eyebrow">اندیشه و پژوهش‌های دینی</span>
-        <h1 class="page-title mb-1">
-          <i class="bi bi-file-earmark-richtext ms-2 text-gold"></i> مقالات علمی و یادداشت‌ها
-        </h1>
-        <div class="section-divider"></div>
+        <?= jhd_page_head([
+    'eyebrow' => 'اندیشه و پژوهش',
+    'icon' => 'bi-file-earmark-richtext',
+    'title' => 'مقالات علمی',
+    'lead' => 'مقالات، یادداشت‌های علمی و پژوهش‌های اعضای مدرسه در معارف اسلامی',
+]) ?>
         <p class="text-muted mt-2 mb-0">
           پژوهش‌های نوین حوزوی در حوزه‌های فقه، کلام، فلسفه، تفسیر، تاریخ و جامعه‌شناسی دینی
         </p>
@@ -112,9 +114,8 @@ require_once __DIR__ . '/../includes/header.php';
     </form>
 
     <?php if (empty($posts)): ?>
-    <div class="text-center py-5 border rounded" style="background:var(--jhd-surface)">
-      <i class="bi bi-file-text display-1 text-muted opacity-25 d-block mb-3"></i>
-      <h4 class="text-muted">
+    <div class="jhd-empty-state">
+      <h4>
         <?= $search ? 'مقاله‌ای مطابق با جستجوی شما یافت نشد' : 'هنوز مقاله‌ای در این بخش ثبت نشده است' ?>
       </h4>
       <p class="text-muted small">می‌توانید عبارت دیگری را جستجو کرده یا فیلترها را حذف کنید.</p>

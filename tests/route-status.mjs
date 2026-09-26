@@ -136,7 +136,7 @@ for (const [path, expectLoc] of [
   ['/post', '/articles'],
   ['/lesson', '/lessons'],
   ['/topic', '/topics'],
-  ['/admin/', '/admin/login'],
+  ['/admin/', '/login'],
   ['/book/usul-aqaid?download=pdf', '/uploads/documents/seed-doc.pdf'],
 ]) {
   const r = await get(path, { follow: false });
@@ -285,11 +285,11 @@ for (const path of [
     const loginPage = await get('/admin/login');
     const csrf = loginPage.text.match(/name="csrf_token" value="([a-f0-9]+)"/)?.[1];
     check('admin login page has CSRF', !!csrf, '');
-    const bad = await postForm('/admin/login', { username: user, password: 'wrong-' + pass, csrf_token: csrf || '' });
+    const bad = await postForm('/admin/login', { identifier: user, password: 'wrong-' + pass, csrf_token: csrf || '' });
     check('wrong password rejected (no 303)', bad.status !== 303, bad.status);
     const fresh = await get('/admin/login');
     const csrf2 = fresh.text.match(/name="csrf_token" value="([a-f0-9]+)"/)?.[1];
-    const ok = await postForm('/admin/login', { username: user, password: pass, csrf_token: csrf2 || '' });
+    const ok = await postForm('/admin/login', { identifier: user, password: pass, csrf_token: csrf2 || '' });
     check('admin login → 303', ok.status === 303, `${ok.status} → ${ok.location}`);
     const dash = await get('/admin/');
     check('dashboard → 200', dash.status === 200, dash.status);

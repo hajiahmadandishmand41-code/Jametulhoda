@@ -67,6 +67,10 @@ jobs:
           php -S 0.0.0.0:8080 router.php > test-server.log 2>&1 &
           curl --retry 10 --retry-connrefused --retry-delay 1 --fail --silent http://127.0.0.1:8080/ > /dev/null
           npm run test:http 2>&1 | tee /tmp/http-tests.log
+          # Unified identity end-to-end matrix (A–X): registration, single login
+          # page for members/staff, role redirects, password change, RBAC gates,
+          # uploads, content creation, 404s, session hardening.
+          node tests/auth-flows.mjs 2>&1 | tee /tmp/auth-flows.log
           node tests/route-smoke.mjs 2>&1 | tee /tmp/route-smoke.log
           node tests/route-matrix.mjs 2>&1 | tee /tmp/route-matrix.log
           npm run test:browser 2>&1 | tee /tmp/browser-tests.log
@@ -74,7 +78,7 @@ jobs:
           if grep -Ei "PHP (Warning|Fatal|Parse)|Application failure|Upload failed" test-server.log; then exit 1; fi
           # `tee` swallows the suite exit codes, so a FAIL line has to be caught here too
           # (the container step below already does the same for Apache).
-          for log in /tmp/http-tests.log /tmp/route-smoke.log /tmp/route-matrix.log /tmp/browser-tests.log /tmp/link-tests.log; do
+          for log in /tmp/http-tests.log /tmp/auth-flows.log /tmp/route-smoke.log /tmp/route-matrix.log /tmp/browser-tests.log /tmp/link-tests.log; do
             if grep -q "FAIL" "$log"; then
               echo "::error title=Integration FAIL::$(grep FAIL "$log" | head -n 20 | tr '\n' ' ' | cut -c1-800)"
               exit 1
@@ -102,7 +106,7 @@ jobs:
         run: |
           python3 - <<'PYTHON'
           import pathlib
-          for name in ['/tmp/http-tests.log','/tmp/route-smoke.log','/tmp/route-matrix.log','/tmp/browser-tests.log','/tmp/link-tests.log','test-server.log']:
+          for name in ['/tmp/http-tests.log','/tmp/auth-flows.log','/tmp/route-smoke.log','/tmp/route-matrix.log','/tmp/browser-tests.log','/tmp/link-tests.log','test-server.log']:
               path=pathlib.Path(name)
               if path.exists():
                   lines=[line for line in path.read_text().splitlines() if any(word in line for word in ['FAIL','Fatal','Warning','Error','failure','exceeded','status','path','checked'])]

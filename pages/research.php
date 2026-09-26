@@ -52,10 +52,12 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="jhd-page-heading d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
       <div>
         <span class="jhd-eyebrow">تحقیقات تخصصی و مستند</span>
-        <h1 class="page-title mb-1">
-          <i class="bi bi-journal-richtext ms-2 text-gold"></i> پژوهش‌های علمی و دینی
-        </h1>
-        <div class="section-divider"></div>
+        <?= jhd_page_head([
+    'eyebrow' => 'پژوهش',
+    'icon' => 'bi-journal-richtext',
+    'title' => 'پژوهش‌های علمی',
+    'lead' => 'پژوهش‌ها و بررسی‌های علمی در حوزه معارف اسلامی',
+]) ?>
         <p class="text-muted mt-2 mb-0">
           تحقیقات بنیادی و کاربردی اساتید و طلاب جامعه‌الهدی با ارجاعات معتبر روایی و عقلی
         </p>
@@ -86,9 +88,8 @@ require_once __DIR__ . '/../includes/header.php';
     </form>
 
     <?php if (empty($posts)): ?>
-    <div class="text-center py-5 border rounded" style="background:var(--jhd-surface)">
-      <i class="bi bi-journal-x display-1 text-muted opacity-25 d-block mb-3"></i>
-      <h4 class="text-muted">
+    <div class="jhd-empty-state">
+      <h4>
         <?= $search ? 'پژوهشی مطابق با عبارت جستجو یافت نشد' : 'هنوز پژوهشی در این بخش منتشر نشده است' ?>
       </h4>
       <a href="<?= url('research') ?>" class="btn btn-outline-primary btn-sm mt-2">

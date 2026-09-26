@@ -2,9 +2,19 @@
 /** Shared, row-locked sessions; separate connection avoids committing application transactions. */
 final class DatabaseSessionHandler implements SessionHandlerInterface, SessionUpdateTimestampHandlerInterface {
     private ?PDO $db = null;
+
+    /**
+     * قفل ردیفی نشست فقط روی MySQL/PostgreSQL معنا دارد. در SQLite تراکنشِ باز
+     * روی همین فایل، کل دیتابیس را قفل می‌کند و نوشتن‌های بعدیِ همان درخواست
+     * (مثل ثبت آخرین ورود) تا پایان تراکنش بلوکه می‌شوند؛ پس روی درایور
+     * توسعهٔ SQLite قفل نمی‌گیریم و هر دستور خودکار commit می‌شود.
+     */
+    private function usesRowLocks(): bool {
+        return databaseDriver() !== 'sqlite';
+    }
     public function open(string $path, string $name): bool { return true; }
     public function close(): bool {
-        if ($this->db?->inTransaction()) $this->db->commit();
+        if ($this->usesRowLocks() && $this->db?->inTransaction()) $this->db->commit();
         $this->db = null;
         return true;
     }
@@ -26,10 +36,10 @@ final class DatabaseSessionHandler implements SessionHandlerInterface, SessionUp
         // PHP may call read() more than once per request (e.g. after
         // session_regenerate_id()); keep the existing row-lock transaction
         // instead of failing with "already an active transaction".
-        if (!$db->inTransaction()) $db->beginTransaction();
+        if ($this->usesRowLocks() && !$db->inTransaction()) $db->beginTransaction();
         // ON CONFLICT DO NOTHING is normalized to INSERT IGNORE on MySQL.
         $db->prepare("INSERT INTO app_sessions (id,data,expires_at) VALUES (?, '', " . $this->nowExpr() . ') ON CONFLICT DO NOTHING')->execute([$id]);
-        $lock = databaseDriver() === 'sqlite' ? '' : ' FOR UPDATE';
+        $lock = $this->usesRowLocks() ? ' FOR UPDATE' : '';
         $s = $db->prepare('SELECT data, expires_at>' . $this->nowExpr() . ' AS valid FROM app_sessions WHERE id=?' . $lock);
         $s->execute([$id]); $row = $s->fetch();
         return $row && $row['valid'] ? (base64_decode($row['data'], true) ?: '') : '';

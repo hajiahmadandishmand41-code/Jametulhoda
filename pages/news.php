@@ -32,11 +32,12 @@ $pages = (int)ceil($total / $limit);
 
 <div class="py-5">
     <div class="container">
-        <div class="page-header mb-4">
-            <h1 class="page-title"><i class="bi bi-newspaper ms-2 text-gold"></i>اخبار مدرسه</h1>
-            <div class="section-divider"></div>
-            <p class="text-muted">تازه‌ترین اخبار، اطلاعیه‌ها و رویدادهای جاری مدرسه علمیه جامعه‌الهدی</p>
-        </div>
+        <?= jhd_page_head([
+    'eyebrow' => 'اطلاع‌رسانی و رویدادها',
+    'icon' => 'bi-newspaper',
+    'title' => 'اخبار مدرسه',
+    'lead' => 'تازه‌ترین اخبار، اطلاعیه‌ها و رویدادهای جاری مدرسه علمیه جامعة‌الهدی',
+]) ?>
 
         <!-- جستجو در اخبار -->
         <form method="get" class="mb-4" role="search">
@@ -59,9 +60,9 @@ $pages = (int)ceil($total / $limit);
         <?php endif; ?>
 
         <?php if (empty($posts)): ?>
-        <div class="text-center py-5">
-            <i class="bi bi-newspaper display-1 text-muted opacity-25 d-block mb-3"></i>
-            <h4 class="text-muted">خبری یافت نشد</h4>
+        <div class="jhd-empty-state">
+            <i class="bi bi-newspaper" aria-hidden="true"></i>
+            <h4>خبری یافت نشد</h4>
             <?php if ($search): ?>
             <a href="<?= url('news') ?>" class="btn btn-primary mt-3">نمایش همه اخبار</a>
             <?php endif; ?>

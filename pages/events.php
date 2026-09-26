@@ -79,10 +79,12 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="jhd-page-heading d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
       <div>
         <span class="jhd-eyebrow">تقویم حوزه و مناسبت‌ها</span>
-        <h1 class="page-title mb-1">
-          <i class="bi bi-calendar-event ms-2 text-gold"></i> رویدادها و برنامه‌ها
-        </h1>
-        <div class="section-divider"></div>
+        <?= jhd_page_head([
+    'eyebrow' => 'تقویم',
+    'icon' => 'bi-calendar-event',
+    'title' => 'رویدادها و برنامه‌ها',
+    'lead' => 'مناسبت‌ها، برنامه‌ها و رویدادهای پیش‌روی مدرسه',
+]) ?>
         <p class="text-muted mt-2 mb-0">
           اطلاع‌رسانی مناسبت‌های مذهبی، جشن‌ها و سوگواری‌ها، نشست‌های تخصصی و ثبت‌نام دوره‌ها
         </p>
@@ -119,9 +121,8 @@ require_once __DIR__ . '/../includes/header.php';
     </form>
 
     <?php if (empty($events)): ?>
-    <div class="text-center py-5 border rounded" style="background:var(--jhd-surface)">
-      <i class="bi bi-calendar-x display-1 text-muted opacity-25 d-block mb-3"></i>
-      <h4 class="text-muted">رویدادی مطابق با جستجوی شما یافت نشد.</h4>
+    <div class="jhd-empty-state">
+      <h4>رویدادی مطابق با جستجوی شما یافت نشد.</h4>
       <a href="<?= url('events') ?>" class="btn btn-outline-primary btn-sm mt-2">همه رویدادها</a>
     </div>
     <?php else: ?>

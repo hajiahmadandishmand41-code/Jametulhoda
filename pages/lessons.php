@@ -74,27 +74,24 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="py-5">
   <div class="container">
     <!-- Header -->
-    <div class="jhd-page-heading d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
-      <div>
-        <span class="jhd-eyebrow">مدرسه علمیه و آموزش مجازی معارف</span>
-        <h1 class="page-title mb-1">
-          <i class="bi bi-mortarboard-fill ms-2 text-gold"></i>
-          <?php if ($activeVolume): ?>
-            <?= sanitize($activeVolume['title']) ?> — <?= sanitize($activeCollection['title']) ?>
-          <?php elseif ($activeCollection): ?>
-            <?= sanitize($activeCollection['title']) ?>
-          <?php else: ?>
-            دروس و دوره‌های حوزوی
-          <?php endif; ?>
-        </h1>
-        <div class="section-divider"></div>
-        <?php if ($activeCollection && $activeCollection['description']): ?>
-        <p class="text-muted mt-2 mb-0"><?= sanitize($activeCollection['description']) ?></p>
-        <?php else: ?>
-        <p class="text-muted mt-2 mb-0">دروس سطح مقدمات، سطوح عالی و خارج در رشته‌های فقه، اصول، کلام، منطق و عقاید</p>
-        <?php endif; ?>
-      </div>
-    </div>
+    <?php
+    if ($activeVolume) {
+        $lessonsHeadTitle = $activeVolume['title'] . ' — ' . $activeCollection['title'];
+    } elseif ($activeCollection) {
+        $lessonsHeadTitle = $activeCollection['title'];
+    } else {
+        $lessonsHeadTitle = 'دروس و دوره‌های حوزوی';
+    }
+    $lessonsHeadLead = ($activeCollection && !empty($activeCollection['description']))
+        ? $activeCollection['description']
+        : 'دروس سطح مقدمات، سطوح عالی و خارج در رشته‌های فقه، اصول، کلام، منطق و عقاید';
+    ?>
+    <?= jhd_page_head([
+        'eyebrow' => 'مدرسه علمیه و آموزش مجازی معارف',
+        'icon' => 'bi-mortarboard-fill',
+        'title' => $lessonsHeadTitle,
+        'lead' => $lessonsHeadLead,
+    ]) ?>
 
     <?php if (!$activeCollection): ?>
     <!-- ۱. فهرست مجموعه‌های درسی -->
@@ -188,40 +185,11 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 
     <?php if (empty($lessons)): ?>
-    <div class="text-center py-5 border rounded" style="background:var(--jhd-surface)">
-      <i class="bi bi-mortarboard display-1 text-muted opacity-25 d-block mb-3"></i>
-      <h4 class="text-muted">درسی مطابق با مشخصات واردشده یافت نشد.</h4>
-    </div>
+    <div class="jhd-empty-state"><i class="bi bi-mortarboard" aria-hidden="true"></i><p>درسی مطابق با مشخصات واردشده یافت نشد.</p></div>
     <?php else: ?>
     <div class="row g-4">
       <?php foreach ($lessons as $ls): $lsUrl = lessonUrl($ls); ?>
-      <div class="col-md-6 col-lg-3">
-        <div class="lesson-card h-100">
-          <?php if (!empty($ls['collection_title'])): ?>
-          <span class="badge bg-secondary align-self-start mb-2" style="font-size:0.72rem">
-            <?= sanitize($ls['collection_title']) ?>
-          </span>
-          <?php endif; ?>
-
-          <h3 class="lesson-card-title">
-            <a href="<?= $lsUrl ?>"><?= sanitize($ls['title']) ?></a>
-          </h3>
-
-          <?php if (!empty($ls['teacher'])): ?>
-          <div class="lesson-card-teacher">
-            <i class="bi bi-person-video3"></i>استاد: <?= sanitize($ls['teacher']) ?>
-          </div>
-          <?php endif; ?>
-
-          <?php if (!empty($ls['summary'])): ?>
-          <p class="text-muted small mb-3"><?= sanitize(excerpt($ls['summary'], 80)) ?></p>
-          <?php endif; ?>
-
-          <a href="<?= $lsUrl ?>" class="btn btn-sm btn-outline-primary w-100 mt-auto">
-            جلسات و صوت درس <i class="bi bi-arrow-left ms-1"></i>
-          </a>
-        </div>
-      </div>
+      <?= renderLessonCard($ls, ['col' => 'col-6 col-md-4 col-lg-3', 'excerpt' => 80]) ?>
       <?php endforeach; ?>
     </div>
 
@@ -296,37 +264,13 @@ require_once __DIR__ . '/../includes/header.php';
     ?>
 
     <?php if (empty($lessons)): ?>
-    <div class="text-center py-5 border rounded" style="background:var(--jhd-surface)">
+    <div class="jhd-empty-state">
       <p class="text-muted mb-0">درسی در این بخش یافت نشد.</p>
     </div>
     <?php else: ?>
     <div class="row g-4">
       <?php foreach ($lessons as $ls): $lsUrl = lessonUrl($ls); ?>
-      <div class="col-md-6 col-lg-4">
-        <div class="lesson-card h-100">
-          <?php if (!empty($ls['lesson_number'])): ?>
-          <span class="badge bg-secondary align-self-start mb-2">جلسه <?= (int)$ls['lesson_number'] ?></span>
-          <?php endif; ?>
-
-          <h3 class="lesson-card-title">
-            <a href="<?= $lsUrl ?>"><?= sanitize($ls['title']) ?></a>
-          </h3>
-
-          <?php if (!empty($ls['teacher'])): ?>
-          <div class="lesson-card-teacher">
-            <i class="bi bi-person ms-1"></i>استاد: <?= sanitize($ls['teacher']) ?>
-          </div>
-          <?php endif; ?>
-
-          <?php if (!empty($ls['summary'])): ?>
-          <p class="text-muted small mb-3"><?= sanitize(excerpt($ls['summary'], 100)) ?></p>
-          <?php endif; ?>
-
-          <a href="<?= $lsUrl ?>" class="btn btn-outline-primary btn-sm w-100 mt-auto">
-            ورود به درس و صوت <i class="bi bi-arrow-left ms-1"></i>
-          </a>
-        </div>
-      </div>
+      <?= renderLessonCard($ls, ['col' => 'col-md-6 col-lg-4', 'excerpt' => 100, 'cta' => 'ورود به درس و صوت']) ?>
       <?php endforeach; ?>
     </div>
 

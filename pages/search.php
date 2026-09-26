@@ -60,7 +60,7 @@ require_once __DIR__ . '/../includes/header.php';
         <i class="bi bi-search ms-2 text-gold"></i> جستجو در آرشیو محتوایی
       </h1>
       <div class="section-divider"></div>
-      <p class="text-muted mt-2 mb-0">جستجو در اخبار، مقالات، گزارش‌ها، کتب دیجیتال، جلسات درسی و موضوعات حوزوی</p>
+      <p class="text-muted mt-2 mb-0">جستجو در اخبار، مقالات، پژوهش‌ها، کتاب‌ها، درس‌ها، ویدیوها، صوت‌ها و موضوعات</p>
     </div>
 
     <!-- فرم جستجو -->
@@ -79,9 +79,8 @@ require_once __DIR__ . '/../includes/header.php';
         یافت شد: <strong><?= number_format($total) ?></strong> نتیجه برای عبارت «<strong><?= sanitize($q) ?></strong>»
       </p>
       <?php else: ?>
-      <div class="text-center py-5 border rounded" style="background:var(--jhd-surface)">
-        <i class="bi bi-search display-1 text-muted opacity-25 d-block mb-3"></i>
-        <h2 class="h4 text-muted">نتیجه‌ای برای «<?= sanitize($q) ?>» یافت نشد.</h2>
+      <div class="jhd-empty-state">
+        <h2>نتیجه‌ای برای «<?= sanitize($q) ?>» یافت نشد.</h2>
         <p class="text-muted small">لطفاً املای کلمات را بررسی کنید یا عبارت دیگری را جستجو فرمایید.</p>
         <a href="<?= url('topics') ?>" class="btn btn-outline-primary btn-sm mt-2">
           مرور اطلس موضوعات
@@ -93,67 +92,31 @@ require_once __DIR__ . '/../includes/header.php';
     <?php if (!empty($results)): ?>
     <div class="row g-4">
       <?php foreach ($results as $p):
-          if ($p['target'] === 'topic') {
+          if ($p['target'] === 'media') {
+              $isAudio = ($p['media_kind'] ?? '') === 'audio';
+              $resultUrl = mediaUrl($isAudio ? 'audio' : 'video', (int)$p['id']);
+              $resultType = $isAudio ? 'audio' : 'video';
+          } elseif ($p['target'] === 'topic') {
               $resultUrl = topicUrl($p);
-              $badge = '<span class="badge badge-article">موضوع</span>';
+              $resultType = 'topic';
           } elseif ($p['target'] === 'book') {
               $resultUrl = bookUrl($p);
-              $badge = '<span class="badge bg-warning text-dark">کتاب</span>';
+              $resultType = 'book';
           } elseif ($p['target'] === 'lesson') {
               $resultUrl = lessonUrl($p);
-              $badge = '<span class="badge bg-success">درس</span>';
+              $resultType = 'lesson';
           } else {
               $resultUrl = postUrl($p);
-              $badge = postTypeBadge($p['post_type']);
+              $resultType = (string)($p['post_type'] ?? 'post');
           }
-      ?>
-      <div class="col-md-6 col-lg-4">
-        <article class="news-card h-100">
-          <div class="news-card-img-wrap">
-            <a href="<?= $resultUrl ?>">
-              <?php if (!empty($p['featured_image'])): ?>
-              <img src="<?= imgUrl($p['featured_image']) ?>" alt="<?= sanitize($p['title']) ?>" class="news-card-img" loading="lazy">
-              <?php else: ?>
-              <div class="news-card-placeholder">
-                <i class="bi <?= $p['target'] === 'topic' ? 'bi-diagram-3' : ($p['target'] === 'book' ? 'bi-book' : ($p['target'] === 'lesson' ? 'bi-mortarboard' : 'bi-file-text')) ?>"></i>
-              </div>
-              <?php endif; ?>
-            </a>
-            <div class="news-card-badge"><?= $badge ?></div>
-          </div>
-
-          <div class="news-card-body">
-            <div class="news-card-meta">
-              <span><i class="bi bi-calendar3 ms-1"></i><?= persianDate($p['published_at'] ?? $p['created_at']) ?></span>
-            </div>
-
-            <h2 class="news-card-title h5">
-              <a href="<?= $resultUrl ?>"><?= sanitize($p['title']) ?></a>
-            </h2>
-
-            <?php if (!empty($p['summary'])): ?>
-            <p class="news-card-summary">
-              <?= sanitize(excerpt($p['summary'], 110)) ?>
-            </p>
-            <?php endif; ?>
-
-            <div class="news-card-footer">
-              <a href="<?= $resultUrl ?>" class="btn-read-more">
-                مشاهده محتوا <i class="bi bi-arrow-left"></i>
-              </a>
-            </div>
-          </div>
-        </article>
-      </div>
-      <?php endforeach; ?>
+          echo renderPostCard($p, [
+              'type' => $resultType,
+              'url' => $resultUrl,
+              'excerpt' => 120,
+              'cta' => 'مشاهده محتوا',
+          ]);
+      endforeach; ?>
     </div>
-
-    <!-- صفحه‌بندی -->
-    <?php if ($pages > 1): ?>
-    <div class="mt-5">
-      <?= paginate($total, $limit, $page, url('search', ['q' => $q, 'page' => '%d'])) ?>
-    </div>
-    <?php endif; ?>
     <?php endif; ?>
     <?php endif; ?>
   </div>

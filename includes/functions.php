@@ -625,10 +625,20 @@ function loginUrl(): string { return url('login'); }
 function registerUrl(): string { return url('register'); }
 function logoutUrl(): string { return url('logout'); }
 function accountUrl(): string { return url('account'); }
+/** تنها صفحهٔ ورود سامانه؛ /admin/login هم به همین کنترلر می‌رسد. */
 function adminLoginUrl(): string { return url('admin/login'); }
 function adminUrl(string $path = '', array $query = []): string {
     $route = trim($path) === '' ? 'admin' : 'admin/' . ltrim($path, '/');
     return url($route, $query);
+}
+function adminDashboardUrl(): string { return url('admin/dashboard'); }
+function adminProfileUrl(): string { return url('admin/profile'); }
+function adminLogoutUrl(): string { return url('admin/logout'); }
+/** نشانی ورود با بازگشت به صفحهٔ جاری (برای محتوای نیازمند ورود). */
+function loginRedirectUrl(string $target = ''): string {
+    $base = loginUrl();
+    if ($target === '') return $base;
+    return $base . (str_contains($base, '?') ? '&' : '?') . 'redirect=' . rawurlencode($target);
 }
 function searchUrl(string $q = '', array $query = []): string {
     if ($q !== '') $query['q'] = $q;
@@ -1220,6 +1230,13 @@ function postTypeLabel(string $type): string {
         'program'      => 'برنامه آموزشی',
         'religious'    => 'فعالیت مذهبی',
         'qa'           => 'پرسش و پاسخ',
+        'book'         => 'کتاب',
+        'lesson'       => 'درس',
+        'topic'        => 'موضوع',
+        'video'        => 'ویدیو',
+        'audio'        => 'صوت',
+        'media'        => 'رسانه',
+        'report'       => 'گزارش',
         default        => 'مطلب',
     };
 }
@@ -1302,6 +1319,20 @@ function searchAll(string $q, int $limit=12, int $offset=0): array {
         $topicsStmt->execute([$qLike,$qLike]);
         $topics=$topicsStmt->fetchAll();
 
+        // رسانه‌ها: ویدیو و صوت ثبت‌شده در media_files یا فایل‌های رسانهٔ درس/مطلب.
+        $mediaStmt=$db->prepare("SELECT m.id, COALESCE(NULLIF(m.title,''), p.title, l.title, 'رسانه') AS title,
+                COALESCE(p.slug, l.slug) AS slug, m.kind AS media_kind, m.file_path AS featured_image,
+                'media' AS post_type, COALESCE(p.published_at, l.created_at) AS published_at,
+                COALESCE(p.summary, '') AS summary, 'media' AS target
+            FROM media_files m
+            LEFT JOIN posts p ON (m.ref_type='post' AND p.id=m.ref_id)
+            LEFT JOIN lessons l ON (m.ref_type='lesson' AND l.id=m.ref_id)
+            WHERE m.kind IN ('video','audio')
+              AND (m.title ILIKE ? OR p.title ILIKE ? OR l.title ILIKE ? OR p.summary ILIKE ?)
+            ORDER BY m.id DESC LIMIT 6");
+        $mediaStmt->execute([$qLike,$qLike,$qLike,$qLike]);
+        $media=$mediaStmt->fetchAll();
+
         $sql="FROM (
             SELECT id,title,slug,summary,content,featured_image,post_type,published_at,created_at,'post' AS target, is_featured FROM posts WHERE status='published'
             UNION ALL
@@ -1311,13 +1342,14 @@ function searchAll(string $q, int $limit=12, int $offset=0): array {
         ) results WHERE title ILIKE ? OR summary ILIKE ? OR content ILIKE ?";
         $cntStmt=$db->prepare('SELECT COUNT(*) '.$sql);
         $cntStmt->execute([$qLike,$qLike,$qLike]);
-        $total=(int)$cntStmt->fetchColumn() + count($topics);
+        $total=(int)$cntStmt->fetchColumn() + count($topics) + count($media);
 
+        $fetchLimit=$offset===0 ? max(1, $limit - count($topics) - count($media)) : $limit;
         $stmt=$db->prepare('SELECT * '.$sql.' ORDER BY is_featured DESC, published_at DESC LIMIT ? OFFSET ?');
-        $stmt->execute([$qLike,$qLike,$qLike,$limit,$offset]);
+        $stmt->execute([$qLike,$qLike,$qLike,$fetchLimit,$offset]);
         $results=$stmt->fetchAll();
-        // prepend topics if offset 0
-        if($offset===0) $results=array_merge($topics,$results);
+        // موضوعات و رسانه‌ها در صفحهٔ نخستِ نتایج بالاتر می‌آیند.
+        if($offset===0) $results=array_merge($topics,$media,$results);
         return ['total'=>$total,'results'=>array_slice($results,0,$limit)];
     }catch(PDOException $e){ return ['total'=>0,'results'=>[]]; }
 }

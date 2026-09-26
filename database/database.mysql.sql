@@ -4,19 +4,34 @@
 -- 3072 bytes, i.e. 768 characters with the utf8mb4 collation used below.
 -- Idempotent: CREATE TABLE IF NOT EXISTS plus INSERT IGNORE. Repeated CREATE
 -- INDEX statements fail with "Duplicate key name" and are skipped by the migrator.
+-- Single identity table: members (role=user), content admins (role=admin) and the
+-- owner (role=super_admin). username/email/phone may be NULL because a public
+-- member signs up with a phone number, while staff sign in with a username or
+-- email. Password is always a password_hash() digest in VARCHAR(255) — never
+-- plaintext. auth_version invalidates other sessions after a password change.
 CREATE TABLE IF NOT EXISTS users (
   id         INT AUTO_INCREMENT,
-  username   VARCHAR(80)      NOT NULL,
-  email      VARCHAR(180)     NOT NULL DEFAULT '',
+  username   VARCHAR(80)      NULL,
+  email      VARCHAR(180)     NULL,
+  phone      VARCHAR(32)      NULL,
+  phone_normalized VARCHAR(32) NULL,
+  country    VARCHAR(80)      NOT NULL DEFAULT '',
+  country_code VARCHAR(8)     NOT NULL DEFAULT '',
   password   VARCHAR(255)     NOT NULL,
   full_name  VARCHAR(120)     NOT NULL DEFAULT '',
-  role       VARCHAR(30) NOT NULL DEFAULT 'admin' CHECK (role IN ('superadmin','admin','editor')),
-  is_active  SMALLINT       NOT NULL DEFAULT 1,
-  last_login DATETIME             NULL,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  auth_version INT NOT NULL DEFAULT 1,
+  role       VARCHAR(30)      NOT NULL DEFAULT 'user',
+  is_active  SMALLINT         NOT NULL DEFAULT 1,
+  must_change_password SMALLINT NOT NULL DEFAULT 0,
+  agreed_terms SMALLINT       NOT NULL DEFAULT 0,
+  avatar     VARCHAR(350)     NULL,
+  last_login DATETIME         NULL,
+  created_at DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  auth_version INT            NOT NULL DEFAULT 1,
   PRIMARY KEY (id),
-  UNIQUE (username)
+  UNIQUE KEY users_username_unique (username),
+  UNIQUE KEY users_email_unique (email),
+  UNIQUE KEY users_phone_normalized_unique (phone_normalized)
  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS categories (
@@ -353,23 +368,12 @@ CREATE TABLE IF NOT EXISTS pending_uploads (
  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE INDEX pending_uploads_due ON pending_uploads(not_before);
 
-CREATE TABLE IF NOT EXISTS members (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  full_name VARCHAR(120) NOT NULL,
-  country VARCHAR(80) NOT NULL DEFAULT '',
-  country_code VARCHAR(8) NOT NULL DEFAULT '',
-  phone VARCHAR(32) NOT NULL,
-  phone_normalized VARCHAR(32) NOT NULL,
-  email VARCHAR(180) NULL,
-  password VARCHAR(255) NOT NULL,
-  is_active SMALLINT NOT NULL DEFAULT 1,
-  agreed_terms SMALLINT NOT NULL DEFAULT 0,
-  auth_version INT NOT NULL DEFAULT 1,
-  last_login DATETIME NULL,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY members_phone_unique (phone_normalized),
-  UNIQUE KEY members_email_unique (email)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- NOTE: older installations kept public accounts in a separate `members` table.
+-- The identity migration (includes/identity.php, run by php/install.php and
+-- bin/migrate.php) copies those rows into `users` with role='user' — passwords
+-- stay valid because both tables always stored password_hash() digests — and
+-- then renames the old table to `members_migrated_v1`. No new `members` table
+-- is created: one table, one login.
 
 ALTER TABLE post_topics ADD COLUMN is_primary SMALLINT NOT NULL DEFAULT 0;
 
