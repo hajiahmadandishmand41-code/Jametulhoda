@@ -35,7 +35,7 @@ $existingId = (int)$stmt->fetchColumn();
 $hash = password_hash($password, PASSWORD_DEFAULT);
 
 if ($existingId) {
-    $db->prepare('UPDATE users SET password = ?, is_active = 1, auth_version = COALESCE(auth_version, 1) + 1 WHERE id = ?')
+    $db->prepare('UPDATE users SET password = ?, is_active = 1, must_change_password = 0, auth_version = COALESCE(auth_version, 1) + 1 WHERE id = ?')
        ->execute([$hash, $existingId]);
     echo "Administrator '{$username}' already existed: password reset and existing sessions invalidated.\n";
 } else {
